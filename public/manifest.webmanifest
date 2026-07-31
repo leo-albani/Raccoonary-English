@@ -1,0 +1,33 @@
+{
+  "short_name": "Raccoonary",
+  "name": "Raccoonary — Impara l'inglese con il procione",
+  "description": "Impara e ripassa l'inglese con Raccoonary, il tuo procione guida",
+  "id": "/",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#F2E8D5",
+  "theme_color": "#6B7C4F",
+  "orientation": "portrait",
+  "prefer_related_applications": false,
+  "icons": [
+    {
+      "src": "https://lh3.googleusercontent.com/d/1GA-Vnp2YB6b8CHrjqocq60P-77wIWleu=s192",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "https://lh3.googleusercontent.com/d/1GA-Vnp2YB6b8CHrjqocq60P-77wIWleu=s512",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "https://lh3.googleusercontent.com/d/1GA-Vnp2YB6b8CHrjqocq60P-77wIWleu=s512",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

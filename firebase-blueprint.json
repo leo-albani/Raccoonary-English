@@ -1,0 +1,89 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "User Profile",
+      "description": "User profile with streak, acorns, and preferences",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "createdAt": { "type": "number" },
+        "streakCount": { "type": "number" },
+        "lastActiveDate": { "type": "string" },
+        "totalAcorns": { "type": "number" },
+        "reminderEnabled": { "type": "boolean" },
+        "reminderTime": { "type": "string" },
+        "onboardingCompleted": { "type": "boolean" }
+      },
+      "required": ["userId", "streakCount", "totalAcorns"]
+    },
+    "VocabItem": {
+      "title": "Vocabulary Item",
+      "description": "Vocabulary item tracked in Leitner Spaced Repetition",
+      "type": "object",
+      "properties": {
+        "term": { "type": "string" },
+        "translation": { "type": "string" },
+        "sourceLang": { "type": "string" },
+        "targetLang": { "type": "string" },
+        "synonyms": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "exampleSource": { "type": "string" },
+        "exampleTranslation": { "type": "string" },
+        "origin": { "type": "string" },
+        "originDetail": { "type": "string" },
+        "createdAt": { "type": "number" },
+        "lastReviewedAt": { "type": "number" },
+        "box": { "type": "number" },
+        "nextReviewAt": { "type": "number" },
+        "correctStreak": { "type": "number" },
+        "wrongCount": { "type": "number" }
+      },
+      "required": ["term", "translation", "box", "nextReviewAt"]
+    },
+    "GrammarProgress": {
+      "title": "Grammar Progress",
+      "description": "Progress for a specific grammar topic",
+      "type": "object",
+      "properties": {
+        "topicName": { "type": "string" },
+        "exercisesCompleted": { "type": "number" },
+        "lastGeneratedAt": { "type": "number" },
+        "currentExerciseSet": {
+          "type": "array",
+          "items": { "type": "object" }
+        }
+      },
+      "required": ["topicName", "exercisesCompleted"]
+    },
+    "ReadingProgress": {
+      "title": "Reading Progress",
+      "description": "Progress for a CEFR reading level",
+      "type": "object",
+      "properties": {
+        "textsCompleted": { "type": "number" },
+        "lastTextId": { "type": "string" }
+      },
+      "required": ["textsCompleted"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "User profile document"
+    },
+    "/users/{userId}/vocabItems/{itemId}": {
+      "schema": "VocabItem",
+      "description": "User vocabulary items"
+    },
+    "/users/{userId}/grammarProgress/{topicId}": {
+      "schema": "GrammarProgress",
+      "description": "User grammar topic progress"
+    },
+    "/users/{userId}/readingProgress/{level}": {
+      "schema": "ReadingProgress",
+      "description": "User reading progress"
+    }
+  }
+}
