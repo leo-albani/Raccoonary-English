@@ -30,24 +30,24 @@ export const Home: React.FC<HomeProps> = ({
 
   const raccoonGreeting =
     dueItems.length > 0
-      ? `Ciao! Ci sono ${dueItems.length} parole pronte in tana per te oggi.`
+      ? `Ci sono ${dueItems.length} parole pronte per il ripasso.`
       : totalCount === 0
-      ? 'Tutto tranquillo in tana! Vuoi aggiungere parole nuove o esercitarti con la grammatica?'
-      : 'Tutto tranquillo in tana oggi! Vuoi fare una sessione extra di ripasso?';
+      ? 'La tana è vuota. Puoi aggiungere parole nuove o fare un esercizio.'
+      : 'Tutto in ordine in tana per oggi.';
 
   return (
     <div className="pb-28 pt-4 px-4 sm:px-6 max-w-5xl mx-auto space-y-6">
       {/* Header Section */}
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white/60 backdrop-blur-md p-4 sm:p-5 rounded-3xl border border-[#6B7C4F]/20 shadow-xs">
         <div className="flex items-center gap-4">
-          <div className="relative">
+          <div className="relative shrink-0">
             <div className="w-16 h-16 sm:w-20 sm:h-20 bg-[#6B7C4F]/10 rounded-full border-2 border-[#3A2B22] flex items-center justify-center overflow-hidden shadow-xs">
               <Mascot pose={dueItems.length > 0 ? 'greeting' : 'sleeping'} size={75} />
             </div>
           </div>
           <div>
             <span className="text-xs font-bold uppercase tracking-wider text-[#6B7C4F] font-display">
-              {timeGreeting}, Esploratore! 👋
+              {timeGreeting}, Esploratore
             </span>
             <h1 className="text-2xl sm:text-3xl font-bold font-display text-[#3A2B22] leading-tight">
               Tana di Raccoonary
@@ -87,25 +87,25 @@ export const Home: React.FC<HomeProps> = ({
               {dueItems.length > 0
                 ? `Hai ${dueItems.length} parole pronte in tana.`
                 : totalCount > 0
-                ? 'Tutti i vocaboli ripassati!'
-                : 'La tua tana è pronta per accogliere parole.'}
+                ? 'I tuoi vocaboli sono aggiornati.'
+                : 'La tua tana è pronta.'}
             </h2>
             <p className="text-white/85 text-sm sm:text-base max-w-md font-medium">
               {dueItems.length > 0
-                ? "L'algoritmo dice che è il momento perfetto per ripassarle prima di dimenticarle!"
-                : 'Continua ad allenare la memoria con un ripasso extra o scopri nuovi concetti.'}
+                ? 'Te le ripropongo ora prima che sfuggano dalla memoria.'
+                : 'Puoi fare un ripasso extra o iniziare un esercizio di grammatica.'}
             </p>
           </div>
 
           <div className="z-10 mt-6 flex items-center gap-3">
             <button onClick={onStartReview} className="btn-zucca text-base sm:text-lg px-8 py-3.5">
-              {dueItems.length > 0 ? 'Ripassa ora ⚡' : 'Inizia ripasso ⚡'}
+              {dueItems.length > 0 ? 'Ripassa ora' : 'Inizia ripasso'}
             </button>
           </div>
 
-          {/* Background Raccoon SVG element */}
+          {/* Background Raccoon element */}
           <div className="absolute -right-6 -bottom-6 opacity-15 pointer-events-none select-none">
-            <Mascot pose="studying" size={240} />
+            <Mascot pose="thinking" size={240} />
           </div>
         </div>
 
@@ -122,7 +122,7 @@ export const Home: React.FC<HomeProps> = ({
               Padronanza Vocaboli
             </h3>
             <p className="text-xs text-[#3A2B22]/70 mt-1">
-              Progresso basato sull'intervallo di ripetizione (Spaced Repetition)
+              Progresso basato sulle tue risposte recenti
             </p>
 
             {/* Visual Bar */}
@@ -141,7 +141,7 @@ export const Home: React.FC<HomeProps> = ({
             </div>
             <p className="text-xs text-gray-500 mt-2 italic font-medium">
               {totalCount === 0
-                ? '0% completato — Importa il tuo primo elenco di parole'
+                ? 'Importa un elenco di parole per iniziare'
                 : `${Math.round(
                     ((totalCount - dueItems.length) / Math.max(1, totalCount)) * 100
                   )}% in memoria a lungo termine`}
@@ -166,7 +166,7 @@ export const Home: React.FC<HomeProps> = ({
             </div>
           </div>
           <div className="border-2 border-dashed border-gray-200 rounded-xl p-3 text-center text-gray-400 text-xs mt-2">
-            Importa ora le tue liste →
+            Importa le tue liste →
           </div>
         </div>
 
@@ -180,8 +180,8 @@ export const Home: React.FC<HomeProps> = ({
               <p className="text-xs text-gray-500">19 argomenti da A1 a C2</p>
             </div>
           </div>
-          <p className="text-xs text-[#3A2B22]/70 italic mt-2">
-            Esercizi guidati con feedback immediato e spiegazioni chiare.
+          <p className="text-xs text-[#3A2B22]/70 italic mt-2 font-medium">
+            Esercizi guidati con risposte immediate e spiegazioni chiare.
           </p>
         </div>
 
@@ -195,8 +195,8 @@ export const Home: React.FC<HomeProps> = ({
               <p className="text-xs text-gray-500">Letture interattive</p>
             </div>
           </div>
-          <p className="text-xs text-[#3A2B22]/70 italic mt-2">
-            Clicca sulle parole nel testo per salvarle istantaneamente.
+          <p className="text-xs text-[#3A2B22]/70 italic mt-2 font-medium">
+            Tocca qualsiasi parola nel testo per salvarla in tana.
           </p>
         </div>
 
@@ -204,14 +204,14 @@ export const Home: React.FC<HomeProps> = ({
         <div className="md:col-span-5 bento-card bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-200/60 flex flex-col justify-between">
           <div>
             <h3 className="font-bold font-display text-base text-[#3A2B22] flex items-center gap-2">
-              <span className="text-xl">💡</span> Tip del Giorno
+              <span className="text-xl">💡</span> Nota del procione
             </h3>
-            <p className="text-sm italic text-[#3A2B22]/85 mt-2 leading-relaxed">
-              "Ripassare piccole quantità di parole ogni giorno con la Spaced Repetition aumenta la ritenzione del 300% rispetto allo studio intensivo."
+            <p className="text-sm italic text-[#3A2B22]/85 mt-2 leading-relaxed font-medium">
+              "Ripassare poche parole ogni giorno è molto più efficace dello studio intensivo concentrato in un solo momento."
             </p>
           </div>
           <div className="flex justify-between items-end mt-4 pt-3 border-t border-amber-200/40">
-            <span className="text-[11px] font-bold text-[#C99A3D] font-display">Consiglio del procione</span>
+            <span className="text-[11px] font-bold text-[#C99A3D] font-display">Tana di Raccoonary</span>
             <span className="text-xl">🦝</span>
           </div>
         </div>
@@ -223,11 +223,11 @@ export const Home: React.FC<HomeProps> = ({
               <h3 className="font-bold font-display text-lg text-[#3A2B22]">
                 Sentiero di Grammatica 🌲
               </h3>
-              <p className="text-xs text-gray-500">Avanza tappa dopo tappa nel bosco</p>
+              <p className="text-xs text-gray-500">Un passo alla volta nel bosco</p>
             </div>
             <button
               onClick={() => onNavigate('grammar')}
-              className="text-xs font-bold text-[#6B7C4F] hover:underline font-display"
+              className="text-xs font-bold text-[#6B7C4F] hover:underline font-display cursor-pointer"
             >
               Vedi tutti →
             </button>
@@ -252,7 +252,7 @@ export const Home: React.FC<HomeProps> = ({
                       {topic.name}
                     </span>
                   </div>
-                  <p className="text-[11px] text-[#3A2B22]/65 truncate mt-0.5">
+                  <p className="text-[11px] text-[#3A2B22]/65 truncate mt-0.5 font-medium">
                     {topic.summary}
                   </p>
                 </div>

@@ -13,22 +13,22 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
 
   const slides: { title: string; subtitle: string; pose: RaccoonPose; speech: string }[] = [
     {
-      title: 'Ti aiuto a non dimenticare le parole',
-      subtitle: 'Ogni parola che cerchi o sbagli finisce in tana. La ripassiamo al momento giusto con la memoria a spazio!',
+      title: 'Non perdi più una parola',
+      subtitle: 'Quello che cerchi o sbagli finisce in tana. Te lo ripropongo al momento giusto.',
       pose: 'greeting',
-      speech: 'Ciao! Sono il tuo procione guida. Preparati a raccogliere un sacco di ghiande!',
+      speech: 'Ciao, sono il tuo procione. Le parole che ti sfuggono le tengo io.',
     },
     {
-      title: 'Ripassiamo insieme grammatica e vocaboli',
-      subtitle: 'Esercizi brevi e leggeri ogni giorno, senza mai farti sentire in colpa per gli errori.',
+      title: 'Grammatica senza il tono da scuola',
+      subtitle: 'Argomenti, phrasal verbs, falsi amici. Un po\' alla volta, con esercizi che rinnovi quando vuoi.',
       pose: 'happy',
-      speech: 'Gli errori sono solo materiale utile per la nostra tana!',
+      speech: 'Eserciti solo quello che ti serve davvero.',
     },
     {
-      title: 'Testi di comprensione al tuo livello',
-      subtitle: 'Brani su misura da A1 a C2. Puoi toccare ogni parola per scoprirne il significato al volo.',
+      title: 'Testi al tuo livello',
+      subtitle: 'Da A1 a C2, in stile Cambridge. Quello che non torna finisce comunque in tana.',
       pose: 'reading',
-      speech: 'Leggiamo insieme un bel brano in inglese?',
+      speech: 'Letture interattive con traduzioni a portata di tap.',
     },
   ];
 
@@ -64,11 +64,11 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
   const activeSlide = slides[currentSlide];
 
   return (
-    <div className="min-h-screen bg-[#F2E8D5] text-[#3A2B22] flex flex-col justify-between p-6 max-w-md mx-auto relative select-none">
+    <div className="min-h-screen bg-[#F2E8D5] text-[#3A2B22] flex flex-col justify-between p-6 max-w-lg mx-auto relative select-none">
       {/* Top Header */}
       {!showStartingChoice && (
         <div className="flex justify-between items-center pt-2">
-          <div className="flex gap-1.5">
+          <div className="flex gap-2">
             {slides.map((_, idx) => (
               <div
                 key={idx}
@@ -80,7 +80,7 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
           </div>
           <button
             onClick={handleSkip}
-            className="text-sm font-semibold text-[#6B7C4F] hover:text-[#3A2B22] transition-colors"
+            className="text-sm font-semibold text-[#6B7C4F] hover:text-[#3A2B22] transition-colors cursor-pointer"
           >
             Salta
           </button>
@@ -89,36 +89,36 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
 
       {/* Main Content */}
       {!showStartingChoice ? (
-        <div className="flex-1 flex flex-col items-center justify-center text-center my-8">
-          <div className="mb-6">
-            <Mascot pose={activeSlide.pose} size={150} speechBubble={activeSlide.speech} />
+        <div className="flex-1 flex flex-col items-center justify-center text-center my-8 space-y-4">
+          <div className="mb-2">
+            <Mascot pose={activeSlide.pose} size={160} speechBubble={activeSlide.speech} />
           </div>
 
-          <h2 className="text-2xl font-bold font-display text-[#3A2B22] mb-3 px-4">
+          <h2 className="text-2xl sm:text-3xl font-bold font-display text-[#3A2B22] px-4">
             {activeSlide.title}
           </h2>
 
-          <p className="text-sm text-[#3A2B22]/80 leading-relaxed px-6">
+          <p className="text-sm sm:text-base text-[#3A2B22]/80 leading-relaxed max-w-md px-4 font-medium">
             {activeSlide.subtitle}
           </p>
         </div>
       ) : (
-        <div className="flex-1 flex flex-col items-center justify-center text-center my-8">
-          <div className="mb-6">
-            <Mascot pose="happy" size={140} speechBubble="Da dove vogliamo iniziare la nostra avventura?" />
+        <div className="flex-1 flex flex-col items-center justify-center text-center my-8 space-y-4">
+          <div className="mb-2">
+            <Mascot pose="happy" size={150} speechBubble="Da dove iniziamo?" />
           </div>
 
-          <h2 className="text-2xl font-bold font-display text-[#3A2B22] mb-2">
+          <h2 className="text-2xl sm:text-3xl font-bold font-display text-[#3A2B22] mb-1">
             Scegli il tuo punto di partenza
           </h2>
-          <p className="text-sm text-[#3A2B22]/80 mb-8 px-4">
-            Puoi importare le tue parole oppure iniziare subito con le lezioni base.
+          <p className="text-sm text-[#3A2B22]/80 max-w-md px-4 font-medium mb-6">
+            Puoi importare un tuo file di parole oppure esplorare subito la tana.
           </p>
 
-          <div className="w-full space-y-4 px-2">
+          <div className="w-full max-w-md space-y-4 px-2">
             <button
               onClick={() => handleSelectPath('import')}
-              className="w-full py-4 px-6 rounded-2xl bg-[#E8802F] text-white font-bold font-display text-base shadow-md hover:bg-[#E8802F]/90 active:scale-98 transition-all flex items-center justify-center gap-3"
+              className="btn-zucca w-full py-4 text-base flex items-center justify-center gap-3"
             >
               <span className="text-xl">📥</span>
               <span>Ho un file di parole da importare</span>
@@ -126,10 +126,10 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
 
             <button
               onClick={() => handleSelectPath('home')}
-              className="w-full py-4 px-6 rounded-2xl bg-[#6B7C4F] text-white font-bold font-display text-base shadow-md hover:bg-[#6B7C4F]/90 active:scale-98 transition-all flex items-center justify-center gap-3"
+              className="w-full py-4 px-6 rounded-2xl bg-[#6B7C4F] text-white font-bold font-display text-base shadow-md hover:bg-[#6B7C4F]/90 cursor-pointer transition-all flex items-center justify-center gap-3"
             >
-              <span className="text-xl">🚀</span>
-              <span>Parto da zero</span>
+              <span className="text-xl">🏠</span>
+              <span>Entra in tana</span>
             </button>
           </div>
         </div>
@@ -137,12 +137,12 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
 
       {/* Footer Navigation */}
       {!showStartingChoice && (
-        <div className="pb-4">
+        <div className="pb-4 max-w-md mx-auto w-full">
           <button
             onClick={handleNext}
-            className="w-full py-4 rounded-2xl bg-[#E8802F] text-white font-bold font-display text-lg shadow-md hover:bg-[#E8802F]/90 active:scale-98 transition-all"
+            className="btn-zucca w-full py-4 text-lg"
           >
-            {currentSlide === slides.length - 1 ? 'Iniziamo!' : 'Continua'}
+            {currentSlide === slides.length - 1 ? 'Iniziamo' : 'Continua'}
           </button>
         </div>
       )}
