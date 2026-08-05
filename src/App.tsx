@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { UserProfile, VocabItem } from './types';
+import { UserProfile, VocabItem, GrammarTopicProgress, SharedLanguagePairContent } from './types';
 import {
-  ensureAuth,
+  auth,
   fetchUserProfile,
   updateUserProfile,
   fetchVocabItems,
@@ -9,11 +9,27 @@ import {
   bulkSaveVocabItems,
   deleteVocabItem,
   resetAllData,
+  adminResetTestData,
   getLocalUserProfile,
   getLocalVocabItems,
+  logoutUser,
+  getUserAccount,
+  fetchGrammarProgress,
+  saveGrammarProgressTopic,
+  fetchUserProfiles,
+  createNewLanguageProfile,
+  switchActiveProfile,
+  deleteLanguageProfile,
+  fetchSharedContent,
+  fetchUITranslations,
 } from './services/firebase';
+import { IT_TRANSLATIONS, getTranslation, isRTLLanguage } from './i18n/translations';
+import { Mascot } from './mascot/Mascot';
+import { onAuthStateChanged } from 'firebase/auth';
 
 // Screens
+import { Login } from './screens/Login';
+import { ProfileSetup } from './screens/ProfileSetup';
 import { Onboarding } from './screens/Onboarding';
 import { Home } from './screens/Home';
 import { Memorization } from './screens/Memorization';
@@ -21,6 +37,7 @@ import { Grammar } from './screens/Grammar';
 import { Reading } from './screens/Reading';
 import { Import } from './screens/Import';
 import { Settings } from './screens/Settings';
+import { LevelTest } from './screens/LevelTest';
 import { Navigation, NavTab } from './components/Navigation';
 
 export function App() {
@@ -29,83 +46,208 @@ export function App() {
   const [vocabItems, setVocabItems] = useState<VocabItem[]>(getLocalVocabItems());
   const [currentTab, setCurrentTab] = useState<NavTab>('home');
   const [selectedGrammarTopicId, setSelectedGrammarTopicId] = useState<string | null>(null);
+  const [showLevelTest, setShowLevelTest] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [needsProfileSetup, setNeedsProfileSetup] = useState(false);
+  const [userProfiles, setUserProfiles] = useState<string[]>(['en']);
+  const [sharedContent, setSharedContent] = useState<SharedLanguagePairContent | null>(null);
+  const [isGeneratingContent, setIsGeneratingContent] = useState<boolean>(false);
+  const [uiTranslationsMap, setUiTranslationsMap] = useState<Record<string, string>>(IT_TRANSLATIONS);
+  const [isGeneratingUITranslations, setIsGeneratingUITranslations] = useState<boolean>(false);
 
-  // Initialize data and streak checking on startup
+  // Helper function for translations
+  const t = (key: string, params?: Record<string, string | number>) =>
+    getTranslation(key, uiTranslationsMap, params);
+
+  // Load UI translations for user's native language & update RTL direction
   useEffect(() => {
-    async function init() {
+    const loadUITranslations = async () => {
+      const nativeLang = user.nativeLanguage || 'it';
+
+      if (isRTLLanguage(nativeLang)) {
+        document.documentElement.dir = 'rtl';
+      } else {
+        document.documentElement.dir = 'ltr';
+      }
+
+      setIsGeneratingUITranslations(true);
       try {
-        const uid = await ensureAuth();
-        setUserId(uid);
+        const res = await fetchUITranslations(nativeLang);
+        if (res && res.strings) {
+          setUiTranslationsMap(res.strings);
+        } else {
+          setUiTranslationsMap(IT_TRANSLATIONS);
+        }
+      } catch (e) {
+        console.error('Failed to load UI translations:', e);
+        setUiTranslationsMap(IT_TRANSLATIONS);
+      } finally {
+        setIsGeneratingUITranslations(false);
+      }
+    };
 
-        const profile = await fetchUserProfile(uid);
-        const items = await fetchVocabItems(uid);
+    if (isAuthenticated && !needsProfileSetup && user.nativeLanguage) {
+      loadUITranslations();
+    }
+  }, [user.nativeLanguage, isAuthenticated, needsProfileSetup]);
 
-        // Update streak logic
-        const todayStr = new Date().toISOString().split('T')[0];
-        let newStreak = profile.streakCount;
+  // Load shared content for the active profile
+  useEffect(() => {
+    const loadContent = async () => {
+      const nativeLang = user.nativeLanguage || 'it';
+      const targetLang = user.activeProfileId || 'en';
 
-        if (profile.lastActiveDate !== todayStr) {
-          const lastDate = new Date(profile.lastActiveDate);
-          const currentDate = new Date(todayStr);
-          const diffDays = Math.round((currentDate.getTime() - lastDate.getTime()) / (1000 * 3600 * 24));
+      setIsGeneratingContent(true);
+      try {
+        const content = await fetchSharedContent(nativeLang, targetLang);
+        setSharedContent(content);
+      } catch (e) {
+        console.error('Failed to load shared content:', e);
+      } finally {
+        setIsGeneratingContent(false);
+      }
+    };
 
-          if (diffDays === 1) {
-            newStreak += 1;
-          } else if (diffDays > 1) {
-            newStreak = 1;
+    if (isAuthenticated && !needsProfileSetup && user.activeProfileId) {
+      loadContent();
+    }
+  }, [user.activeProfileId, user.nativeLanguage, isAuthenticated, needsProfileSetup]);
+
+  // Initialize Auth state listener
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (authUser) => {
+      if (authUser && !authUser.isAnonymous) {
+        setIsLoading(true);
+        setUserId(authUser.uid);
+        try {
+          const account = await getUserAccount(authUser.uid);
+          if (!account) {
+            setNeedsProfileSetup(true);
+            setIsAuthenticated(true);
+            setIsLoading(false);
+            return;
           }
 
-          const updatedProfile = {
-            ...profile,
-            streakCount: Math.max(1, newStreak),
-            lastActiveDate: todayStr,
-          };
+          setNeedsProfileSetup(false);
+          const profiles = await fetchUserProfiles(authUser.uid);
+          setUserProfiles(profiles);
 
-          setUser(updatedProfile);
-          await updateUserProfile(updatedProfile);
-        } else {
-          setUser(profile);
+          const profile = await fetchUserProfile(authUser.uid);
+          const items = await fetchVocabItems(authUser.uid, profile.activeProfileId);
+          const grammarMap = await fetchGrammarProgress(authUser.uid, profile.activeProfileId);
+
+          // Update streak logic
+          const todayStr = new Date().toISOString().split('T')[0];
+          let newStreak = profile.streakCount;
+
+          if (profile.lastActiveDate !== todayStr) {
+            const lastDate = new Date(profile.lastActiveDate);
+            const currentDate = new Date(todayStr);
+            const diffDays = Math.round((currentDate.getTime() - lastDate.getTime()) / (1000 * 3600 * 24));
+
+            if (diffDays === 1) {
+              newStreak += 1;
+            } else if (diffDays > 1) {
+              newStreak = 1;
+            }
+
+            const updatedProfile = {
+              ...profile,
+              userId: authUser.uid,
+              streakCount: Math.max(1, newStreak),
+              lastActiveDate: todayStr,
+            };
+
+            setUser(updatedProfile);
+            await updateUserProfile(updatedProfile);
+          } else {
+            setUser({ ...profile, userId: authUser.uid });
+          }
+
+          setVocabItems(items);
+          setGrammarProgress(grammarMap);
+          setIsAuthenticated(true);
+        } catch (e) {
+          console.warn('Profile sync error:', e);
+          setIsAuthenticated(true);
+        } finally {
+          setIsLoading(false);
         }
-
-        setVocabItems(items);
-      } catch (e) {
-        console.warn('Initialization offline fallback active:', e);
-      } finally {
+      } else {
+        setIsAuthenticated(false);
+        setNeedsProfileSetup(false);
         setIsLoading(false);
       }
-    }
+    });
 
-    init();
+    return () => unsubscribe();
   }, []);
 
-  const handleCompleteOnboarding = async (choice: 'import' | 'home') => {
+  const [grammarProgress, setGrammarProgress] = useState<Record<string, GrammarTopicProgress>>(() => {
+    try {
+      const saved = localStorage.getItem('raccoonary_grammar_progress');
+      return saved ? JSON.parse(saved) : {};
+    } catch (e) {
+      return {};
+    }
+  });
+  const [lastActiveTopicId, setLastActiveTopicId] = useState<string | null>(() => {
+    try {
+      return localStorage.getItem('raccoonary_last_active_topic');
+    } catch (e) {
+      return null;
+    }
+  });
+
+  const handleUpdateGrammarProgress = (progress: GrammarTopicProgress) => {
+    setGrammarProgress((prev) => {
+      const updated = { ...prev, [progress.topicId]: progress };
+      try {
+        localStorage.setItem('raccoonary_grammar_progress', JSON.stringify(updated));
+      } catch (e) {}
+      saveGrammarProgressTopic(userId, progress, user.activeProfileId);
+      return updated;
+    });
+  };
+
+  const handleSetLastActiveTopicId = (topicId: string) => {
+    setLastActiveTopicId(topicId);
+    try {
+      localStorage.setItem('raccoonary_last_active_topic', topicId);
+    } catch (e) {}
+  };
+
+  const handleCompleteOnboarding = async (choice: 'import' | 'home' | 'level_test') => {
     const updatedUser = { ...user, onboardingCompleted: true };
     setUser(updatedUser);
     await updateUserProfile(updatedUser);
 
     if (choice === 'import') {
       setCurrentTab('import');
+    } else if (choice === 'level_test') {
+      setCurrentTab('home');
+      setShowLevelTest(true);
     } else {
       setCurrentTab('home');
     }
   };
 
   const handleSaveItem = async (item: VocabItem) => {
-    await saveVocabItem(userId, item);
-    const updated = await fetchVocabItems(userId);
+    await saveVocabItem(userId, item, user.activeProfileId);
+    const updated = await fetchVocabItems(userId, user.activeProfileId);
     setVocabItems(updated);
   };
 
   const handleBulkImport = async (newItems: VocabItem[]) => {
-    await bulkSaveVocabItems(userId, newItems);
-    const updated = await fetchVocabItems(userId);
+    await bulkSaveVocabItems(userId, newItems, user.activeProfileId);
+    const updated = await fetchVocabItems(userId, user.activeProfileId);
     setVocabItems(updated);
   };
 
   const handleDeleteItem = async (itemId: string) => {
-    await deleteVocabItem(userId, itemId);
-    const updated = await fetchVocabItems(userId);
+    await deleteVocabItem(userId, itemId, user.activeProfileId);
+    const updated = await fetchVocabItems(userId, user.activeProfileId);
     setVocabItems(updated);
   };
 
@@ -119,10 +261,99 @@ export function App() {
   };
 
   const handleResetData = async () => {
-    await resetAllData(userId);
-    setUser(getLocalUserProfile());
+    await resetAllData(userId, user.activeProfileId);
+    const refreshedUser = await fetchUserProfile(userId);
+    setUser(refreshedUser);
     setVocabItems([]);
+    setGrammarProgress({});
     setCurrentTab('home');
+  };
+
+  const handleAdminResetData = async () => {
+    setIsLoading(true);
+    await adminResetTestData(userId, user.activeProfileId);
+    const refreshedUser = await fetchUserProfile(userId);
+    const refreshedVocab = await fetchVocabItems(userId, refreshedUser.activeProfileId);
+    const refreshedGrammar = await fetchGrammarProgress(userId, refreshedUser.activeProfileId);
+    setUser(refreshedUser);
+    setVocabItems(refreshedVocab);
+    setGrammarProgress(refreshedGrammar);
+    setShowLevelTest(false);
+    setIsLoading(false);
+    setCurrentTab('home');
+  };
+
+  const handleLogout = async () => {
+    setIsLoading(true);
+    await logoutUser();
+    setIsAuthenticated(false);
+    setIsLoading(false);
+  };
+
+  const handleSwitchProfile = async (targetLanguage: string) => {
+    setIsLoading(true);
+    try {
+      const updatedProfile = await switchActiveProfile(userId, targetLanguage);
+      const items = await fetchVocabItems(userId, targetLanguage);
+      const grammarMap = await fetchGrammarProgress(userId, targetLanguage);
+      setUser(updatedProfile);
+      setVocabItems(items);
+      setGrammarProgress(grammarMap);
+      setShowLevelTest(false);
+      setCurrentTab('home');
+    } catch (e) {
+      console.error('Error switching profile:', e);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleAddNewLanguage = async (targetLanguage: string) => {
+    setIsLoading(true);
+    try {
+      await createNewLanguageProfile(userId, targetLanguage);
+      const updatedProfiles = await fetchUserProfiles(userId);
+      const updatedProfile = await fetchUserProfile(userId);
+      const items = await fetchVocabItems(userId, targetLanguage);
+      const grammarMap = await fetchGrammarProgress(userId, targetLanguage);
+
+      setUserProfiles(updatedProfiles);
+      setUser(updatedProfile);
+      setVocabItems(items);
+      setGrammarProgress(grammarMap);
+      setShowLevelTest(false);
+      setCurrentTab('home');
+    } catch (e) {
+      console.error('Error adding new language profile:', e);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleDeleteLanguageProfile = async (targetLanguage: string) => {
+    if (userProfiles.length <= 1) return;
+    setIsLoading(true);
+    try {
+      let nextActiveLang = user.activeProfileId;
+      if (user.activeProfileId === targetLanguage) {
+        nextActiveLang = userProfiles.find((p) => p !== targetLanguage) || 'en';
+        await switchActiveProfile(userId, nextActiveLang);
+      }
+      await deleteLanguageProfile(userId, targetLanguage);
+      const updatedProfiles = await fetchUserProfiles(userId);
+      const updatedUser = await fetchUserProfile(userId);
+      const items = await fetchVocabItems(userId, updatedUser.activeProfileId);
+      const grammarMap = await fetchGrammarProgress(userId, updatedUser.activeProfileId);
+
+      setUserProfiles(updatedProfiles);
+      setUser(updatedUser);
+      setVocabItems(items);
+      setGrammarProgress(grammarMap);
+    } catch (e) {
+      console.error('Error deleting language profile:', e);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   if (isLoading) {
@@ -136,9 +367,58 @@ export function App() {
     );
   }
 
+  // Show Login screen if user is not authenticated with Google
+  if (!isAuthenticated) {
+    return <Login />;
+  }
+
+  // Show Profile Setup screen if user hasn't completed their user profile fields
+  if (needsProfileSetup) {
+    return (
+      <ProfileSetup
+        userId={userId}
+        onComplete={async () => {
+          setIsLoading(true);
+          setNeedsProfileSetup(false);
+          const updatedProfile = await fetchUserProfile(userId);
+          const items = await fetchVocabItems(userId);
+          setUser(updatedProfile);
+          setVocabItems(items);
+          setIsLoading(false);
+        }}
+      />
+    );
+  }
+
   // Show Onboarding screen if user hasn't completed onboarding yet
   if (!user.onboardingCompleted) {
-    return <Onboarding onComplete={handleCompleteOnboarding} />;
+    return (
+      <Onboarding
+        onComplete={handleCompleteOnboarding}
+        skipSlides={userProfiles.length > 1 || user.activeProfileId !== 'en'}
+        t={t}
+      />
+    );
+  }
+
+  // Mascot loading screen when generating dynamic UI translations for spoken language
+  if (isGeneratingUITranslations && user.nativeLanguage && user.nativeLanguage !== 'it') {
+    return (
+      <div className="min-h-screen bg-[#F2E8D5] flex flex-col items-center justify-center p-6 text-center text-[#3A2B22] space-y-4 animate-fade-in">
+        <Mascot pose="thinking" size={140} speechBubble={t('common.preparingAppInLanguage')} />
+        <p className="font-bold font-display text-sm text-[#6B7C4F]">Un attimo di pazienza per la tana...</p>
+      </div>
+    );
+  }
+
+  // Mascot loading screen when generating dynamic shared content for language pair
+  if (isGeneratingContent && !sharedContent) {
+    return (
+      <div className="min-h-screen bg-[#F2E8D5] flex flex-col items-center justify-center p-6 text-center text-[#3A2B22] space-y-4 animate-fade-in">
+        <Mascot pose="thinking" size={140} speechBubble="Sto preparando i contenuti per questa lingua, un attimo..." />
+        <p className="font-bold font-display text-sm text-[#6B7C4F]">Un attimo di pazienza per la tana...</p>
+      </div>
+    );
   }
 
   const dueItems = vocabItems.filter((i) => i.nextReviewAt <= Date.now());
@@ -147,58 +427,97 @@ export function App() {
     <div className="min-h-screen bg-[#F2E8D5] text-[#3A2B22] font-sans antialiased">
       {/* Active Tab Screen */}
       <main className="min-h-screen">
-        {currentTab === 'home' && (
-          <Home
-            user={user}
-            vocabItems={vocabItems}
-            onStartReview={() => setCurrentTab('memorize')}
-            onNavigate={(tab) => setCurrentTab(tab)}
-            onSelectGrammarTopic={(topicId) => {
-              setSelectedGrammarTopicId(topicId);
-              setCurrentTab('grammar');
-            }}
-          />
-        )}
-
-        {currentTab === 'memorize' && (
-          <Memorization
-            vocabItems={vocabItems}
-            onSaveItem={handleSaveItem}
-            onSessionComplete={handleSessionComplete}
-            onBackToHome={() => setCurrentTab('home')}
-          />
-        )}
-
-        {currentTab === 'grammar' && (
-          <Grammar
-            onSaveErrorVocab={handleSaveItem}
-            selectedTopicId={selectedGrammarTopicId}
-          />
-        )}
-
-        {currentTab === 'reading' && (
-          <Reading onSaveVocabItem={handleSaveItem} />
-        )}
-
-        {currentTab === 'import' && (
-          <Import
-            existingVocabItems={vocabItems}
-            onBulkImport={handleBulkImport}
-            onNavigateToHome={() => setCurrentTab('home')}
-          />
-        )}
-
-        {currentTab === 'settings' && (
-          <Settings
-            user={user}
-            vocabItems={vocabItems}
-            onUpdateUser={async (u) => {
+        {showLevelTest ? (
+          <LevelTest
+            userProfile={user}
+            onUpdateProfile={async (updated) => {
+              const u = { ...user, ...updated };
               setUser(u);
               await updateUserProfile(u);
             }}
-            onDeleteItem={handleDeleteItem}
-            onResetData={handleResetData}
+            onSaveErrorVocab={handleSaveItem}
+            onBack={() => setShowLevelTest(false)}
+            t={t}
           />
+        ) : (
+          <>
+            {currentTab === 'home' && (
+              <Home
+                user={user}
+                vocabItems={vocabItems}
+                userProfiles={userProfiles}
+                sharedContent={sharedContent}
+                onSwitchProfile={handleSwitchProfile}
+                onAddNewLanguage={handleAddNewLanguage}
+                onStartReview={() => setCurrentTab('memorize')}
+                onNavigate={(tab) => setCurrentTab(tab)}
+                onSelectGrammarTopic={(topicId) => {
+                  setSelectedGrammarTopicId(topicId);
+                  setCurrentTab('grammar');
+                }}
+                onAddVocabItem={handleSaveItem}
+                onDeleteItem={handleDeleteItem}
+                onOpenLevelTest={() => setShowLevelTest(true)}
+                t={t}
+              />
+            )}
+
+            {currentTab === 'memorize' && (
+              <Memorization
+                vocabItems={vocabItems}
+                onSaveItem={handleSaveItem}
+                onDeleteItem={handleDeleteItem}
+                onSessionComplete={handleSessionComplete}
+                onBackToHome={() => setCurrentTab('home')}
+                t={t}
+              />
+            )}
+
+            {currentTab === 'grammar' && (
+              <Grammar
+                onSaveErrorVocab={handleSaveItem}
+                selectedTopicId={selectedGrammarTopicId}
+                grammarProgress={grammarProgress}
+                onUpdateGrammarProgress={handleUpdateGrammarProgress}
+                lastActiveTopicId={lastActiveTopicId}
+                onSetLastActiveTopicId={handleSetLastActiveTopicId}
+                sharedContent={sharedContent}
+                t={t}
+              />
+            )}
+
+            {currentTab === 'reading' && (
+              <Reading onSaveVocabItem={handleSaveItem} t={t} />
+            )}
+
+            {currentTab === 'import' && (
+              <Import
+                existingVocabItems={vocabItems}
+                onBulkImport={handleBulkImport}
+                onNavigateToHome={() => setCurrentTab('home')}
+              />
+            )}
+
+            {currentTab === 'settings' && (
+              <Settings
+                user={user}
+                userProfiles={userProfiles}
+                vocabItems={vocabItems}
+                onUpdateUser={async (u) => {
+                  setUser(u);
+                  await updateUserProfile(u);
+                }}
+                onSwitchProfile={handleSwitchProfile}
+                onAddNewLanguage={handleAddNewLanguage}
+                onDeleteLanguageProfile={handleDeleteLanguageProfile}
+                onDeleteItem={handleDeleteItem}
+                onResetData={handleResetData}
+                onAdminResetData={handleAdminResetData}
+                onLogout={handleLogout}
+                t={t}
+              />
+            )}
+          </>
         )}
       </main>
 
@@ -210,6 +529,7 @@ export function App() {
           setCurrentTab(tab);
         }}
         dueCount={dueItems.length}
+        t={t}
       />
     </div>
   );

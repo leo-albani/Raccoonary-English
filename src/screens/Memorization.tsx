@@ -3,19 +3,24 @@ import { Mascot } from '../mascot/Mascot';
 import { VocabItem, AnswerEvaluationResult } from '../types';
 import { evaluateUserAnswer } from '../services/gemini';
 import { calculateNextReview, filterDueItems } from '../services/leitner';
+import { TanaManager } from '../components/TanaManager';
 
 interface MemorizationProps {
   vocabItems: VocabItem[];
   onSaveItem: (item: VocabItem) => void;
+  onDeleteItem: (itemId: string) => void;
   onSessionComplete: (acornsEarned: number) => void;
   onBackToHome: () => void;
+  t?: (key: string, params?: Record<string, string | number>) => string;
 }
 
 export const Memorization: React.FC<MemorizationProps> = ({
   vocabItems,
   onSaveItem,
+  onDeleteItem,
   onSessionComplete,
   onBackToHome,
+  t,
 }) => {
   const sessionPool = filterDueItems(vocabItems, 20);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -25,6 +30,7 @@ export const Memorization: React.FC<MemorizationProps> = ({
   const [evaluation, setEvaluation] = useState<AnswerEvaluationResult | null>(null);
   const [correctCount, setCorrectCount] = useState(0);
   const [isFinished, setIsFinished] = useState(false);
+  const [showTanaManager, setShowTanaManager] = useState(false);
 
   if (sessionPool.length === 0) {
     return (
@@ -34,33 +40,61 @@ export const Memorization: React.FC<MemorizationProps> = ({
           <span className="badge-leaf">Tana in Ordine</span>
           <h2 className="text-2xl font-bold font-display text-[#3A2B22]">Nessun ripasso in sospeso</h2>
           <p className="text-sm text-[#3A2B22]/75">
-            Hai completato tutti i ripassi previsti per oggi. Torna domani o importa nuove parole per continuare!
+            Hai completato tutti i ripassi previsti per oggi. Torna domani o gestisci le parole già presenti in tana!
           </p>
-          <div className="pt-2">
+          <div className="pt-2 flex flex-col sm:flex-row gap-3">
+            <button
+              onClick={() => setShowTanaManager(true)}
+              className="btn-verde flex-1 py-3.5 text-sm"
+            >
+              📚 Gestisci la tana ({vocabItems.length})
+            </button>
             <button
               onClick={onBackToHome}
-              className="btn-zucca w-full py-4 text-base"
+              className="btn-zucca flex-1 py-3.5 text-sm"
             >
               Torna alla tana 🏠
             </button>
           </div>
         </div>
+
+        {showTanaManager && (
+          <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs p-3 sm:p-6 overflow-y-auto flex items-center justify-center">
+            <div className="w-full max-w-3xl">
+              <TanaManager
+                vocabItems={vocabItems}
+                onDeleteItem={onDeleteItem}
+                onClose={() => setShowTanaManager(false)}
+              />
+            </div>
+          </div>
+        )}
       </div>
     );
   }
 
   const currentItem = sessionPool[currentIndex];
 
+  // Random 50/50 direction choice per item occurrence
+  // Direction A (true): Term -> Translation
+  // Direction B (false): Translation -> Term
+  const isTermToTranslation = React.useMemo(() => Math.random() < 0.5, [currentIndex, currentItem.id]);
+
+  const promptText = isTermToTranslation ? currentItem.term : currentItem.translation;
+  const targetAnswer = isTermToTranslation ? currentItem.translation : currentItem.term;
+  const exampleText = isTermToTranslation ? currentItem.exampleSource : currentItem.exampleTranslation;
+
   // Prepare multiple choice options if applicable
   const otherItems = vocabItems.filter((i) => i.id !== currentItem.id);
-  const distractor1 = otherItems[0]?.translation || 'gatto';
-  const distractor2 = otherItems[1]?.translation || 'albero';
-  const distractor3 = otherItems[2]?.translation || 'casa';
-  const rawOptions = [currentItem.translation, distractor1, distractor2, distractor3];
-  // Stable pseudo-random shuffle per item index
+  const distractor1 = otherItems[0] ? (isTermToTranslation ? otherItems[0].translation : otherItems[0].term) : (isTermToTranslation ? 'gatto' : 'cat');
+  const distractor2 = otherItems[1] ? (isTermToTranslation ? otherItems[1].translation : otherItems[1].term) : (isTermToTranslation ? 'albero' : 'tree');
+  const distractor3 = otherItems[2] ? (isTermToTranslation ? otherItems[2].translation : otherItems[2].term) : (isTermToTranslation ? 'casa' : 'house');
+  const rawOptions = [targetAnswer, distractor1, distractor2, distractor3];
+
+  // Stable pseudo-random shuffle per item index and direction
   const options = React.useMemo(() => {
     return [...rawOptions].sort((a, b) => a.length - b.length || a.localeCompare(b));
-  }, [currentItem.id]);
+  }, [currentItem.id, isTermToTranslation]);
 
   const handleSubmit = async (answerToCheck?: string) => {
     const answer = answerToCheck !== undefined ? answerToCheck : userTypedAnswer;
@@ -69,10 +103,10 @@ export const Memorization: React.FC<MemorizationProps> = ({
     setIsEvaluating(true);
     try {
       const result = await evaluateUserAnswer(
-        currentItem.term,
-        currentItem.translation,
+        promptText,
+        targetAnswer,
         answer,
-        currentItem.synonyms
+        isTermToTranslation ? currentItem.synonyms : []
       );
       setEvaluation(result);
 
@@ -120,7 +154,7 @@ export const Memorization: React.FC<MemorizationProps> = ({
 
       setEvaluation({
         corretto: false,
-        spiegazione: `Nessun problema! "${currentItem.term}" significa "${currentItem.translation}". Te la tengo qui buona per il prossimo ripasso.`,
+        spiegazione: `Nessun problema! "${promptText}" significa "${targetAnswer}". Te la tengo qui buona per il prossimo ripasso.`,
       });
     } finally {
       setIsEvaluating(false);
@@ -202,9 +236,12 @@ export const Memorization: React.FC<MemorizationProps> = ({
           />
         </div>
 
-        <span className="text-xs font-bold text-[#3A2B22]/70 font-display">
-          {currentIndex + 1} / {sessionPool.length}
-        </span>
+        <button
+          onClick={() => setShowTanaManager(true)}
+          className="text-xs font-bold text-[#3A2B22] bg-[#FAF5EB] hover:bg-[#F2E8D5] px-2.5 py-1.5 rounded-xl border border-[#3A2B22]/15 font-display transition-all cursor-pointer flex items-center gap-1"
+        >
+          <span>📚 Tana ({vocabItems.length})</span>
+        </button>
       </div>
 
       {/* Mascot Feedback Display */}
@@ -219,24 +256,36 @@ export const Memorization: React.FC<MemorizationProps> = ({
           <Mascot
             pose="thinking"
             size={110}
-            speechBubble={`Come si dice "${currentItem.term}" in italiano?`}
+            speechBubble={
+              isTermToTranslation
+                ? `Come si dice "${promptText}" in italiano?`
+                : `Come si dice "${promptText}" in inglese?`
+            }
           />
         )}
       </div>
 
       {/* Term Bento Card */}
       <div className="bento-card text-center space-y-3">
-        <div>
+        <div className="flex items-center justify-center gap-2">
           <span className="badge-leaf bg-[#C99A3D]">
             Box Leitner {currentItem.box}
           </span>
+          <span className="text-[11px] font-bold text-[#6B7C4F] bg-[#6B7C4F]/10 px-2 py-0.5 rounded-full font-display uppercase">
+            {isTermToTranslation ? 'EN ➔ IT' : 'IT ➔ EN'}
+          </span>
         </div>
         <h3 className="text-3xl font-bold font-display text-[#3A2B22]">
-          {currentItem.term}
+          {promptText}
         </h3>
-        {currentItem.exampleSource && (
+        {currentItem.usageNote && (
+          <p className="text-xs text-[#C99A3D] font-semibold bg-[#FAF5EB] p-2 rounded-xl border border-[#C99A3D]/20">
+            💡 Nota d'uso: {currentItem.usageNote}
+          </p>
+        )}
+        {exampleText && (
           <p className="text-xs text-[#3A2B22]/75 italic border-t border-[#6B7C4F]/10 pt-3 mt-3">
-            "{currentItem.exampleSource}"
+            "{exampleText}"
           </p>
         )}
       </div>
@@ -312,6 +361,19 @@ export const Memorization: React.FC<MemorizationProps> = ({
           >
             Continua →
           </button>
+        </div>
+      )}
+
+      {/* Tana Manager Overlay */}
+      {showTanaManager && (
+        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs p-3 sm:p-6 overflow-y-auto flex items-center justify-center">
+          <div className="w-full max-w-3xl">
+            <TanaManager
+              vocabItems={vocabItems}
+              onDeleteItem={onDeleteItem}
+              onClose={() => setShowTanaManager(false)}
+            />
+          </div>
         </div>
       )}
     </div>

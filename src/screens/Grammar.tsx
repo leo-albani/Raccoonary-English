@@ -1,18 +1,51 @@
 import React, { useState } from 'react';
 import { Mascot } from '../mascot/Mascot';
-import { GrammarTopic, Exercise, VocabItem } from '../types';
+import { GrammarTopic, Exercise, VocabItem, GrammarTopicProgress, SharedLanguagePairContent, SpecialSectionItem } from '../types';
 import { GRAMMAR_SYLLABUS, IRREGULAR_VERBS } from '../data/grammarSyllabus';
 import { generateGrammarExercises } from '../services/gemini';
 
 interface GrammarProps {
   onSaveErrorVocab: (item: VocabItem) => void;
   selectedTopicId?: string | null;
+  grammarProgress?: Record<string, GrammarTopicProgress>;
+  onUpdateGrammarProgress?: (progress: GrammarTopicProgress) => void;
+  lastActiveTopicId?: string | null;
+  onSetLastActiveTopicId?: (topicId: string) => void;
+  sharedContent?: SharedLanguagePairContent | null;
+  t?: (key: string, params?: Record<string, string | number>) => string;
 }
 
-export const Grammar: React.FC<GrammarProps> = ({ onSaveErrorVocab, selectedTopicId }) => {
-  const [activeTab, setActiveTab] = useState<'syllabus' | 'irregular'>('syllabus');
+export const Grammar: React.FC<GrammarProps> = ({
+  onSaveErrorVocab,
+  selectedTopicId,
+  grammarProgress = {},
+  onUpdateGrammarProgress,
+  lastActiveTopicId,
+  onSetLastActiveTopicId,
+  sharedContent,
+  t,
+}) => {
+  // Get topics from sharedContent if available, or fallback
+  const allTopics: GrammarTopic[] = sharedContent?.syllabus
+    ? [
+        ...(sharedContent.syllabus.base || []),
+        ...(sharedContent.syllabus.intermedio || []),
+        ...(sharedContent.syllabus.avanzato || []),
+      ]
+    : GRAMMAR_SYLLABUS;
+
+  const specialSections = sharedContent?.specialSections || [];
+  const isIrregularApplicable = sharedContent?.irregularVerbsEquivalent
+    ? sharedContent.irregularVerbsEquivalent.applicabile
+    : true;
+  const irregularVerbs = sharedContent?.irregularVerbsEquivalent?.verbi || IRREGULAR_VERBS;
+
+  const [activeTab, setActiveTab] = useState<'syllabus' | 'special' | 'irregular'>('syllabus');
+  const [selectedSpecialIdx, setSelectedSpecialIdx] = useState(0);
+  const [specialFilter, setSpecialFilter] = useState('');
+
   const [selectedTopic, setSelectedTopic] = useState<GrammarTopic | null>(
-    selectedTopicId ? GRAMMAR_SYLLABUS.find((t) => t.id === selectedTopicId) || null : null
+    selectedTopicId ? allTopics.find((t) => t.id === selectedTopicId) || null : null
   );
 
   const [exercises, setExercises] = useState<Exercise[]>([]);
@@ -34,6 +67,10 @@ export const Grammar: React.FC<GrammarProps> = ({ onSaveErrorVocab, selectedTopi
     setUserAnswers({});
     setCheckedAnswers({});
 
+    if (onSetLastActiveTopicId) {
+      onSetLastActiveTopicId(topic.id);
+    }
+
     try {
       const generated = await generateGrammarExercises(topic.name, topic.level);
       setExercises(generated);
@@ -42,6 +79,47 @@ export const Grammar: React.FC<GrammarProps> = ({ onSaveErrorVocab, selectedTopi
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleFinishSet = () => {
+    if (!selectedTopic || exercises.length === 0) {
+      setSelectedTopic(null);
+      return;
+    }
+
+    // Calculate score percentage
+    let correctCount = 0;
+    exercises.forEach((ex, idx) => {
+      const userAns = (userAnswers[idx] || '').trim().toLowerCase();
+      const correctAns = (ex.rispostaCorretta || '').trim().toLowerCase();
+      if (userAns === correctAns) {
+        correctCount += 1;
+      }
+    });
+
+    const scorePercent = Math.round((correctCount / exercises.length) * 100);
+    const prevProg = grammarProgress[selectedTopic.id];
+
+    const isPassed = (prevProg && prevProg.passed) || scorePercent >= 70;
+    const bestScore = Math.max(prevProg?.bestScorePercent || 0, scorePercent);
+
+    const updatedProg: GrammarTopicProgress = {
+      topicId: selectedTopic.id,
+      topicName: selectedTopic.name,
+      exercisesCompleted: (prevProg?.exercisesCompleted || 0) + exercises.length,
+      lastGeneratedAt: Date.now(),
+      currentExerciseSet: exercises,
+      passed: isPassed,
+      bestScorePercent: bestScore,
+      lastScorePercent: scorePercent,
+      attemptsCount: (prevProg?.attemptsCount || 0) + 1,
+    };
+
+    if (onUpdateGrammarProgress) {
+      onUpdateGrammarProgress(updatedProg);
+    }
+
+    setSelectedTopic(null);
   };
 
   const handleRegenerateRequest = () => {
@@ -92,7 +170,7 @@ export const Grammar: React.FC<GrammarProps> = ({ onSaveErrorVocab, selectedTopi
     }
   };
 
-  const filteredVerbs = IRREGULAR_VERBS.filter(
+  const filteredVerbs = irregularVerbs.filter(
     (v) =>
       v.base.toLowerCase().includes(verbFilter.toLowerCase()) ||
       v.translation.toLowerCase().includes(verbFilter.toLowerCase()) ||
@@ -102,7 +180,7 @@ export const Grammar: React.FC<GrammarProps> = ({ onSaveErrorVocab, selectedTopi
   return (
     <div className="p-4 sm:p-6 max-w-4xl mx-auto space-y-6 pb-28">
       {/* Top Tab Switcher */}
-      <div className="bg-white p-1.5 rounded-2xl border border-[#6B7C4F]/20 flex shadow-xs max-w-md mx-auto">
+      <div className="bg-white p-1.5 rounded-2xl border border-[#6B7C4F]/20 flex shadow-xs max-w-lg mx-auto">
         <button
           onClick={() => {
             setActiveTab('syllabus');
@@ -112,19 +190,132 @@ export const Grammar: React.FC<GrammarProps> = ({ onSaveErrorVocab, selectedTopi
             activeTab === 'syllabus' ? 'bg-[#6B7C4F] text-white shadow-xs' : 'text-[#3A2B22]/70 hover:text-[#3A2B22]'
           }`}
         >
-          🌲 Syllabus Grammatica
+          {t ? t('grammar.tabSyllabus') : '🌲 Syllabus Grammatica'}
         </button>
-        <button
-          onClick={() => setActiveTab('irregular')}
-          className={`flex-1 py-2.5 rounded-xl font-bold font-display text-xs transition-all cursor-pointer ${
-            activeTab === 'irregular' ? 'bg-[#6B7C4F] text-white shadow-xs' : 'text-[#3A2B22]/70 hover:text-[#3A2B22]'
-          }`}
-        >
-          📖 Verbi Irregolari
-        </button>
+
+        {specialSections.length > 0 && (
+          <button
+            onClick={() => {
+              setActiveTab('special');
+              setSelectedTopic(null);
+            }}
+            className={`flex-1 py-2.5 rounded-xl font-bold font-display text-xs transition-all cursor-pointer ${
+              activeTab === 'special' ? 'bg-[#6B7C4F] text-white shadow-xs' : 'text-[#3A2B22]/70 hover:text-[#3A2B22]'
+            }`}
+          >
+            {t ? t('grammar.tabSpecial') : '⭐ Sezioni Speciali'}
+          </button>
+        )}
+
+        {isIrregularApplicable && (
+          <button
+            onClick={() => {
+              setActiveTab('irregular');
+              setSelectedTopic(null);
+            }}
+            className={`flex-1 py-2.5 rounded-xl font-bold font-display text-xs transition-all cursor-pointer ${
+              activeTab === 'irregular' ? 'bg-[#6B7C4F] text-white shadow-xs' : 'text-[#3A2B22]/70 hover:text-[#3A2B22]'
+            }`}
+          >
+            {t ? t('grammar.tabIrregular') : '📖 Verbi Irregolari'}
+          </button>
+        )}
       </div>
 
-      {activeTab === 'irregular' ? (
+      {activeTab === 'special' && specialSections.length > 0 ? (
+        <div className="space-y-4">
+          <div className="flex gap-2 overflow-x-auto pb-2">
+            {specialSections.map((sec, idx) => (
+              <button
+                key={sec.id || idx}
+                onClick={() => {
+                  setSelectedSpecialIdx(idx);
+                  setSpecialFilter('');
+                }}
+                className={`px-4 py-2 rounded-xl font-bold text-xs font-display whitespace-nowrap cursor-pointer ${
+                  selectedSpecialIdx === idx
+                    ? 'bg-[#E8802F] text-white shadow-xs'
+                    : 'bg-white text-[#3A2B22]/70 hover:bg-[#F2E8D5]/50 border border-[#6B7C4F]/20'
+                }`}
+              >
+                {sec.nome}
+              </button>
+            ))}
+          </div>
+
+          {(() => {
+            const currentSec = specialSections[selectedSpecialIdx] || specialSections[0];
+            const items = (currentSec?.voci || []).filter(
+              (v) =>
+                v.voce.toLowerCase().includes(specialFilter.toLowerCase()) ||
+                v.significato.toLowerCase().includes(specialFilter.toLowerCase())
+            );
+
+            return (
+              <div className="space-y-4">
+                <div className="bento-card space-y-3">
+                  <span className="badge-leaf">Sezione Speciale</span>
+                  <h2 className="font-bold font-display text-2xl text-[#3A2B22]">{currentSec.nome}</h2>
+                  <input
+                    type="text"
+                    value={specialFilter}
+                    onChange={(e) => setSpecialFilter(e.target.value)}
+                    placeholder="Cerca voce o significato..."
+                    className="w-full p-3.5 rounded-xl bg-[#F2E8D5]/50 border border-[#6B7C4F]/30 focus:outline-none focus:border-[#6B7C4F] text-sm font-medium"
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {items.map((item, idx) => (
+                    <div key={idx} className="bento-card p-4 flex items-start justify-between gap-3 text-xs">
+                      <div className="space-y-1">
+                        <div className="font-bold text-sm text-[#3A2B22] font-display">
+                          {item.voce}
+                        </div>
+                        <div className="text-xs text-[#6B7C4F] font-bold">
+                          {item.significato}
+                        </div>
+                        {item.esempio && (
+                          <div className="text-[11px] text-[#3A2B22]/70 italic mt-1 font-medium">
+                            "{item.esempio}"
+                          </div>
+                        )}
+                      </div>
+                      <button
+                        onClick={() => {
+                          const vocabItem: VocabItem = {
+                            id: `special_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+                            term: item.voce,
+                            translation: item.significato,
+                            sourceLang: 'en',
+                            targetLang: 'it',
+                            synonyms: [],
+                            exampleSource: item.esempio || '',
+                            exampleTranslation: '',
+                            origin: 'special_section',
+                            originDetail: currentSec.nome,
+                            createdAt: Date.now(),
+                            lastReviewedAt: null,
+                            box: 1,
+                            nextReviewAt: Date.now(),
+                            correctStreak: 0,
+                            wrongCount: 0,
+                          };
+                          onSaveErrorVocab(vocabItem);
+                        }}
+                        className="text-xs font-bold text-[#E8802F] hover:underline shrink-0 font-display cursor-pointer bg-[#E8802F]/10 px-2.5 py-1 rounded-lg"
+                        title="Salva in tana"
+                      >
+                        + Tana 📥
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })()}
+        </div>
+      ) : activeTab === 'irregular' ? (
         /* Irregular Verbs Reference List */
         <div className="space-y-4">
           <div className="bento-card space-y-3">
@@ -289,7 +480,7 @@ export const Grammar: React.FC<GrammarProps> = ({ onSaveErrorVocab, selectedTopi
                           </button>
                         ) : (
                           <button
-                            onClick={() => setSelectedTopic(null)}
+                            onClick={handleFinishSet}
                             className="btn-zucca w-full py-3 text-sm mt-2"
                           >
                             Set completato! Torna al Syllabus 🎉
@@ -307,7 +498,7 @@ export const Grammar: React.FC<GrammarProps> = ({ onSaveErrorVocab, selectedTopi
         /* Syllabus Topic List categorized into Bento Grid */
         <div className="space-y-6">
           {categories.map((cat) => {
-            const topics = GRAMMAR_SYLLABUS.filter((t) => t.category === cat);
+            const topics = allTopics.filter((t) => t.category === cat);
             return (
               <div key={cat} className="space-y-3">
                 <div className="flex items-center gap-2 px-1">
@@ -315,28 +506,57 @@ export const Grammar: React.FC<GrammarProps> = ({ onSaveErrorVocab, selectedTopi
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {topics.map((t) => (
-                    <div
-                      key={t.id}
-                      onClick={() => startTopicExercises(t)}
-                      className="bento-card hover:border-[#6B7C4F] cursor-pointer flex items-center justify-between gap-3 group"
-                    >
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-[#C99A3D]/20 text-[#C99A3D] font-display">
-                            {t.level}
-                          </span>
+                  {topics.map((t) => {
+                    const prog = grammarProgress[t.id];
+                    const isPassed = prog?.passed;
+                    const isLastActive = lastActiveTopicId === t.id;
+
+                    return (
+                      <div
+                        key={t.id}
+                        onClick={() => startTopicExercises(t)}
+                        className={`bento-card hover:border-[#6B7C4F] cursor-pointer flex items-center justify-between gap-3 group relative overflow-hidden transition-all ${
+                          isPassed ? 'border-2 border-[#6B7C4F]/60 bg-[#6B7C4F]/5' : ''
+                        }`}
+                      >
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1 flex-wrap">
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-[#C99A3D]/20 text-[#C99A3D] font-display">
+                              {t.level}
+                            </span>
+                            {isPassed && (
+                              <span className="text-[10px] font-extrabold px-2 py-0.5 rounded bg-[#6B7C4F] text-white font-display">
+                                ✓ Superato
+                              </span>
+                            )}
+                            {prog && prog.bestScorePercent !== undefined && (
+                              <span className="text-[10px] font-bold text-[#3A2B22]/60 font-display">
+                                Best: {prog.bestScorePercent}%
+                              </span>
+                            )}
+                          </div>
                           <h3 className="font-bold text-base text-[#3A2B22] font-display truncate">
                             {t.name}
                           </h3>
+                          <p className="text-xs text-[#3A2B22]/70 line-clamp-2 mt-1 font-medium">
+                            {t.summary}
+                          </p>
                         </div>
-                        <p className="text-xs text-[#3A2B22]/70 line-clamp-2 mt-1 font-medium">
-                          {t.summary}
-                        </p>
+
+                        {/* Mascot indicator for last active topic */}
+                        {isLastActive && (
+                          <div className="shrink-0 flex items-center gap-1 bg-[#F2E8D5] px-2 py-1 rounded-xl border border-[#6B7C4F]/30 shadow-xs">
+                            <span className="text-sm">🦝</span>
+                            <span className="text-[10px] font-bold text-[#6B7C4F]">Qui</span>
+                          </div>
+                        )}
+
+                        <span className="text-[#E8802F] font-bold text-xl group-hover:translate-x-1 transition-transform shrink-0">
+                          →
+                        </span>
                       </div>
-                      <span className="text-[#E8802F] font-bold text-xl group-hover:translate-x-1 transition-transform">→</span>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             );

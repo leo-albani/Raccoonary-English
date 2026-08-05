@@ -1,25 +1,75 @@
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Default deny catch-all
+    // Default deny all
     match /{document=**} {
       allow read, write: if false;
     }
 
-    // User documents and subcollections
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return request.auth != null && request.auth.token.email in [
+        'leonardo.albani98@gmail.com'
+      ];
+    }
+
+    // Shared Language Pair Content (read/write for authenticated users)
+    match /sharedContent/{pairId} {
+      allow read, write: if isSignedIn();
+    }
+
+    // UI Translations per spoken language
+    match /translations/{langCode} {
+      allow read, write: if isSignedIn();
+    }
+
+    // User Profile matching
     match /users/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+      allow read, write: if isOwner(userId);
 
+      // Legacy flat subcollections: read-only for owner, no new writes
       match /vocabItems/{itemId} {
-        allow read, write: if request.auth != null && request.auth.uid == userId;
+        allow read: if isOwner(userId);
+        allow write: if false;
       }
-
       match /grammarProgress/{topicId} {
-        allow read, write: if request.auth != null && request.auth.uid == userId;
+        allow read: if isOwner(userId);
+        allow write: if false;
+      }
+      match /readingProgress/{readingId} {
+        allow read: if isOwner(userId);
+        allow write: if false;
+      }
+      match /levelTests/{testId} {
+        allow read: if isOwner(userId);
+        allow write: if false;
       }
 
-      match /readingProgress/{level} {
-        allow read, write: if request.auth != null && request.auth.uid == userId;
+      // Profile documents and nested subcollections
+      match /profiles/{profileId} {
+        allow read, write: if isOwner(userId);
+
+        match /vocabItems/{itemId} {
+          allow read, write: if isOwner(userId);
+        }
+        match /grammarProgress/{topicId} {
+          allow read, write: if isOwner(userId);
+        }
+        match /readingProgress/{readingId} {
+          allow read, write: if isOwner(userId);
+        }
+        match /levelTests/{testId} {
+          allow read, write: if isOwner(userId);
+        }
       }
     }
   }

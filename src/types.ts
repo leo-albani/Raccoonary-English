@@ -6,6 +6,33 @@ export type RaccoonPose = 'greeting' | 'happy' | 'thinking' | 'digging' | 'sleep
 
 export type CEFRLevel = 'A1' | 'A2' | 'B1' | 'B2' | 'C1' | 'C2';
 
+export interface UITranslationSet {
+  langCode: string;
+  strings: Record<string, string>;
+  generatedAt?: number;
+}
+
+export interface UserAccount {
+  userId: string;
+  firstName: string;
+  lastName: string;
+  username: string;
+  nativeLanguage: string; // ISO 639-1 code e.g. "it"
+  activeProfileId: string; // Target language code e.g. "en"
+  createdAt: number;
+}
+
+export interface UserLanguageProfile {
+  targetLanguage: string;
+  createdAt: number;
+  currentLevel?: CEFRLevel | 'Sotto A1';
+  streakCount: number;
+  totalAcorns: number;
+  lastActiveDate: string | null;
+  reminderEnabled: boolean;
+  reminderTime: string;
+}
+
 export interface UserProfile {
   userId: string;
   createdAt: number;
@@ -15,9 +42,34 @@ export interface UserProfile {
   reminderEnabled: boolean;
   reminderTime: string; // HH:mm
   onboardingCompleted: boolean;
+  currentLevel?: CEFRLevel | 'Sotto A1';
+  lastTestDate?: number;
+  firstName?: string;
+  lastName?: string;
+  username?: string;
+  nativeLanguage?: string;
+  activeProfileId?: string;
 }
 
-export type VocabOrigin = 'import' | 'grammar_error' | 'reading_error' | 'exercise_error';
+export type VocabOrigin = 'import' | 'grammar_error' | 'reading_error' | 'exercise_error' | 'translator_search' | 'translator_lookup' | 'level_test_error' | 'special_section';
+
+export interface TranslationResult {
+  lingua_origine: 'it' | 'en';
+  traduzione_principale: string;
+  alternative: string[];
+}
+
+export interface WordDeepDiveResult {
+  definizione: string;
+  nota_uso: string;
+  esempi: { en: string; it: string }[];
+}
+
+export interface PhraseDeepDiveResult {
+  tipo: 'idiomatico' | 'letterale';
+  quando_si_usa: string;
+  esempi: { en: string; it: string }[];
+}
 
 export interface VocabItem {
   id: string;
@@ -28,6 +80,7 @@ export interface VocabItem {
   synonyms: string[];
   exampleSource: string; // clean text without HTML
   exampleTranslation: string;
+  usageNote?: string; // Optional usage note or context (e.g. quando_si_usa)
   origin: VocabOrigin;
   originDetail: string; // topic name or CEFR level
   createdAt: number;
@@ -66,6 +119,29 @@ export interface GrammarTopicProgress {
   exercisesCompleted: number;
   lastGeneratedAt: number | null;
   currentExerciseSet: Exercise[];
+  passed: boolean;
+  bestScorePercent: number;
+  lastScorePercent: number;
+  attemptsCount: number;
+}
+
+export interface LevelTestQuestion {
+  id: string;
+  level: CEFRLevel;
+  tipo: 'multiple_choice' | 'fill_in_blank' | 'sentence_transformation' | 'reading_comprehension';
+  testo_contesto?: string;
+  domanda: string;
+  opzioni?: string[];
+  rispostaCorretta: string;
+}
+
+export interface LevelTestResult {
+  id: string;
+  takenAt: number;
+  resultLevel: CEFRLevel | 'Sotto A1';
+  totalCorrect: number;
+  totalQuestions: number;
+  levelBreakdown: Record<CEFRLevel, { correct: number; total: number; percent: number; passed: boolean }>;
 }
 
 export interface ReadingQuestion {
@@ -114,3 +190,31 @@ export interface AnswerEvaluationResult {
   spiegazione: string;
   synonymAccepted?: boolean;
 }
+
+export interface SpecialSectionItem {
+  voce: string;
+  significato: string;
+  esempio?: string;
+}
+
+export interface SpecialSection {
+  id: string;
+  nome: string;
+  voci: SpecialSectionItem[];
+}
+
+export interface SharedLanguagePairContent {
+  syllabus: {
+    base: GrammarTopic[];
+    intermedio: GrammarTopic[];
+    avanzato: GrammarTopic[];
+  };
+  specialSections: SpecialSection[];
+  irregularVerbsEquivalent: {
+    applicabile: boolean;
+    verbi: IrregularVerb[];
+  };
+  generatedAt: number;
+  generatedBy: 'seed' | 'gemini';
+}
+

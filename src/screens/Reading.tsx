@@ -5,9 +5,10 @@ import { generateReadingText, explainWordInContext } from '../services/gemini';
 
 interface ReadingProps {
   onSaveVocabItem: (item: VocabItem) => void;
+  t?: (key: string, params?: Record<string, string | number>) => string;
 }
 
-export const Reading: React.FC<ReadingProps> = ({ onSaveVocabItem }) => {
+export const Reading: React.FC<ReadingProps> = ({ onSaveVocabItem, t }) => {
   const [currentLevel, setCurrentLevel] = useState<CEFRLevel>('A1');
   const [readingText, setReadingText] = useState<ReadingText | null>(null);
   const [isLoading, setIsLoading] = useState(false);

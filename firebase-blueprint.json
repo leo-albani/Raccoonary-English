@@ -2,88 +2,159 @@
   "entities": {
     "UserProfile": {
       "title": "User Profile",
-      "description": "User profile with streak, acorns, and preferences",
+      "description": "User account profile and streak metadata",
       "type": "object",
       "properties": {
-        "userId": { "type": "string" },
+        "userId": { "type": "string", "maxLength": 128 },
         "createdAt": { "type": "number" },
         "streakCount": { "type": "number" },
-        "lastActiveDate": { "type": "string" },
+        "lastActiveDate": { "type": "string", "maxLength": 32 },
         "totalAcorns": { "type": "number" },
         "reminderEnabled": { "type": "boolean" },
-        "reminderTime": { "type": "string" },
-        "onboardingCompleted": { "type": "boolean" }
+        "reminderTime": { "type": "string", "maxLength": 16 },
+        "onboardingCompleted": { "type": "boolean" },
+        "currentLevel": { "type": "string", "maxLength": 16 },
+        "lastTestDate": { "type": "number" },
+        "firstName": { "type": "string", "maxLength": 128 },
+        "lastName": { "type": "string", "maxLength": 128 },
+        "username": { "type": "string", "maxLength": 128 },
+        "nativeLanguage": { "type": "string", "maxLength": 16 },
+        "activeProfileId": { "type": "string", "maxLength": 16 },
+        "legacyMigrated": { "type": "boolean" }
       },
-      "required": ["userId", "streakCount", "totalAcorns"]
+      "required": ["userId", "createdAt"]
     },
     "VocabItem": {
-      "title": "Vocabulary Item",
-      "description": "Vocabulary item tracked in Leitner Spaced Repetition",
+      "title": "Vocab Item",
+      "description": "Vocabulary item stored in the tanaleitner box system",
       "type": "object",
       "properties": {
-        "term": { "type": "string" },
-        "translation": { "type": "string" },
-        "sourceLang": { "type": "string" },
-        "targetLang": { "type": "string" },
-        "synonyms": {
-          "type": "array",
-          "items": { "type": "string" }
-        },
-        "exampleSource": { "type": "string" },
-        "exampleTranslation": { "type": "string" },
-        "origin": { "type": "string" },
-        "originDetail": { "type": "string" },
+        "id": { "type": "string", "maxLength": 128 },
+        "term": { "type": "string", "maxLength": 1000 },
+        "translation": { "type": "string", "maxLength": 1000 },
+        "sourceLang": { "type": "string", "maxLength": 10 },
+        "targetLang": { "type": "string", "maxLength": 10 },
+        "exampleSource": { "type": "string", "maxLength": 2000 },
+        "exampleTranslation": { "type": "string", "maxLength": 2000 },
+        "origin": { "type": "string", "maxLength": 64 },
+        "originDetail": { "type": "string", "maxLength": 256 },
         "createdAt": { "type": "number" },
         "lastReviewedAt": { "type": "number" },
         "box": { "type": "number" },
         "nextReviewAt": { "type": "number" },
         "correctStreak": { "type": "number" },
-        "wrongCount": { "type": "number" }
+        "wrongCount": { "type": "number" },
+        "usageNote": { "type": "string", "maxLength": 2000 }
       },
-      "required": ["term", "translation", "box", "nextReviewAt"]
+      "required": ["id", "term", "translation", "origin", "createdAt", "box", "nextReviewAt"]
     },
-    "GrammarProgress": {
-      "title": "Grammar Progress",
-      "description": "Progress for a specific grammar topic",
+    "GrammarTopicProgress": {
+      "title": "Grammar Topic Progress",
+      "description": "Progress tracking for individual grammar syllabus topics",
       "type": "object",
       "properties": {
-        "topicName": { "type": "string" },
+        "topicId": { "type": "string", "maxLength": 128 },
+        "topicName": { "type": "string", "maxLength": 256 },
         "exercisesCompleted": { "type": "number" },
         "lastGeneratedAt": { "type": "number" },
-        "currentExerciseSet": {
-          "type": "array",
-          "items": { "type": "object" }
-        }
+        "passed": { "type": "boolean" },
+        "bestScorePercent": { "type": "number" },
+        "lastScorePercent": { "type": "number" },
+        "attemptsCount": { "type": "number" }
       },
-      "required": ["topicName", "exercisesCompleted"]
+      "required": ["topicId", "topicName"]
     },
-    "ReadingProgress": {
-      "title": "Reading Progress",
-      "description": "Progress for a CEFR reading level",
+    "LevelTestResult": {
+      "title": "Level Test Result",
+      "description": "Cambridge-style CEFR placement test history record",
       "type": "object",
       "properties": {
-        "textsCompleted": { "type": "number" },
-        "lastTextId": { "type": "string" }
+        "id": { "type": "string", "maxLength": 128 },
+        "takenAt": { "type": "number" },
+        "resultLevel": { "type": "string", "maxLength": 16 },
+        "totalCorrect": { "type": "number" },
+        "totalQuestions": { "type": "number" }
       },
-      "required": ["textsCompleted"]
+      "required": ["id", "takenAt", "resultLevel", "totalCorrect", "totalQuestions"]
+    },
+    "UserLanguageProfile": {
+      "title": "User Language Profile",
+      "description": "Language-specific user progress and metrics profile",
+      "type": "object",
+      "properties": {
+        "targetLanguage": { "type": "string", "maxLength": 16 },
+        "createdAt": { "type": "number" },
+        "currentLevel": { "type": "string", "maxLength": 16 },
+        "streakCount": { "type": "number" },
+        "totalAcorns": { "type": "number" },
+        "lastActiveDate": { "type": "string", "maxLength": 32 },
+        "reminderEnabled": { "type": "boolean" },
+        "reminderTime": { "type": "string", "maxLength": 16 }
+      },
+      "required": ["targetLanguage", "createdAt", "streakCount", "totalAcorns"]
+    },
+    "SharedLanguagePairContent": {
+      "title": "Shared Language Pair Content",
+      "description": "Shared grammar syllabus, special sections, and irregular verbs per language pair",
+      "type": "object",
+      "properties": {
+        "generatedAt": { "type": "number" },
+        "generatedBy": { "type": "string", "maxLength": 32 }
+      },
+      "required": ["generatedAt", "generatedBy"]
+    },
+    "UITranslation": {
+      "title": "UI Translation",
+      "description": "Localized interface strings for a spoken language",
+      "type": "object",
+      "properties": {
+        "langCode": { "type": "string", "maxLength": 16 },
+        "strings": { "type": "object" },
+        "generatedAt": { "type": "number" }
+      },
+      "required": ["langCode", "strings"]
     }
   },
   "firestore": {
+    "/translations/{langCode}": {
+      "schema": "UITranslation",
+      "description": "Interface translation strings per language"
+    },
+    "/sharedContent/{pairId}": {
+      "schema": "SharedLanguagePairContent",
+      "description": "Shared language pair syllabus and reference materials"
+    },
     "/users/{userId}": {
       "schema": "UserProfile",
       "description": "User profile document"
     },
+    "/users/{userId}/profiles/{profileId}": {
+      "schema": "UserLanguageProfile",
+      "description": "Language target profile"
+    },
+    "/users/{userId}/profiles/{profileId}/vocabItems/{itemId}": {
+      "schema": "VocabItem",
+      "description": "Language profile vocabulary collection"
+    },
+    "/users/{userId}/profiles/{profileId}/grammarProgress/{topicId}": {
+      "schema": "GrammarTopicProgress",
+      "description": "Language profile grammar topic progress subcollection"
+    },
+    "/users/{userId}/profiles/{profileId}/levelTests/{testId}": {
+      "schema": "LevelTestResult",
+      "description": "Language profile CEFR level test attempt history"
+    },
     "/users/{userId}/vocabItems/{itemId}": {
       "schema": "VocabItem",
-      "description": "User vocabulary items"
+      "description": "User vocabulary collection"
     },
     "/users/{userId}/grammarProgress/{topicId}": {
-      "schema": "GrammarProgress",
-      "description": "User grammar topic progress"
+      "schema": "GrammarTopicProgress",
+      "description": "User grammar topic progress subcollection"
     },
-    "/users/{userId}/readingProgress/{level}": {
-      "schema": "ReadingProgress",
-      "description": "User reading progress"
+    "/users/{userId}/levelTests/{testId}": {
+      "schema": "LevelTestResult",
+      "description": "User CEFR level test attempt history"
     }
   }
 }

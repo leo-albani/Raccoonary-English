@@ -1,26 +1,66 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Mascot } from '../mascot/Mascot';
-import { UserProfile, VocabItem } from '../types';
+import { UserProfile, VocabItem, SharedLanguagePairContent } from '../types';
 import { GRAMMAR_SYLLABUS } from '../data/grammarSyllabus';
+import { Translator } from '../components/Translator';
+import { TARGET_LANGUAGES, NATIVE_LANGUAGES } from '../data/languages';
 
 interface HomeProps {
   user: UserProfile;
   vocabItems: VocabItem[];
+  userProfiles?: string[];
+  sharedContent?: SharedLanguagePairContent | null;
+  onSwitchProfile?: (targetLanguage: string) => void;
+  onAddNewLanguage?: (targetLanguage: string) => void;
   onStartReview: () => void;
   onNavigate: (tab: 'memorize' | 'grammar' | 'reading' | 'import' | 'settings') => void;
   onSelectGrammarTopic: (topicId: string) => void;
+  onAddVocabItem: (item: VocabItem) => void;
+  onDeleteItem: (itemId: string) => void;
+  onOpenLevelTest: () => void;
+  t?: (key: string, params?: Record<string, string | number>) => string;
 }
 
 export const Home: React.FC<HomeProps> = ({
   user,
   vocabItems,
+  userProfiles = ['en'],
+  sharedContent,
+  onSwitchProfile,
+  onAddNewLanguage,
   onStartReview,
   onNavigate,
   onSelectGrammarTopic,
+  onAddVocabItem,
+  onDeleteItem,
+  onOpenLevelTest,
+  t,
 }) => {
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const [showAddModal, setShowAddModal] = useState(false);
+
+  const activeLang = TARGET_LANGUAGES.find((l) => l.code === (user.activeProfileId || 'en')) || {
+    code: 'en',
+    name: 'Inglese',
+    flag: '🇬🇧',
+  };
+  const availableLanguages = TARGET_LANGUAGES.filter((l) => !userProfiles.includes(l.code));
+
   const now = Date.now();
   const dueItems = vocabItems.filter((i) => i.nextReviewAt <= now);
   const totalCount = vocabItems.length;
+
+  // Level Test calculation for card
+  let levelTestCardSub = 'Fai il test Cambridge di 35 domande per scoprire il tuo livello CEFR';
+  if (user.currentLevel) {
+    if (user.lastTestDate) {
+      const diffDays = Math.floor((now - user.lastTestDate) / (1000 * 60 * 60 * 24));
+      const daysLabel = diffDays === 0 ? 'oggi' : diffDays === 1 ? '1 giorno fa' : `${diffDays} giorni fa`;
+      levelTestCardSub = `Ultimo test effettuato ${daysLabel}`;
+    } else {
+      levelTestCardSub = 'Test completato recentemente';
+    }
+  }
 
   // Contextual greeting
   const hour = new Date().getHours();
@@ -38,7 +78,7 @@ export const Home: React.FC<HomeProps> = ({
   return (
     <div className="pb-28 pt-4 px-4 sm:px-6 max-w-5xl mx-auto space-y-6">
       {/* Header Section */}
-      <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white/60 backdrop-blur-md p-4 sm:p-5 rounded-3xl border border-[#6B7C4F]/20 shadow-xs">
+      <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white/60 backdrop-blur-md p-4 sm:p-5 rounded-3xl border border-[#6B7C4F]/20 shadow-xs relative">
         <div className="flex items-center gap-4">
           <div className="relative shrink-0">
             <div className="w-16 h-16 sm:w-20 sm:h-20 bg-[#6B7C4F]/10 rounded-full border-2 border-[#3A2B22] flex items-center justify-center overflow-hidden shadow-xs">
@@ -46,10 +86,81 @@ export const Home: React.FC<HomeProps> = ({
             </div>
           </div>
           <div>
-            <span className="text-xs font-bold uppercase tracking-wider text-[#6B7C4F] font-display">
-              {timeGreeting}, Esploratore
-            </span>
-            <h1 className="text-2xl sm:text-3xl font-bold font-display text-[#3A2B22] leading-tight">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-xs font-bold uppercase tracking-wider text-[#6B7C4F] font-display">
+                {timeGreeting}, Esploratore
+              </span>
+
+              {/* Language Switcher Pill */}
+              <div className="relative">
+                <button
+                  onClick={() => setShowProfileMenu((prev) => !prev)}
+                  className="flex items-center gap-1.5 bg-white px-2.5 py-1 rounded-full border border-[#6B7C4F]/30 hover:border-[#6B7C4F] shadow-xs text-[#3A2B22] font-bold text-xs cursor-pointer transition-all"
+                  title="Cambia o aggiungi lingua"
+                >
+                  <span>{activeLang.flag}</span>
+                  <span>{activeLang.name}</span>
+                  <span className="text-[#6B7C4F] text-[10px]">▾</span>
+                </button>
+
+                {/* Dropdown Menu */}
+                {showProfileMenu && (
+                  <>
+                    <div className="fixed inset-0 z-30" onClick={() => setShowProfileMenu(false)} />
+                    <div className="absolute top-full left-0 mt-2 w-60 bg-white rounded-2xl border-2 border-[#6B7C4F]/30 shadow-xl p-2 z-40 space-y-1 animate-in fade-in zoom-in-95 duration-150">
+                      <div className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-gray-400">
+                        I tuoi profili lingua
+                      </div>
+                      {userProfiles.map((code) => {
+                        const lang = TARGET_LANGUAGES.find((l) => l.code === code) || {
+                          code,
+                          name: code,
+                          flag: '🌐',
+                        };
+                        const isActive = code === (user.activeProfileId || 'en');
+                        return (
+                          <button
+                            key={code}
+                            onClick={() => {
+                              setShowProfileMenu(false);
+                              if (!isActive && onSwitchProfile) onSwitchProfile(code);
+                            }}
+                            className={`w-full text-left px-3 py-2 rounded-xl flex items-center justify-between font-bold text-xs transition-all cursor-pointer ${
+                              isActive
+                                ? 'bg-[#6B7C4F]/15 text-[#3A2B22] border border-[#6B7C4F]/40'
+                                : 'hover:bg-gray-100 text-gray-700'
+                            }`}
+                          >
+                            <span className="flex items-center gap-2">
+                              <span className="text-base">{lang.flag}</span>
+                              <span>{lang.name}</span>
+                            </span>
+                            {isActive && <span className="text-[#6B7C4F] font-black">✓</span>}
+                          </button>
+                        );
+                      })}
+
+                      {availableLanguages.length > 0 && (
+                        <div className="pt-1 mt-1 border-t border-gray-100">
+                          <button
+                            onClick={() => {
+                              setShowProfileMenu(false);
+                              setShowAddModal(true);
+                            }}
+                            className="w-full text-left px-3 py-2 rounded-xl flex items-center gap-2 font-bold text-xs text-[#E8802F] hover:bg-[#E8802F]/10 transition-all cursor-pointer border border-dashed border-[#E8802F]/40"
+                          >
+                            <span className="text-sm">➕</span>
+                            <span>Aggiungi lingua</span>
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+
+            <h1 className="text-2xl sm:text-3xl font-bold font-display text-[#3A2B22] leading-tight mt-0.5">
               Tana di Raccoonary
             </h1>
             <p className="text-xs sm:text-sm text-[#3A2B22]/75 font-medium mt-0.5">
@@ -76,6 +187,50 @@ export const Home: React.FC<HomeProps> = ({
           </div>
         </div>
       </header>
+
+      {/* Fixed Search / Translator Bar at Top of Home */}
+      <Translator
+        vocabItems={vocabItems}
+        onAddVocabItem={onAddVocabItem}
+        onDeleteItem={onDeleteItem}
+        nativeLang={user.nativeLanguage || 'it'}
+        targetLang={user.activeProfileId || 'en'}
+        nativeName={NATIVE_LANGUAGES.find((l) => l.code === (user.nativeLanguage || 'it'))?.name || 'Italiano'}
+        targetName={activeLang.name}
+        t={t}
+      />
+
+      {/* Compact Level Test Card */}
+      <div
+        onClick={onOpenLevelTest}
+        className="bento-card p-4 sm:p-5 bg-gradient-to-r from-[#C99A3D]/15 via-white to-[#6B7C4F]/15 border-2 border-[#C99A3D]/40 hover:border-[#C99A3D] cursor-pointer flex items-center justify-between gap-4 transition-all"
+      >
+        <div className="flex items-center gap-3.5 min-w-0">
+          <div className="w-12 h-12 rounded-2xl bg-[#C99A3D] text-white flex items-center justify-center font-extrabold text-xl font-display shadow-xs shrink-0">
+            🎯
+          </div>
+          <div className="min-w-0">
+            <div className="flex items-center gap-2">
+              <span className="badge-leaf bg-[#C99A3D] text-white">Test Cambridge</span>
+              {user.currentLevel && (
+                <span className="text-xs font-bold text-[#E8802F] font-display">
+                  Livello attuale: {user.currentLevel}
+                </span>
+              )}
+            </div>
+            <h3 className="font-bold text-base text-[#3A2B22] font-display mt-0.5 truncate">
+              {user.currentLevel ? `Il tuo livello: ${user.currentLevel}` : 'Non hai ancora fatto il test'}
+            </h3>
+            <p className="text-xs text-[#3A2B22]/70 font-medium truncate mt-0.5">
+              {levelTestCardSub}
+            </p>
+          </div>
+        </div>
+
+        <button className="btn-zucca py-2.5 px-4 text-xs font-bold shrink-0">
+          {user.currentLevel ? 'Rifai il Test 🔄' : 'Inizia Test 🎯'}
+        </button>
+      </div>
 
       {/* Main Bento Grid */}
       <div className="grid grid-cols-1 md:grid-cols-12 gap-5">
@@ -234,34 +389,86 @@ export const Home: React.FC<HomeProps> = ({
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {GRAMMAR_SYLLABUS.slice(0, 4).map((topic, index) => (
-              <div
-                key={topic.id}
-                onClick={() => onSelectGrammarTopic(topic.id)}
-                className="flex items-center gap-3 p-3 rounded-2xl border border-[#6B7C4F]/15 hover:border-[#6B7C4F] hover:bg-[#F2E8D5]/30 transition-all cursor-pointer bg-white shadow-2xs"
-              >
-                <div className="w-9 h-9 rounded-full bg-[#6B7C4F] text-white flex items-center justify-center font-bold text-xs font-display shadow-xs shrink-0">
-                  {index + 1}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-[#C99A3D]/20 text-[#C99A3D]">
-                      {topic.level}
-                    </span>
-                    <span className="font-bold text-xs text-[#3A2B22] font-display truncate">
-                      {topic.name}
-                    </span>
+            {(() => {
+              const displaySyllabus = sharedContent?.syllabus
+                ? [
+                    ...(sharedContent.syllabus.base || []),
+                    ...(sharedContent.syllabus.intermedio || []),
+                    ...(sharedContent.syllabus.avanzato || []),
+                  ]
+                : GRAMMAR_SYLLABUS;
+
+              return displaySyllabus.slice(0, 4).map((topic, index) => (
+                <div
+                  key={topic.id}
+                  onClick={() => onSelectGrammarTopic(topic.id)}
+                  className="flex items-center gap-3 p-3 rounded-2xl border border-[#6B7C4F]/15 hover:border-[#6B7C4F] hover:bg-[#F2E8D5]/30 transition-all cursor-pointer bg-white shadow-2xs"
+                >
+                  <div className="w-9 h-9 rounded-full bg-[#6B7C4F] text-white flex items-center justify-center font-bold text-xs font-display shadow-xs shrink-0">
+                    {index + 1}
                   </div>
-                  <p className="text-[11px] text-[#3A2B22]/65 truncate mt-0.5 font-medium">
-                    {topic.summary}
-                  </p>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-[#C99A3D]/20 text-[#C99A3D]">
+                        {topic.level}
+                      </span>
+                      <span className="font-bold text-xs text-[#3A2B22] font-display truncate">
+                        {topic.name}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-[#3A2B22]/65 truncate mt-0.5 font-medium">
+                      {topic.summary}
+                    </p>
+                  </div>
+                  <span className="text-[#6B7C4F] text-base shrink-0">›</span>
                 </div>
-                <span className="text-[#6B7C4F] text-base shrink-0">›</span>
-              </div>
-            ))}
+              ));
+            })()}
           </div>
         </div>
       </div>
+
+      {/* Add Language Modal */}
+      {showAddModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-in fade-in">
+          <div className="bg-[#F2E8D5] rounded-3xl p-6 max-w-md w-full border-2 border-[#3A2B22] shadow-2xl space-y-5 relative">
+            <button
+              onClick={() => setShowAddModal(false)}
+              className="absolute top-4 right-4 text-gray-400 hover:text-[#3A2B22] font-bold text-xl cursor-pointer"
+            >
+              ✕
+            </button>
+
+            <div className="space-y-1">
+              <h2 className="text-2xl font-bold font-display text-[#3A2B22]">
+                Aggiungi una lingua 🌍
+              </h2>
+              <p className="text-xs sm:text-sm text-[#3A2B22]/75 font-medium">
+                Scegli la nuova lingua che desideri imparare o esercitare:
+              </p>
+            </div>
+
+            <div className="space-y-2.5 max-h-72 overflow-y-auto pr-1">
+              {availableLanguages.map((lang) => (
+                <button
+                  key={lang.code}
+                  onClick={() => {
+                    setShowAddModal(false);
+                    if (onAddNewLanguage) onAddNewLanguage(lang.code);
+                  }}
+                  className="w-full p-3.5 bg-white hover:bg-[#6B7C4F]/10 rounded-2xl border-2 border-gray-200 hover:border-[#6B7C4F] flex items-center justify-between font-bold text-[#3A2B22] shadow-xs transition-all cursor-pointer"
+                >
+                  <div className="flex items-center gap-3">
+                    <span className="text-2xl">{lang.flag}</span>
+                    <span className="text-base font-display">{lang.name}</span>
+                  </div>
+                  <span className="text-xs font-bold text-[#6B7C4F] font-display">Inizia →</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

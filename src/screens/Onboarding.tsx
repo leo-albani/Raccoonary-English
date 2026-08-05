@@ -3,32 +3,34 @@ import { Mascot } from '../mascot/Mascot';
 import { RaccoonPose } from '../types';
 
 interface OnboardingProps {
-  onComplete: (choice: 'import' | 'home') => void;
+  onComplete: (choice: 'import' | 'home' | 'level_test') => void;
+  skipSlides?: boolean;
+  t?: (key: string, params?: Record<string, string | number>) => string;
 }
 
-export const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
+export const Onboarding: React.FC<OnboardingProps> = ({ onComplete, skipSlides = false, t }) => {
   const [currentSlide, setCurrentSlide] = useState(0);
-  const [showStartingChoice, setShowStartingChoice] = useState(false);
+  const [showStartingChoice, setShowStartingChoice] = useState(skipSlides);
   const [notificationAsked, setNotificationAsked] = useState(false);
 
   const slides: { title: string; subtitle: string; pose: RaccoonPose; speech: string }[] = [
     {
-      title: 'Non perdi più una parola',
-      subtitle: 'Quello che cerchi o sbagli finisce in tana. Te lo ripropongo al momento giusto.',
+      title: t ? t('onboarding.slide1.title') : 'Non perdi più una parola',
+      subtitle: t ? t('onboarding.slide1.subtitle') : 'Quello che cerchi o sbagli finisce in tana. Te lo ripropongo al momento giusto.',
       pose: 'greeting',
-      speech: 'Ciao, sono il tuo procione. Le parole che ti sfuggono le tengo io.',
+      speech: t ? t('onboarding.slide1.speech') : 'Ciao, sono il tuo procione. Le parole che ti sfuggono le tengo io.',
     },
     {
-      title: 'Grammatica senza il tono da scuola',
-      subtitle: 'Argomenti, phrasal verbs, falsi amici. Un po\' alla volta, con esercizi che rinnovi quando vuoi.',
+      title: t ? t('onboarding.slide2.title') : 'Grammatica senza il tono da scuola',
+      subtitle: t ? t('onboarding.slide2.subtitle') : 'Argomenti, phrasal verbs, falsi amici. Un po\' alla volta, con esercizi che rinnovi quando vuoi.',
       pose: 'happy',
-      speech: 'Eserciti solo quello che ti serve davvero.',
+      speech: t ? t('onboarding.slide2.speech') : 'Eserciti solo quello che ti serve davvero.',
     },
     {
-      title: 'Testi al tuo livello',
-      subtitle: 'Da A1 a C2, in stile Cambridge. Quello che non torna finisce comunque in tana.',
+      title: t ? t('onboarding.slide3.title') : 'Testi al tuo livello',
+      subtitle: t ? t('onboarding.slide3.subtitle') : 'Da A1 a C2, in stile Cambridge. Quello che non torna finisce comunque in tana.',
       pose: 'reading',
-      speech: 'Letture interattive con traduzioni a portata di tap.',
+      speech: t ? t('onboarding.slide3.speech') : 'Letture interattive con traduzioni a portata di tap.',
     },
   ];
 
@@ -53,7 +55,7 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
     setNotificationAsked(true);
   };
 
-  const handleSelectPath = (choice: 'import' | 'home') => {
+  const handleSelectPath = (choice: 'import' | 'home' | 'level_test') => {
     if (!notificationAsked && 'Notification' in window && Notification.permission === 'default') {
       requestNotificationPermission().then(() => onComplete(choice));
     } else {
@@ -115,10 +117,18 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
             Puoi importare un tuo file di parole oppure esplorare subito la tana.
           </p>
 
-          <div className="w-full max-w-md space-y-4 px-2">
+          <div className="w-full max-w-md space-y-3 px-2">
+            <button
+              onClick={() => handleSelectPath('level_test')}
+              className="btn-zucca w-full py-3.5 text-sm sm:text-base flex items-center justify-center gap-3"
+            >
+              <span className="text-xl">🎯</span>
+              <span>Scopri il mio livello con un test</span>
+            </button>
+
             <button
               onClick={() => handleSelectPath('import')}
-              className="btn-zucca w-full py-4 text-base flex items-center justify-center gap-3"
+              className="w-full py-3.5 px-6 rounded-2xl bg-[#C99A3D] text-white font-bold font-display text-sm sm:text-base shadow-sm hover:bg-[#C99A3D]/90 cursor-pointer transition-all flex items-center justify-center gap-3"
             >
               <span className="text-xl">📥</span>
               <span>Ho un file di parole da importare</span>
@@ -126,10 +136,10 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
 
             <button
               onClick={() => handleSelectPath('home')}
-              className="w-full py-4 px-6 rounded-2xl bg-[#6B7C4F] text-white font-bold font-display text-base shadow-md hover:bg-[#6B7C4F]/90 cursor-pointer transition-all flex items-center justify-center gap-3"
+              className="w-full py-3.5 px-6 rounded-2xl bg-[#6B7C4F] text-white font-bold font-display text-sm sm:text-base shadow-sm hover:bg-[#6B7C4F]/90 cursor-pointer transition-all flex items-center justify-center gap-3"
             >
               <span className="text-xl">🏠</span>
-              <span>Entra in tana</span>
+              <span>Parto da zero / Entra in tana</span>
             </button>
           </div>
         </div>

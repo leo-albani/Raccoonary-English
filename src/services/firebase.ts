@@ -1,5 +1,13 @@
 import { initializeApp, getApps } from 'firebase/app';
-import { getAuth, signInAnonymously, onAuthStateChanged, User } from 'firebase/auth';
+import {
+  getAuth,
+  signInAnonymously,
+  GoogleAuthProvider,
+  signInWithPopup,
+  linkWithPopup,
+  signOut,
+  User,
+} from 'firebase/auth';
 import {
   getFirestore,
   doc,
@@ -8,63 +16,415 @@ import {
   collection,
   getDocs,
   deleteDoc,
-  onSnapshot,
+  getDocFromServer,
 } from 'firebase/firestore';
-import { UserProfile, VocabItem, GrammarTopicProgress, ReadingProgress } from '../types';
+import { UserProfile, UserAccount, VocabItem, GrammarTopicProgress, SharedLanguagePairContent, UITranslationSet } from '../types';
+import { SEED_IT_EN_CONTENT } from '../data/sharedContentSeed';
+import { NATIVE_LANGUAGES, TARGET_LANGUAGES } from '../data/languages';
+import { IT_TRANSLATIONS } from '../i18n/translations';
+import firebaseConfig from '../../firebase-applet-config.json';
 
 // Storage keys for local resilience
 const LOCAL_USER_KEY = 'raccoonary_local_user';
 const LOCAL_VOCAB_KEY = 'raccoonary_local_vocab';
 const LOCAL_GRAMMAR_KEY = 'raccoonary_local_grammar';
-const LOCAL_READING_KEY = 'raccoonary_local_reading';
 
-let dbInstance: any = null;
-let authInstance: any = null;
-let isFirebaseInitialized = false;
-
-// Safe lazy Firebase setup
-export function initFirebase() {
-  if (isFirebaseInitialized) return { db: dbInstance, auth: authInstance };
-
-  try {
-    // Check if firebase-applet-config.json exists dynamically or standard config
-    const configStr = (import.meta as any).env?.VITE_FIREBASE_CONFIG;
-    if (configStr) {
-      const config = JSON.parse(configStr);
-      const app = getApps().length === 0 ? initializeApp(config) : getApps()[0];
-      dbInstance = getFirestore(app, config.firestoreDatabaseId);
-      authInstance = getAuth(app);
-      isFirebaseInitialized = true;
-    }
-  } catch (e) {
-    console.log('Firebase config not loaded, operating in local offline mode.');
-  }
-
-  return { db: dbInstance, auth: authInstance };
+// Error Handling Infrastructure
+export enum OperationType {
+  CREATE = 'create',
+  UPDATE = 'update',
+  DELETE = 'delete',
+  LIST = 'list',
+  GET = 'get',
+  WRITE = 'write',
 }
 
-// Ensure anonymous sign-in if Firebase is present
-export async function ensureAuth(): Promise<string> {
-  const { auth } = initFirebase();
-  if (auth) {
-    try {
-      if (!auth.currentUser) {
-        const cred = await signInAnonymously(auth);
-        return cred.user.uid;
-      }
-      return auth.currentUser.uid;
-    } catch (e) {
-      console.warn('Firebase auth failed, using local user ID:', e);
+export interface FirestoreErrorInfo {
+  error: string;
+  operationType: OperationType;
+  path: string | null;
+  authInfo: {
+    userId?: string | null;
+    email?: string | null;
+    emailVerified?: boolean | null;
+    isAnonymous?: boolean | null;
+    tenantId?: string | null;
+    providerInfo?: {
+      providerId?: string | null;
+      email?: string | null;
+    }[];
+  };
+}
+
+// App & Service Initialization
+const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
+export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
+export const auth = getAuth(app);
+
+export function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
+  const errInfo: FirestoreErrorInfo = {
+    error: error instanceof Error ? error.message : String(error),
+    authInfo: {
+      userId: auth.currentUser?.uid,
+      email: auth.currentUser?.email,
+      emailVerified: auth.currentUser?.emailVerified,
+      isAnonymous: auth.currentUser?.isAnonymous,
+      tenantId: auth.currentUser?.tenantId,
+      providerInfo: auth.currentUser?.providerData?.map((provider) => ({
+        providerId: provider.providerId,
+        email: provider.email,
+      })) || [],
+    },
+    operationType,
+    path,
+  };
+  console.error('Firestore Error: ', JSON.stringify(errInfo));
+  throw new Error(JSON.stringify(errInfo));
+}
+
+// Connection Validation
+async function testConnection() {
+  try {
+    await getDocFromServer(doc(db, 'test', 'connection'));
+  } catch (error) {
+    if (error instanceof Error && error.message.includes('the client is offline')) {
+      console.error('Please check your Firebase configuration.');
     }
   }
+}
+testConnection();
 
-  // Fallback to local storage user ID
+export function initFirebase() {
+  return { db, auth };
+}
+
+// Ensure anonymous auth
+export async function ensureAuth(): Promise<string> {
+  try {
+    if (!auth.currentUser) {
+      const cred = await signInAnonymously(auth);
+      return cred.user.uid;
+    }
+    return auth.currentUser.uid;
+  } catch (e) {
+    console.warn('Firebase auth failed, using local user ID:', e);
+  }
+
   let localId = localStorage.getItem('raccoonary_uid');
   if (!localId) {
     localId = 'local_user_' + Math.random().toString(36).substring(2, 9);
     localStorage.setItem('raccoonary_uid', localId);
   }
   return localId;
+}
+
+export async function loginWithGoogle(): Promise<{ user: User; isLinked: boolean; warningMessage?: string }> {
+  const provider = new GoogleAuthProvider();
+  const currentUser = auth.currentUser;
+
+  if (currentUser && currentUser.isAnonymous) {
+    try {
+      const cred = await linkWithPopup(currentUser, provider);
+      return { user: cred.user, isLinked: true };
+    } catch (error: any) {
+      if (error?.code === 'auth/credential-already-in-use') {
+        const warningMessage =
+          'Questo account Google è già collegato a un profilo Raccoonary esistente su un altro dispositivo. Ti sto portando lì — i dati di questa sessione locale non anonima non verranno uniti automaticamente.';
+        const result = await signInWithPopup(auth, provider);
+        return { user: result.user, isLinked: false, warningMessage };
+      }
+      throw translateAuthError(error);
+    }
+  } else {
+    try {
+      const result = await signInWithPopup(auth, provider);
+      return { user: result.user, isLinked: false };
+    } catch (error: any) {
+      throw translateAuthError(error);
+    }
+  }
+}
+
+function translateAuthError(error: any): Error {
+  const code = error?.code || '';
+  if (code === 'auth/popup-closed-by-user' || code === 'auth/cancelled-popup-request') {
+    return new Error('Accesso annullato. Nessun problema, puoi riprovare quando vuoi! 🦝');
+  }
+  if (code === 'auth/popup-blocked') {
+    return new Error('Il browser ha bloccato la finestra di accesso. Abilita i popup per proseguire. 🦝');
+  }
+  if (code === 'auth/network-request-failed') {
+    return new Error('Sembra che ci sia un problema di connessione. Controlla la rete e riprova! 🦝');
+  }
+  return new Error(error?.message || 'Impossibile completare l\'accesso con Google in questo momento. Riprova più tardi.');
+}
+
+export async function logoutUser(): Promise<void> {
+  await signOut(auth);
+}
+
+// ------------------- ADMIN UTILS -------------------
+export const ADMIN_EMAILS = ['leonardo.albani98@gmail.com'];
+
+export function isUserAdmin(email?: string | null): boolean {
+  if (!email) return false;
+  return ADMIN_EMAILS.includes(email.toLowerCase());
+}
+
+// ------------------- USER ACCOUNT & PROFILES -------------------
+export async function getUserAccount(userId: string): Promise<UserAccount | null> {
+  if (db && !userId.startsWith('local_user_')) {
+    const path = `users/${userId}`;
+    try {
+      const docRef = doc(db, 'users', userId);
+      const snap = await getDoc(docRef);
+      if (snap.exists()) {
+        const data = snap.data();
+        if (
+          data.firstName &&
+          data.lastName &&
+          data.username &&
+          data.nativeLanguage &&
+          data.activeProfileId
+        ) {
+          return {
+            userId,
+            firstName: data.firstName,
+            lastName: data.lastName,
+            username: data.username,
+            nativeLanguage: data.nativeLanguage,
+            activeProfileId: data.activeProfileId,
+            createdAt: data.createdAt || Date.now(),
+          };
+        }
+      }
+    } catch (e) {
+      console.warn('Error fetching user account doc:', e);
+    }
+  }
+  return null;
+}
+
+export async function checkUserHasLegacyData(userId: string): Promise<boolean> {
+  // Check local storage first
+  const localVocab = getLocalVocabItems();
+  if (localVocab && localVocab.length > 0) {
+    return true;
+  }
+
+  if (db && !userId.startsWith('local_user_')) {
+    const path = `users/${userId}/vocabItems`;
+    try {
+      const colRef = collection(db, 'users', userId, 'vocabItems');
+      const snap = await getDocs(colRef);
+      if (!snap.empty) {
+        return true;
+      }
+    } catch (e) {
+      console.warn('Error checking legacy vocab items:', e);
+    }
+  }
+  return false;
+}
+
+export async function migrateLegacyDataIfNeeded(userId: string, activeProfileId: string): Promise<boolean> {
+  if (!db || userId.startsWith('local_user_')) return false;
+
+  try {
+    const userDocRef = doc(db, 'users', userId);
+    const userSnap = await getDoc(userDocRef);
+    if (!userSnap.exists()) return false;
+
+    const userData = userSnap.data();
+    if (userData.legacyMigrated) {
+      return false; // Already migrated
+    }
+
+    // Check if old vocabItems collection has documents
+    const oldVocabRef = collection(db, 'users', userId, 'vocabItems');
+    const oldVocabSnap = await getDocs(oldVocabRef);
+
+    // Check if new profile vocabItems collection is empty
+    const newVocabRef = collection(db, 'users', userId, 'profiles', activeProfileId, 'vocabItems');
+    const newVocabSnap = await getDocs(newVocabRef);
+
+    if (oldVocabSnap.empty) {
+      // Mark as legacyMigrated so we don't check again
+      await setDoc(userDocRef, { legacyMigrated: true }, { merge: true });
+      return false;
+    }
+
+    if (!newVocabSnap.empty) {
+      // Profile already populated
+      await setDoc(userDocRef, { legacyMigrated: true }, { merge: true });
+      return false;
+    }
+
+    // Migration step 1 & 2: Copy subcollections (vocabItems, grammarProgress, readingProgress, levelTests)
+    const subcollections = ['vocabItems', 'grammarProgress', 'readingProgress', 'levelTests'];
+    for (const sub of subcollections) {
+      const oldColRef = collection(db, 'users', userId, sub);
+      const oldSnap = await getDocs(oldColRef);
+      for (const oldDocSnap of oldSnap.docs) {
+        const newDocRef = doc(db, 'users', userId, 'profiles', activeProfileId, sub, oldDocSnap.id);
+        await setDoc(newDocRef, oldDocSnap.data(), { merge: true });
+      }
+    }
+
+    // Migration step 3: Copy old metrics from root doc to target profile doc
+    const profileRef = doc(db, 'users', userId, 'profiles', activeProfileId);
+    const profileUpdates: Record<string, any> = {};
+    if (userData.streakCount !== undefined) profileUpdates.streakCount = userData.streakCount;
+    if (userData.totalAcorns !== undefined) profileUpdates.totalAcorns = userData.totalAcorns;
+    if (userData.currentLevel !== undefined) profileUpdates.currentLevel = userData.currentLevel;
+    if (userData.reminderEnabled !== undefined) profileUpdates.reminderEnabled = userData.reminderEnabled;
+    if (userData.reminderTime !== undefined) profileUpdates.reminderTime = userData.reminderTime;
+    if (userData.lastActiveDate !== undefined) profileUpdates.lastActiveDate = userData.lastActiveDate;
+    if (userData.lastTestDate !== undefined) profileUpdates.lastTestDate = userData.lastTestDate;
+    if (userData.onboardingCompleted !== undefined) profileUpdates.onboardingCompleted = userData.onboardingCompleted;
+
+    if (Object.keys(profileUpdates).length > 0) {
+      await setDoc(profileRef, profileUpdates, { merge: true });
+    }
+
+    // Migration step 4: Mark root user doc as legacyMigrated
+    await setDoc(userDocRef, { legacyMigrated: true }, { merge: true });
+
+    return true;
+  } catch (e) {
+    console.error('Error migrating legacy data:', e);
+    return false;
+  }
+}
+
+export async function createUserAccountAndProfile(
+  userId: string,
+  data: {
+    firstName: string;
+    lastName: string;
+    username: string;
+    nativeLanguage: string;
+    targetLanguage: string;
+  }
+): Promise<void> {
+  const accountDoc = {
+    userId,
+    firstName: data.firstName,
+    lastName: data.lastName,
+    username: data.username,
+    nativeLanguage: data.nativeLanguage,
+    activeProfileId: data.targetLanguage,
+    createdAt: Date.now(),
+    legacyMigrated: true,
+  };
+
+  const profileDoc = {
+    targetLanguage: data.targetLanguage,
+    createdAt: Date.now(),
+    currentLevel: null,
+    streakCount: 0,
+    totalAcorns: 0,
+    lastActiveDate: new Date().toISOString().split('T')[0],
+    reminderEnabled: false,
+    reminderTime: '20:00',
+  };
+
+  if (db && !userId.startsWith('local_user_')) {
+    const userPath = `users/${userId}`;
+    try {
+      await setDoc(doc(db, 'users', userId), accountDoc, { merge: true });
+      await setDoc(doc(db, 'users', userId, 'profiles', data.targetLanguage), profileDoc, { merge: true });
+    } catch (e) {
+      handleFirestoreError(e, OperationType.WRITE, userPath);
+    }
+  }
+
+  // Also update local storage profile
+  const existingLocal = getLocalUserProfile();
+  saveLocalUserProfile({
+    ...existingLocal,
+    userId,
+    firstName: data.firstName,
+    lastName: data.lastName,
+    username: data.username,
+    nativeLanguage: data.nativeLanguage,
+    activeProfileId: data.targetLanguage,
+  });
+}
+
+// ------------------- PROFILE MANAGEMENT -------------------
+export async function fetchUserProfiles(userId: string): Promise<string[]> {
+  if (db && !userId.startsWith('local_user_')) {
+    const path = `users/${userId}/profiles`;
+    try {
+      const colRef = collection(db, 'users', userId, 'profiles');
+      const snap = await getDocs(colRef);
+      const profileIds: string[] = [];
+      snap.forEach((docSnap) => {
+        profileIds.push(docSnap.id);
+      });
+      if (profileIds.length > 0) {
+        return profileIds;
+      }
+    } catch (e) {
+      handleFirestoreError(e, OperationType.LIST, path);
+    }
+  }
+  const localProfile = getLocalUserProfile();
+  return [localProfile.activeProfileId || 'en'];
+}
+
+export async function createNewLanguageProfile(
+  userId: string,
+  targetLanguage: string
+): Promise<void> {
+  const profileDoc = {
+    targetLanguage,
+    createdAt: Date.now(),
+    currentLevel: null,
+    streakCount: 0,
+    totalAcorns: 0,
+    lastActiveDate: new Date().toISOString().split('T')[0],
+    reminderEnabled: false,
+    reminderTime: '20:00',
+    onboardingCompleted: false,
+  };
+
+  if (db && !userId.startsWith('local_user_')) {
+    const userPath = `users/${userId}`;
+    try {
+      await setDoc(doc(db, 'users', userId, 'profiles', targetLanguage), profileDoc, { merge: true });
+      await setDoc(doc(db, 'users', userId), { activeProfileId: targetLanguage }, { merge: true });
+    } catch (e) {
+      handleFirestoreError(e, OperationType.WRITE, userPath);
+    }
+  }
+
+  const existingLocal = getLocalUserProfile();
+  saveLocalUserProfile({
+    ...existingLocal,
+    activeProfileId: targetLanguage,
+    onboardingCompleted: false,
+  });
+}
+
+export async function switchActiveProfile(userId: string, targetLanguage: string): Promise<UserProfile> {
+  if (db && !userId.startsWith('local_user_')) {
+    const userPath = `users/${userId}`;
+    try {
+      await setDoc(doc(db, 'users', userId), { activeProfileId: targetLanguage }, { merge: true });
+    } catch (e) {
+      handleFirestoreError(e, OperationType.WRITE, userPath);
+    }
+  }
+
+  const existingLocal = getLocalUserProfile();
+  saveLocalUserProfile({
+    ...existingLocal,
+    activeProfileId: targetLanguage,
+  });
+
+  return await fetchUserProfile(userId);
 }
 
 // ------------------- USER PROFILE -------------------
@@ -92,18 +452,46 @@ export function saveLocalUserProfile(profile: UserProfile): void {
 }
 
 export async function fetchUserProfile(userId: string): Promise<UserProfile> {
-  const { db } = initFirebase();
-  if (db) {
+  if (db && !userId.startsWith('local_user_')) {
+    const path = `users/${userId}`;
     try {
       const docRef = doc(db, 'users', userId);
       const snap = await getDoc(docRef);
       if (snap.exists()) {
-        const data = snap.data() as UserProfile;
-        saveLocalUserProfile(data);
-        return data;
+        const accountData = snap.data();
+        const activeProfileId = accountData.activeProfileId || 'en';
+
+        // Check & perform migration if needed
+        await migrateLegacyDataIfNeeded(userId, activeProfileId);
+
+        // Fetch target profile doc
+        const profileRef = doc(db, 'users', userId, 'profiles', activeProfileId);
+        const profileSnap = await getDoc(profileRef);
+        const profileData = profileSnap.exists() ? profileSnap.data() : {};
+
+        const unifiedProfile: UserProfile = {
+          userId,
+          createdAt: profileData.createdAt || accountData.createdAt || Date.now(),
+          streakCount: profileData.streakCount ?? accountData.streakCount ?? 0,
+          lastActiveDate: profileData.lastActiveDate || accountData.lastActiveDate || new Date().toISOString().split('T')[0],
+          totalAcorns: profileData.totalAcorns ?? accountData.totalAcorns ?? 0,
+          reminderEnabled: profileData.reminderEnabled ?? accountData.reminderEnabled ?? false,
+          reminderTime: profileData.reminderTime || accountData.reminderTime || '20:00',
+          onboardingCompleted: profileData.onboardingCompleted ?? accountData.onboardingCompleted ?? false,
+          currentLevel: profileSnap.exists() ? (profileData.currentLevel || null) : (accountData.currentLevel || null),
+          lastTestDate: profileSnap.exists() ? (profileData.lastTestDate || null) : (accountData.lastTestDate || null),
+          activeProfileId,
+          firstName: accountData.firstName,
+          lastName: accountData.lastName,
+          username: accountData.username,
+          nativeLanguage: accountData.nativeLanguage,
+        };
+
+        saveLocalUserProfile(unifiedProfile);
+        return unifiedProfile;
       }
     } catch (e) {
-      console.warn('Firestore fetch user profile error:', e);
+      handleFirestoreError(e, OperationType.GET, path);
     }
   }
   return getLocalUserProfile();
@@ -111,13 +499,38 @@ export async function fetchUserProfile(userId: string): Promise<UserProfile> {
 
 export async function updateUserProfile(profile: UserProfile): Promise<void> {
   saveLocalUserProfile(profile);
-  const { db } = initFirebase();
   if (db && profile.userId && !profile.userId.startsWith('local_user_')) {
+    const activeProfileId = profile.activeProfileId || getLocalUserProfile().activeProfileId || 'en';
+    const path = `users/${profile.userId}/profiles/${activeProfileId}`;
     try {
-      const docRef = doc(db, 'users', profile.userId);
-      await setDoc(docRef, profile, { merge: true });
+      // Update nested profile document
+      const profileRef = doc(db, 'users', profile.userId, 'profiles', activeProfileId);
+      await setDoc(
+        profileRef,
+        {
+          targetLanguage: activeProfileId,
+          streakCount: profile.streakCount ?? 0,
+          totalAcorns: profile.totalAcorns ?? 0,
+          currentLevel: profile.currentLevel || null,
+          lastActiveDate: profile.lastActiveDate || new Date().toISOString().split('T')[0],
+          reminderEnabled: profile.reminderEnabled ?? false,
+          reminderTime: profile.reminderTime || '20:00',
+          onboardingCompleted: profile.onboardingCompleted ?? false,
+          lastTestDate: profile.lastTestDate || null,
+        },
+        { merge: true }
+      );
+
+      // Also ensure root account doc has updated activeProfileId if set
+      const userRef = doc(db, 'users', profile.userId);
+      const rootUpdates: Record<string, any> = { activeProfileId };
+      if (profile.firstName) rootUpdates.firstName = profile.firstName;
+      if (profile.lastName) rootUpdates.lastName = profile.lastName;
+      if (profile.username) rootUpdates.username = profile.username;
+      if (profile.nativeLanguage) rootUpdates.nativeLanguage = profile.nativeLanguage;
+      await setDoc(userRef, rootUpdates, { merge: true });
     } catch (e) {
-      console.warn('Firestore update user profile error:', e);
+      handleFirestoreError(e, OperationType.WRITE, path);
     }
   }
 }
@@ -137,11 +550,12 @@ export function saveLocalVocabItems(items: VocabItem[]): void {
   localStorage.setItem(LOCAL_VOCAB_KEY, JSON.stringify(items));
 }
 
-export async function fetchVocabItems(userId: string): Promise<VocabItem[]> {
-  const { db } = initFirebase();
+export async function fetchVocabItems(userId: string, profileId?: string): Promise<VocabItem[]> {
+  const targetProfileId = profileId || getLocalUserProfile().activeProfileId || 'en';
   if (db && !userId.startsWith('local_user_')) {
+    const path = `users/${userId}/profiles/${targetProfileId}/vocabItems`;
     try {
-      const colRef = collection(db, 'users', userId, 'vocabItems');
+      const colRef = collection(db, 'users', userId, 'profiles', targetProfileId, 'vocabItems');
       const snap = await getDocs(colRef);
       const items: VocabItem[] = [];
       snap.forEach((docSnap) => {
@@ -150,13 +564,14 @@ export async function fetchVocabItems(userId: string): Promise<VocabItem[]> {
       saveLocalVocabItems(items);
       return items;
     } catch (e) {
-      console.warn('Firestore fetch vocab error:', e);
+      handleFirestoreError(e, OperationType.LIST, path);
     }
   }
   return getLocalVocabItems();
 }
 
-export async function saveVocabItem(userId: string, item: VocabItem): Promise<void> {
+export async function saveVocabItem(userId: string, item: VocabItem, profileId?: string): Promise<void> {
+  const targetProfileId = profileId || getLocalUserProfile().activeProfileId || 'en';
   const items = getLocalVocabItems();
   const existingIdx = items.findIndex((i) => i.id === item.id);
   if (existingIdx >= 0) {
@@ -166,18 +581,19 @@ export async function saveVocabItem(userId: string, item: VocabItem): Promise<vo
   }
   saveLocalVocabItems(items);
 
-  const { db } = initFirebase();
   if (db && !userId.startsWith('local_user_')) {
+    const path = `users/${userId}/profiles/${targetProfileId}/vocabItems/${item.id}`;
     try {
-      const docRef = doc(db, 'users', userId, 'vocabItems', item.id);
+      const docRef = doc(db, 'users', userId, 'profiles', targetProfileId, 'vocabItems', item.id);
       await setDoc(docRef, item, { merge: true });
     } catch (e) {
-      console.warn('Firestore save vocab item error:', e);
+      handleFirestoreError(e, OperationType.WRITE, path);
     }
   }
 }
 
-export async function bulkSaveVocabItems(userId: string, newItems: VocabItem[]): Promise<void> {
+export async function bulkSaveVocabItems(userId: string, newItems: VocabItem[], profileId?: string): Promise<void> {
+  const targetProfileId = profileId || getLocalUserProfile().activeProfileId || 'en';
   const items = getLocalVocabItems();
   const itemMap = new Map<string, VocabItem>();
   items.forEach((i) => itemMap.set(i.id, i));
@@ -186,39 +602,182 @@ export async function bulkSaveVocabItems(userId: string, newItems: VocabItem[]):
   const updatedList = Array.from(itemMap.values());
   saveLocalVocabItems(updatedList);
 
-  const { db } = initFirebase();
   if (db && !userId.startsWith('local_user_')) {
     for (const item of newItems) {
+      const path = `users/${userId}/profiles/${targetProfileId}/vocabItems/${item.id}`;
       try {
-        const docRef = doc(db, 'users', userId, 'vocabItems', item.id);
+        const docRef = doc(db, 'users', userId, 'profiles', targetProfileId, 'vocabItems', item.id);
         await setDoc(docRef, item, { merge: true });
       } catch (e) {
-        console.warn('Firestore bulk save item error:', e);
+        handleFirestoreError(e, OperationType.WRITE, path);
       }
     }
   }
 }
 
-export async function deleteVocabItem(userId: string, itemId: string): Promise<void> {
+export async function deleteVocabItem(userId: string, itemId: string, profileId?: string): Promise<void> {
+  const targetProfileId = profileId || getLocalUserProfile().activeProfileId || 'en';
   const items = getLocalVocabItems().filter((i) => i.id !== itemId);
   saveLocalVocabItems(items);
 
-  const { db } = initFirebase();
   if (db && !userId.startsWith('local_user_')) {
+    const path = `users/${userId}/profiles/${targetProfileId}/vocabItems/${itemId}`;
     try {
-      const docRef = doc(db, 'users', userId, 'vocabItems', itemId);
+      const docRef = doc(db, 'users', userId, 'profiles', targetProfileId, 'vocabItems', itemId);
       await deleteDoc(docRef);
     } catch (e) {
-      console.warn('Firestore delete vocab error:', e);
+      handleFirestoreError(e, OperationType.DELETE, path);
     }
   }
 }
 
-export async function resetAllData(userId: string): Promise<void> {
+// ------------------- GRAMMAR PROGRESS -------------------
+export async function fetchGrammarProgress(userId: string, profileId?: string): Promise<Record<string, GrammarTopicProgress>> {
+  const targetProfileId = profileId || getLocalUserProfile().activeProfileId || 'en';
+  let progressMap: Record<string, GrammarTopicProgress> = {};
+  
+  try {
+    const saved = localStorage.getItem(LOCAL_GRAMMAR_KEY);
+    if (saved) progressMap = JSON.parse(saved);
+  } catch (e) {}
+
+  if (db && !userId.startsWith('local_user_')) {
+    const path = `users/${userId}/profiles/${targetProfileId}/grammarProgress`;
+    try {
+      const colRef = collection(db, 'users', userId, 'profiles', targetProfileId, 'grammarProgress');
+      const snap = await getDocs(colRef);
+      snap.forEach((docSnap) => {
+        progressMap[docSnap.id] = docSnap.data() as GrammarTopicProgress;
+      });
+      localStorage.setItem(LOCAL_GRAMMAR_KEY, JSON.stringify(progressMap));
+    } catch (e) {
+      handleFirestoreError(e, OperationType.LIST, path);
+    }
+  }
+
+  return progressMap;
+}
+
+export async function saveGrammarProgressTopic(
+  userId: string,
+  progress: GrammarTopicProgress,
+  profileId?: string
+): Promise<void> {
+  const targetProfileId = profileId || getLocalUserProfile().activeProfileId || 'en';
+  
+  try {
+    const saved = localStorage.getItem(LOCAL_GRAMMAR_KEY);
+    const existing = saved ? JSON.parse(saved) : {};
+    existing[progress.topicId] = progress;
+    localStorage.setItem(LOCAL_GRAMMAR_KEY, JSON.stringify(existing));
+  } catch (e) {}
+
+  if (db && !userId.startsWith('local_user_')) {
+    const path = `users/${userId}/profiles/${targetProfileId}/grammarProgress/${progress.topicId}`;
+    try {
+      const docRef = doc(db, 'users', userId, 'profiles', targetProfileId, 'grammarProgress', progress.topicId);
+      await setDoc(docRef, progress, { merge: true });
+    } catch (e) {
+      handleFirestoreError(e, OperationType.WRITE, path);
+    }
+  }
+}
+
+// ------------------- LEVEL TESTS -------------------
+export async function fetchLevelTests(userId: string, profileId?: string): Promise<any[]> {
+  const targetProfileId = profileId || getLocalUserProfile().activeProfileId || 'en';
+  let history: any[] = [];
+  try {
+    const saved = localStorage.getItem('raccoonary_level_test_history');
+    if (saved) history = JSON.parse(saved);
+  } catch (e) {}
+
+  if (db && !userId.startsWith('local_user_')) {
+    const path = `users/${userId}/profiles/${targetProfileId}/levelTests`;
+    try {
+      const colRef = collection(db, 'users', userId, 'profiles', targetProfileId, 'levelTests');
+      const snap = await getDocs(colRef);
+      const remoteList: any[] = [];
+      snap.forEach((docSnap) => {
+        remoteList.push(docSnap.data());
+      });
+      if (remoteList.length > 0) {
+        history = remoteList.sort((a, b) => (b.takenAt || 0) - (a.takenAt || 0));
+        localStorage.setItem('raccoonary_level_test_history', JSON.stringify(history));
+      }
+    } catch (e) {
+      handleFirestoreError(e, OperationType.LIST, path);
+    }
+  }
+
+  return history;
+}
+
+export async function saveLevelTestResult(
+  userId: string,
+  result: any,
+  profileId?: string
+): Promise<void> {
+  const targetProfileId = profileId || getLocalUserProfile().activeProfileId || 'en';
+  try {
+    const saved = localStorage.getItem('raccoonary_level_test_history');
+    const existing = saved ? JSON.parse(saved) : [];
+    const updated = [result, ...existing];
+    localStorage.setItem('raccoonary_level_test_history', JSON.stringify(updated));
+  } catch (e) {}
+
+  if (db && !userId.startsWith('local_user_')) {
+    const path = `users/${userId}/profiles/${targetProfileId}/levelTests/${result.id}`;
+    try {
+      const docRef = doc(db, 'users', userId, 'profiles', targetProfileId, 'levelTests', result.id);
+      await setDoc(docRef, result, { merge: true });
+    } catch (e) {
+      handleFirestoreError(e, OperationType.WRITE, path);
+    }
+  }
+}
+
+// ------------------- RESET UTILS -------------------
+export async function resetAllData(userId: string, profileId?: string): Promise<void> {
+  const targetProfileId = profileId || getLocalUserProfile().activeProfileId || 'en';
   localStorage.removeItem(LOCAL_USER_KEY);
   localStorage.removeItem(LOCAL_VOCAB_KEY);
   localStorage.removeItem(LOCAL_GRAMMAR_KEY);
-  localStorage.removeItem(LOCAL_READING_KEY);
+  localStorage.removeItem('raccoonary_level_test_history');
+
+  if (db && !userId.startsWith('local_user_')) {
+    const subcollections = ['vocabItems', 'grammarProgress', 'readingProgress', 'levelTests'];
+    for (const sub of subcollections) {
+      const path = `users/${userId}/profiles/${targetProfileId}/${sub}`;
+      try {
+        const colRef = collection(db, 'users', userId, 'profiles', targetProfileId, sub);
+        const snap = await getDocs(colRef);
+        for (const docSnap of snap.docs) {
+          await deleteDoc(docSnap.ref);
+        }
+      } catch (e) {
+        handleFirestoreError(e, OperationType.DELETE, path);
+      }
+    }
+
+    // Reset profile doc metrics
+    const profileRef = doc(db, 'users', userId, 'profiles', targetProfileId);
+    await setDoc(
+      profileRef,
+      {
+        targetLanguage: targetProfileId,
+        streakCount: 0,
+        totalAcorns: 0,
+        currentLevel: null,
+        lastActiveDate: new Date().toISOString().split('T')[0],
+        reminderEnabled: false,
+        reminderTime: '20:00',
+        onboardingCompleted: true,
+        lastTestDate: null,
+      },
+      { merge: true }
+    );
+  }
 
   const freshUser: UserProfile = {
     userId,
@@ -229,7 +788,204 @@ export async function resetAllData(userId: string): Promise<void> {
     reminderEnabled: false,
     reminderTime: '20:00',
     onboardingCompleted: true,
+    activeProfileId: targetProfileId,
   };
 
   await updateUserProfile(freshUser);
 }
+
+export async function adminResetTestData(userId: string, profileId?: string): Promise<void> {
+  const targetProfileId = profileId || getLocalUserProfile().activeProfileId || 'en';
+  localStorage.removeItem(LOCAL_USER_KEY);
+  localStorage.removeItem(LOCAL_VOCAB_KEY);
+  localStorage.removeItem(LOCAL_GRAMMAR_KEY);
+  localStorage.removeItem('raccoonary_level_test_history');
+  localStorage.removeItem('raccoonary_grammar_progress');
+  localStorage.removeItem('raccoonary_last_active_topic');
+
+  if (db && !userId.startsWith('local_user_')) {
+    const subcollections = ['vocabItems', 'grammarProgress', 'readingProgress', 'levelTests'];
+    for (const sub of subcollections) {
+      const path = `users/${userId}/profiles/${targetProfileId}/${sub}`;
+      try {
+        const colRef = collection(db, 'users', userId, 'profiles', targetProfileId, sub);
+        const snap = await getDocs(colRef);
+        for (const docSnap of snap.docs) {
+          await deleteDoc(docSnap.ref);
+        }
+      } catch (e) {
+        handleFirestoreError(e, OperationType.DELETE, path);
+      }
+    }
+
+    // Reset target profile document only
+    const profileRef = doc(db, 'users', userId, 'profiles', targetProfileId);
+    await setDoc(
+      profileRef,
+      {
+        targetLanguage: targetProfileId,
+        streakCount: 0,
+        totalAcorns: 0,
+        currentLevel: null,
+        lastActiveDate: new Date().toISOString().split('T')[0],
+        reminderEnabled: false,
+        reminderTime: '20:00',
+        onboardingCompleted: true,
+        lastTestDate: null,
+      },
+      { merge: true }
+    );
+  }
+
+  const refreshedUser = await fetchUserProfile(userId);
+  saveLocalUserProfile(refreshedUser);
+}
+
+export async function deleteLanguageProfile(userId: string, targetLanguage: string): Promise<void> {
+  if (db && !userId.startsWith('local_user_')) {
+    const subcollections = ['vocabItems', 'grammarProgress', 'readingProgress', 'levelTests'];
+    for (const sub of subcollections) {
+      const path = `users/${userId}/profiles/${targetLanguage}/${sub}`;
+      try {
+        const colRef = collection(db, 'users', userId, 'profiles', targetLanguage, sub);
+        const snap = await getDocs(colRef);
+        for (const docSnap of snap.docs) {
+          await deleteDoc(docSnap.ref);
+        }
+      } catch (e) {
+        handleFirestoreError(e, OperationType.DELETE, path);
+      }
+    }
+    const profileRef = doc(db, 'users', userId, 'profiles', targetLanguage);
+    try {
+      await deleteDoc(profileRef);
+    } catch (e) {
+      handleFirestoreError(e, OperationType.DELETE, `users/${userId}/profiles/${targetLanguage}`);
+    }
+  }
+}
+
+export async function fetchSharedContent(
+  nativeLang: string = 'it',
+  targetLang: string = 'en'
+): Promise<SharedLanguagePairContent> {
+  const pairId = `${nativeLang}_${targetLang}`;
+
+  if (db) {
+    try {
+      const docRef = doc(db, 'sharedContent', pairId);
+      const snap = await getDoc(docRef);
+
+      if (snap.exists()) {
+        return snap.data() as SharedLanguagePairContent;
+      }
+
+      if (nativeLang === 'it' && targetLang === 'en') {
+        try {
+          await setDoc(docRef, SEED_IT_EN_CONTENT);
+        } catch (e) {
+          console.warn('Could not save seed to Firestore:', e);
+        }
+        return SEED_IT_EN_CONTENT;
+      }
+
+      const nativeName = NATIVE_LANGUAGES.find((l) => l.code === nativeLang)?.name || nativeLang;
+      const targetName = TARGET_LANGUAGES.find((l) => l.code === targetLang)?.name || targetLang;
+
+      const res = await fetch('/api/generate-shared-content', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nativeLang, targetLang, nativeName, targetName }),
+      });
+
+      if (!res.ok) {
+        throw new Error(`Failed to generate shared content for ${pairId}`);
+      }
+
+      const generatedContent: SharedLanguagePairContent = await res.json();
+
+      try {
+        await setDoc(docRef, generatedContent);
+      } catch (e) {
+        console.warn('Could not save shared content to Firestore:', e);
+      }
+
+      return generatedContent;
+    } catch (e) {
+      console.error(`Error fetching/generating shared content for ${pairId}:`, e);
+    }
+  }
+
+  return SEED_IT_EN_CONTENT;
+}
+
+export async function fetchUITranslations(nativeLang: string = 'it'): Promise<UITranslationSet> {
+  const code = nativeLang.toLowerCase();
+
+  if (db) {
+    try {
+      const docRef = doc(db, 'translations', code);
+      const snap = await getDoc(docRef);
+
+      if (snap.exists()) {
+        const data = snap.data();
+        if (data && data.strings) {
+          return {
+            langCode: code,
+            strings: data.strings,
+            generatedAt: data.generatedAt,
+          };
+        }
+      }
+
+      if (code === 'it') {
+        const itSet: UITranslationSet = {
+          langCode: 'it',
+          strings: IT_TRANSLATIONS,
+          generatedAt: Date.now(),
+        };
+        try {
+          await setDoc(docRef, itSet);
+        } catch (e) {
+          console.warn('Could not save IT translations to Firestore:', e);
+        }
+        return itSet;
+      }
+
+      const nativeName = NATIVE_LANGUAGES.find((l) => l.code === code)?.name || code;
+
+      const res = await fetch('/api/generate-ui-translations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          nativeLang: code,
+          nativeName,
+          masterTranslations: IT_TRANSLATIONS,
+        }),
+      });
+
+      if (!res.ok) {
+        throw new Error(`Failed to generate UI translations for ${code}`);
+      }
+
+      const generated: UITranslationSet = await res.json();
+
+      try {
+        await setDoc(docRef, generated);
+      } catch (e) {
+        console.warn(`Could not save ${code} translations to Firestore:`, e);
+      }
+
+      return generated;
+    } catch (e) {
+      console.error(`Error fetching/generating UI translations for ${code}:`, e);
+    }
+  }
+
+  return {
+    langCode: code,
+    strings: IT_TRANSLATIONS,
+    generatedAt: Date.now(),
+  };
+}
+
