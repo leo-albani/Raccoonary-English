@@ -479,49 +479,162 @@ Rispondi SOLO in JSON:
   }
 });
 
-// API 9: Generate Level Placement Test (35 questions across A1-C2)
+// API 9: Generate Level Placement Test (35 questions across A1-C2 generated in 6 parallel requests)
 app.post("/api/generate-level-test", async (req, res) => {
   try {
     const { targetLang = "en", nativeLang = "it", targetName = "Inglese", nativeName = "Italiano" } = req.body;
     const ai = getGeminiClient();
-    const prompt = `Genera un test di livello CEFR per la lingua ${targetName} (${targetLang}) rivolto ad una persona madrelingua ${nativeName} (${nativeLang}), stile esame di certificazione ufficiale (sezioni Use of Language e Reading).
-Crea esattamente 35 domande suddivise per livello CEFR come segue:
-- A1: 5 domande (tipo: "multiple_choice" o "fill_in_blank")
-- A2: 5 domande (tipo: "multiple_choice" o "fill_in_blank")
-- B1: 6 domande (tipo: "multiple_choice", "fill_in_blank" o "sentence_transformation")
-- B2: 6 domande (tipo: "multiple_choice", "sentence_transformation", oppure 1 breve testo di comprensione con 2 domande "reading_comprehension")
-- C1: 6 domande (tipo: "multiple_choice", "sentence_transformation", oppure 1 breve testo di comprensione con 2 domande "reading_comprehension")
-- C2: 7 domande (tipo: "multiple_choice", "sentence_transformation", oppure 1 breve testo di comprensione con 3 domande "reading_comprehension")
 
-Nessuna domanda orale o di produzione parlata.
-Le domande devono verificare la competenza nella lingua ${targetName}. Domande e opzioni devono essere formulate chiaramente per un madrelingua ${nativeName}.
-Per le domande di tipo "reading_comprehension", includi il testo del brano in ${targetName} in "testo_contesto".
-Per "sentence_transformation", la domanda deve indicare la frase di partenza in ${targetName} e come riformularla.
-
-Rispondi SOLO in JSON con un array di 35 oggetti con struttura esatta:
+    const levelPrompts = [
+      {
+        level: "A1",
+        count: 5,
+        prompt: `Genera esattamente 5 domande di livello CEFR A1 per verificare la competenza nella lingua ${targetName} (${targetLang}) rivolte ad una persona madrelingua ${nativeName} (${nativeLang}).
+Tipi ammessi: "multiple_choice" o "fill_in_blank".
+Domande e opzioni devono essere in ${targetName} con istruzioni chiare in ${nativeName}.
+Rispondi SOLO in JSON con un array di 5 oggetti con struttura esatta:
 [
   {
-    "id": "q1",
-    "level": "A1" | "A2" | "B1" | "B2" | "C1" | "C2",
-    "tipo": "multiple_choice" | "fill_in_blank" | "sentence_transformation" | "reading_comprehension",
-    "testo_contesto": "...", // opzionale
+    "level": "A1",
+    "tipo": "multiple_choice" | "fill_in_blank",
     "domanda": "testo della domanda in ${targetName}",
-    "opzioni": ["A", "B", "C", "D"], // opzionale per scelta multipla/reading
-    "rispostaCorretta": "risposta esatta"
+    "opzioni": ["A", "B", "C", "D"],
+    "rispostaCorretta": "risposta esatta in ${targetName}"
   }
-]`;
-
-    const response = await ai.models.generateContent({
-      model: "gemini-3.6-flash",
-      contents: prompt,
-      config: {
-        responseMimeType: "application/json",
+]`
       },
+      {
+        level: "A2",
+        count: 5,
+        prompt: `Genera esattamente 5 domande di livello CEFR A2 per verificare la competenza nella lingua ${targetName} (${targetLang}) rivolte ad una persona madrelingua ${nativeName} (${nativeLang}).
+Tipi ammessi: "multiple_choice" o "fill_in_blank".
+Domande e opzioni devono essere in ${targetName} con istruzioni chiare in ${nativeName}.
+Rispondi SOLO in JSON con un array di 5 oggetti con struttura esatta:
+[
+  {
+    "level": "A2",
+    "tipo": "multiple_choice" | "fill_in_blank",
+    "domanda": "testo della domanda in ${targetName}",
+    "opzioni": ["A", "B", "C", "D"],
+    "rispostaCorretta": "risposta esatta in ${targetName}"
+  }
+]`
+      },
+      {
+        level: "B1",
+        count: 6,
+        prompt: `Genera esattamente 6 domande di livello CEFR B1 per verificare la competenza nella lingua ${targetName} (${targetLang}) rivolte ad una persona madrelingua ${nativeName} (${nativeLang}).
+Tipi ammessi: "multiple_choice", "fill_in_blank", "sentence_transformation".
+Per "sentence_transformation", indica la frase di partenza e la parte da completare/riformulare.
+Rispondi SOLO in JSON con un array di 6 oggetti con struttura esatta:
+[
+  {
+    "level": "B1",
+    "tipo": "multiple_choice" | "fill_in_blank" | "sentence_transformation",
+    "domanda": "testo della domanda in ${targetName}",
+    "opzioni": ["A", "B", "C", "D"],
+    "rispostaCorretta": "risposta esatta in ${targetName}"
+  }
+]`
+      },
+      {
+        level: "B2",
+        count: 6,
+        prompt: `Genera esattamente 6 domande di livello CEFR B2 per verificare la competenza nella lingua ${targetName} (${targetLang}) rivolte ad una persona madrelingua ${nativeName} (${nativeLang}).
+Tipi ammessi: "multiple_choice", "sentence_transformation", oppure 1 breve testo di comprensione con 2 domande "reading_comprehension" (includi il brano in ${targetName} nel campo "testo_contesto").
+Rispondi SOLO in JSON con un array di 6 oggetti con struttura esatta:
+[
+  {
+    "level": "B2",
+    "tipo": "multiple_choice" | "sentence_transformation" | "reading_comprehension",
+    "testo_contesto": "...",
+    "domanda": "testo della domanda in ${targetName}",
+    "opzioni": ["A", "B", "C", "D"],
+    "rispostaCorretta": "risposta esatta in ${targetName}"
+  }
+]`
+      },
+      {
+        level: "C1",
+        count: 6,
+        prompt: `Genera esattamente 6 domande di livello CEFR C1 per verificare la competenza nella lingua ${targetName} (${targetLang}) rivolte ad una persona madrelingua ${nativeName} (${nativeLang}).
+Tipi ammessi: "multiple_choice", "sentence_transformation", oppure 1 breve testo di comprensione con 2 domande "reading_comprehension" (includi il brano in ${targetName} nel campo "testo_contesto").
+Rispondi SOLO in JSON con un array di 6 oggetti con struttura esatta:
+[
+  {
+    "level": "C1",
+    "tipo": "multiple_choice" | "sentence_transformation" | "reading_comprehension",
+    "testo_contesto": "...",
+    "domanda": "testo della domanda in ${targetName}",
+    "opzioni": ["A", "B", "C", "D"],
+    "rispostaCorretta": "risposta esatta in ${targetName}"
+  }
+]`
+      },
+      {
+        level: "C2",
+        count: 7,
+        prompt: `Genera esattamente 7 domande di livello CEFR C2 per verificare la competenza nella lingua ${targetName} (${targetLang}) rivolte ad una persona madrelingua ${nativeName} (${nativeLang}).
+Tipi ammessi: "multiple_choice", "sentence_transformation", oppure 1 breve testo di comprensione con 3 domande "reading_comprehension" (includi il brano in ${targetName} nel campo "testo_contesto").
+Rispondi SOLO in JSON con un array di 7 oggetti con struttura esatta:
+[
+  {
+    "level": "C2",
+    "tipo": "multiple_choice" | "sentence_transformation" | "reading_comprehension",
+    "testo_contesto": "...",
+    "domanda": "testo della domanda in ${targetName}",
+    "opzioni": ["A", "B", "C", "D"],
+    "rispostaCorretta": "risposta esatta in ${targetName}"
+  }
+]`
+      }
+    ];
+
+    const responses = await Promise.all(
+      levelPrompts.map((item) =>
+        ai.models
+          .generateContent({
+            model: "gemini-3.6-flash",
+            contents: item.prompt,
+            config: {
+              responseMimeType: "application/json",
+            },
+          })
+          .catch((err) => {
+            console.error(`Error generating level test for level ${item.level}:`, err);
+            return null;
+          })
+      )
+    );
+
+    let allQuestions: any[] = [];
+    let qIndex = 1;
+
+    responses.forEach((resp, i) => {
+      const cfg = levelPrompts[i];
+      if (!resp || !resp.text) return;
+      try {
+        const parsed = JSON.parse(cleanJsonOutput(resp.text));
+        if (Array.isArray(parsed)) {
+          parsed.forEach((q: any) => {
+            allQuestions.push({
+              ...q,
+              id: `q${qIndex++}`,
+              level: q.level || cfg.level,
+            });
+          });
+        }
+      } catch (e) {
+        console.error(`Error parsing JSON for level ${cfg.level}:`, e);
+      }
     });
 
-    const rawText = response.text || "[]";
-    const questions = JSON.parse(cleanJsonOutput(rawText));
-    res.json({ questions });
+    if (allQuestions.length < 20) {
+      console.warn("Generated fewer questions than minimum threshold, returning fallback level test.");
+      return res.json({ questions: getFallbackLevelTestQuestions() });
+    }
+
+    res.json({ questions: allQuestions });
   } catch (err: any) {
     console.error("Error generating level test:", err);
     // Return rich 35-question default fallback set

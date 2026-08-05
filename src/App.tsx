@@ -80,6 +80,7 @@ export function App() {
     if (
       isAuthenticated &&
       !needsProfileSetup &&
+      user.onboardingCompleted &&
       !user.tutorialCompleted &&
       currentTab === 'home' &&
       !showLevelTest &&
@@ -88,10 +89,13 @@ export function App() {
       !isGeneratingUITranslations
     ) {
       setShowGuidedTour(true);
+    } else if (currentTab !== 'home' || showLevelTest) {
+      setShowGuidedTour(false);
     }
   }, [
     isAuthenticated,
     needsProfileSetup,
+    user.onboardingCompleted,
     user.tutorialCompleted,
     currentTab,
     showLevelTest,
@@ -278,18 +282,20 @@ export function App() {
   };
 
   const handleCompleteOnboarding = async (choice: 'import' | 'home' | 'level_test') => {
-    const updatedUser = { ...user, onboardingCompleted: true };
-    setUser(updatedUser);
-    await updateUserProfile(updatedUser);
-
     if (choice === 'import') {
       setCurrentTab('import');
+      setShowLevelTest(false);
     } else if (choice === 'level_test') {
       setCurrentTab('home');
       setShowLevelTest(true);
     } else {
       setCurrentTab('home');
+      setShowLevelTest(false);
     }
+
+    const updatedUser = { ...user, onboardingCompleted: true };
+    setUser(updatedUser);
+    await updateUserProfile(updatedUser);
   };
 
   const handleSaveItem = async (item: VocabItem) => {
@@ -605,12 +611,14 @@ export function App() {
       </main>
 
       {/* Guided Tour with Rocky */}
-      <GuidedTour
-        isOpen={showGuidedTour}
-        activeOutfit={user.activeOutfit}
-        onComplete={handleCompleteTour}
-        onSkip={handleCompleteTour}
-      />
+      {currentTab === 'home' && !showLevelTest && (
+        <GuidedTour
+          isOpen={showGuidedTour}
+          activeOutfit={user.activeOutfit}
+          onComplete={handleCompleteTour}
+          onSkip={handleCompleteTour}
+        />
+      )}
 
       {/* Global Bottom Navigation */}
       <Navigation
