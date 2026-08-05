@@ -20,6 +20,7 @@ export interface UserAccount {
   nativeLanguage: string; // ISO 639-1 code e.g. "it"
   activeProfileId: string; // Target language code e.g. "en"
   createdAt: number;
+  tutorialCompleted?: boolean;
 }
 
 export interface UserLanguageProfile {
@@ -55,6 +56,7 @@ export interface UserProfile {
   unlockedOutfits?: string[];
   activeOutfit?: string;
   streakFreezes?: number;
+  tutorialCompleted?: boolean;
 }
 
 export type VocabOrigin = 'import' | 'grammar_error' | 'reading_error' | 'exercise_error' | 'translator_search' | 'translator_lookup' | 'level_test_error' | 'special_section';

@@ -114,7 +114,7 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete, skipSlides =
             Scegli il tuo punto di partenza
           </h2>
           <p className="text-sm text-[#3A2B22]/80 max-w-md px-4 font-medium mb-6">
-            Puoi importare un tuo file di parole oppure esplorare subito la tana.
+            Scegli se scoprire subito il tuo livello o iniziare a esplorare la tana.
           </p>
 
           <div className="w-full max-w-md space-y-3 px-2">
@@ -124,14 +124,6 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete, skipSlides =
             >
               <span className="text-xl">🎯</span>
               <span>Scopri il mio livello con un test</span>
-            </button>
-
-            <button
-              onClick={() => handleSelectPath('import')}
-              className="w-full py-3.5 px-6 rounded-2xl bg-[#C99A3D] text-white font-bold font-display text-sm sm:text-base shadow-sm hover:bg-[#C99A3D]/90 cursor-pointer transition-all flex items-center justify-center gap-3"
-            >
-              <span className="text-xl">📥</span>
-              <span>Ho un file di parole da importare</span>
             </button>
 
             <button

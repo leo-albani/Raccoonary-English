@@ -23,7 +23,8 @@
         "legacyMigrated": { "type": "boolean" },
         "unlockedOutfits": { "type": "array" },
         "activeOutfit": { "type": "string", "maxLength": 64 },
-        "streakFreezes": { "type": "number" }
+        "streakFreezes": { "type": "number" },
+        "tutorialCompleted": { "type": "boolean" }
       },
       "required": ["userId", "createdAt"]
     },

@@ -33,6 +33,7 @@ export const Navigation: React.FC<NavigationProps> = ({
           return (
             <button
               key={tab.id}
+              id={`tour-target-nav-${tab.id}`}
               onClick={() => onSelectTab(tab.id)}
               className={`min-h-[44px] min-w-[44px] w-full flex flex-col items-center justify-center py-1 px-1 rounded-2xl transition-all relative cursor-pointer ${
                 isActive

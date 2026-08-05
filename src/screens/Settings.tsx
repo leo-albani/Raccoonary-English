@@ -24,6 +24,7 @@ interface SettingsProps {
   onResetData: () => void;
   onAdminResetData?: () => void;
   onLogout: () => void;
+  onRestartTutorial?: () => void;
   t?: (key: string, params?: Record<string, string | number>) => string;
 }
 
@@ -39,6 +40,7 @@ export const Settings: React.FC<SettingsProps> = ({
   onResetData,
   onAdminResetData,
   onLogout,
+  onRestartTutorial,
   t,
 }) => {
   // Group 1: Account state
@@ -272,6 +274,25 @@ export const Settings: React.FC<SettingsProps> = ({
             </button>
             {isAccountSaved && <span className="text-xs font-bold text-green-700 animate-fade-in">✓ Salvato!</span>}
           </div>
+
+          {/* Tutorial Restart Button */}
+          {onRestartTutorial && (
+            <div className="pt-3 border-t border-[#6B7C4F]/10 flex items-center justify-between gap-3">
+              <div>
+                <div className="font-bold text-xs text-[#3A2B22]">Tutorial guidato con Rocky</div>
+                <div className="text-[11px] text-[#3A2B22]/65 font-medium">Rivivi la panoramica delle sezioni della tana</div>
+              </div>
+              <button
+                type="button"
+                onClick={onRestartTutorial}
+                id="btn-restart-tutorial"
+                className="py-2 px-3.5 rounded-xl bg-[#6B7C4F]/10 hover:bg-[#6B7C4F] hover:text-white text-xs font-bold text-[#6B7C4F] transition-all cursor-pointer border border-[#6B7C4F]/20 flex items-center gap-1.5 shrink-0"
+              >
+                <span>🦝</span>
+                <span>Rivedi il tutorial</span>
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Interface Language Selector (Searchable) */}

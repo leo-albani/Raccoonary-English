@@ -200,7 +200,7 @@ export const Home: React.FC<HomeProps> = ({
         </div>
 
         {/* Header Stats Badges */}
-        <div className="flex gap-3 justify-between md:justify-end">
+        <div id="tour-target-streak" className="flex gap-3 justify-between md:justify-end">
           <button
             onClick={() => onNavigate('wardrobe')}
             className="bg-white hover:bg-amber-50/50 rounded-2xl px-4 py-2.5 flex items-center gap-3 border-b-4 border-gray-200 hover:border-[#6B7C4F]/30 shadow-xs flex-1 md:flex-none cursor-pointer transition-all text-left"
@@ -229,16 +229,18 @@ export const Home: React.FC<HomeProps> = ({
       </header>
 
       {/* Fixed Search / Translator Bar at Top of Home */}
-      <Translator
-        vocabItems={vocabItems}
-        onAddVocabItem={onAddVocabItem}
-        onDeleteItem={onDeleteItem}
-        nativeLang={user.nativeLanguage || 'it'}
-        targetLang={user.activeProfileId || 'en'}
-        nativeName={NATIVE_LANGUAGES.find((l) => l.code === (user.nativeLanguage || 'it'))?.name || 'Italiano'}
-        targetName={activeLang.name}
-        t={t}
-      />
+      <div id="tour-target-translator">
+        <Translator
+          vocabItems={vocabItems}
+          onAddVocabItem={onAddVocabItem}
+          onDeleteItem={onDeleteItem}
+          nativeLang={user.nativeLanguage || 'it'}
+          targetLang={user.activeProfileId || 'en'}
+          nativeName={NATIVE_LANGUAGES.find((l) => l.code === (user.nativeLanguage || 'it'))?.name || 'Italiano'}
+          targetName={activeLang.name}
+          t={t}
+        />
+      </div>
 
       {/* Compact Level Test Card */}
       <div
@@ -293,7 +295,7 @@ export const Home: React.FC<HomeProps> = ({
           </div>
 
           <div className="z-10 mt-6 flex items-center gap-3">
-            <button onClick={onStartReview} className="btn-zucca text-base sm:text-lg px-8 py-3.5">
+            <button id="tour-target-review-btn" onClick={onStartReview} className="btn-zucca text-base sm:text-lg px-8 py-3.5">
               {dueItems.length > 0 ? 'Ripassa ora' : 'Inizia ripasso'}
             </button>
           </div>

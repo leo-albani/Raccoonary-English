@@ -453,6 +453,7 @@ export function getLocalUserProfile(): UserProfile {
     unlockedOutfits: ['base'],
     activeOutfit: 'base',
     streakFreezes: 0,
+    tutorialCompleted: false,
   };
 }
 
@@ -492,6 +493,7 @@ export async function fetchUserProfile(userId: string): Promise<UserProfile> {
           unlockedOutfits: profileData.unlockedOutfits || accountData.unlockedOutfits || ['base'],
           activeOutfit: profileData.activeOutfit || accountData.activeOutfit || 'base',
           streakFreezes: profileData.streakFreezes ?? accountData.streakFreezes ?? 0,
+          tutorialCompleted: profileData.tutorialCompleted ?? accountData.tutorialCompleted ?? false,
           activeProfileId,
           firstName: accountData.firstName,
           lastName: accountData.lastName,
@@ -532,6 +534,7 @@ export async function updateUserProfile(profile: UserProfile): Promise<void> {
           unlockedOutfits: profile.unlockedOutfits || ['base'],
           activeOutfit: profile.activeOutfit || 'base',
           streakFreezes: profile.streakFreezes ?? 0,
+          tutorialCompleted: profile.tutorialCompleted ?? false,
         },
         { merge: true }
       );
@@ -543,6 +546,7 @@ export async function updateUserProfile(profile: UserProfile): Promise<void> {
       if (profile.lastName) rootUpdates.lastName = profile.lastName;
       if (profile.username) rootUpdates.username = profile.username;
       if (profile.nativeLanguage) rootUpdates.nativeLanguage = profile.nativeLanguage;
+      if (profile.tutorialCompleted !== undefined) rootUpdates.tutorialCompleted = profile.tutorialCompleted;
       await setDoc(userRef, rootUpdates, { merge: true });
     } catch (e) {
       handleFirestoreError(e, OperationType.WRITE, path);

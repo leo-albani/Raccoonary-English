@@ -41,6 +41,7 @@ import { LevelTest } from './screens/LevelTest';
 import { Pronunciation } from './screens/Pronunciation';
 import { Wardrobe } from './screens/Wardrobe';
 import { Navigation, NavTab } from './components/Navigation';
+import { GuidedTour } from './components/GuidedTour';
 import { setupDailyReminderTimer } from './services/notifications';
 
 export function App() {
@@ -59,6 +60,45 @@ export function App() {
   const [isGeneratingContent, setIsGeneratingContent] = useState<boolean>(false);
   const [uiTranslationsMap, setUiTranslationsMap] = useState<Record<string, string>>(IT_TRANSLATIONS);
   const [isGeneratingUITranslations, setIsGeneratingUITranslations] = useState<boolean>(false);
+  const [showGuidedTour, setShowGuidedTour] = useState<boolean>(false);
+
+  const handleCompleteTour = async () => {
+    setShowGuidedTour(false);
+    const updated = { ...user, tutorialCompleted: true };
+    setUser(updated);
+    await updateUserProfile(updated);
+  };
+
+  const handleRestartTutorial = () => {
+    setCurrentTab('home');
+    setShowLevelTest(false);
+    setShowGuidedTour(true);
+  };
+
+  // Auto-launch guided tour once on Home after onboarding if not completed
+  useEffect(() => {
+    if (
+      isAuthenticated &&
+      !needsProfileSetup &&
+      !user.tutorialCompleted &&
+      currentTab === 'home' &&
+      !showLevelTest &&
+      !isLoading &&
+      !isGeneratingContent &&
+      !isGeneratingUITranslations
+    ) {
+      setShowGuidedTour(true);
+    }
+  }, [
+    isAuthenticated,
+    needsProfileSetup,
+    user.tutorialCompleted,
+    currentTab,
+    showLevelTest,
+    isLoading,
+    isGeneratingContent,
+    isGeneratingUITranslations,
+  ]);
 
   // Helper function for translations
   const t = (key: string, params?: Record<string, string | number>) =>
@@ -556,12 +596,21 @@ export function App() {
                 onResetData={handleResetData}
                 onAdminResetData={handleAdminResetData}
                 onLogout={handleLogout}
+                onRestartTutorial={handleRestartTutorial}
                 t={t}
               />
             )}
           </>
         )}
       </main>
+
+      {/* Guided Tour with Rocky */}
+      <GuidedTour
+        isOpen={showGuidedTour}
+        activeOutfit={user.activeOutfit}
+        onComplete={handleCompleteTour}
+        onSkip={handleCompleteTour}
+      />
 
       {/* Global Bottom Navigation */}
       <Navigation
