@@ -38,13 +38,17 @@ import { Reading } from './screens/Reading';
 import { Import } from './screens/Import';
 import { Settings } from './screens/Settings';
 import { LevelTest } from './screens/LevelTest';
+import { Pronunciation } from './screens/Pronunciation';
+import { Wardrobe } from './screens/Wardrobe';
 import { Navigation, NavTab } from './components/Navigation';
+import { setupDailyReminderTimer } from './services/notifications';
 
 export function App() {
   const [userId, setUserId] = useState<string>('local_user');
   const [user, setUser] = useState<UserProfile>(getLocalUserProfile());
   const [vocabItems, setVocabItems] = useState<VocabItem[]>(getLocalVocabItems());
   const [currentTab, setCurrentTab] = useState<NavTab>('home');
+  const [streakFreezeActivated, setStreakFreezeActivated] = useState<boolean>(false);
   const [selectedGrammarTopicId, setSelectedGrammarTopicId] = useState<string | null>(null);
   const [showLevelTest, setShowLevelTest] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -137,32 +141,47 @@ export function App() {
           const items = await fetchVocabItems(authUser.uid, profile.activeProfileId);
           const grammarMap = await fetchGrammarProgress(authUser.uid, profile.activeProfileId);
 
-          // Update streak logic
+          // Update streak logic and streak freeze protection
           const todayStr = new Date().toISOString().split('T')[0];
-          let newStreak = profile.streakCount;
+          let updatedProfile = { ...profile, userId: authUser.uid };
 
-          if (profile.lastActiveDate !== todayStr) {
+          if (profile.lastActiveDate && profile.lastActiveDate !== todayStr) {
             const lastDate = new Date(profile.lastActiveDate);
             const currentDate = new Date(todayStr);
             const diffDays = Math.round((currentDate.getTime() - lastDate.getTime()) / (1000 * 3600 * 24));
 
             if (diffDays === 1) {
-              newStreak += 1;
-            } else if (diffDays > 1) {
-              newStreak = 1;
+              // Active yesterday -> increment streak by 1
+              updatedProfile.streakCount = Math.max(1, profile.streakCount + 1);
+              updatedProfile.lastActiveDate = todayStr;
+            } else if (diffDays === 2) {
+              // Skipped exactly 1 day! (e.g. active Monday, skipped Tuesday, opened Wednesday)
+              if (profile.streakFreezes && profile.streakFreezes > 0) {
+                // CONSUME 1 STREAK FREEZE! Preserve current streak!
+                updatedProfile.streakFreezes = profile.streakFreezes - 1;
+                // Keep streakCount as is, update lastActiveDate
+                updatedProfile.lastActiveDate = todayStr;
+                setStreakFreezeActivated(true);
+              } else {
+                // No freeze -> reset streak to 1
+                updatedProfile.streakCount = 1;
+                updatedProfile.lastActiveDate = todayStr;
+              }
+            } else if (diffDays > 2) {
+              // Skipped 2 or more days -> reset streak to 1
+              updatedProfile.streakCount = 1;
+              updatedProfile.lastActiveDate = todayStr;
             }
-
-            const updatedProfile = {
-              ...profile,
-              userId: authUser.uid,
-              streakCount: Math.max(1, newStreak),
-              lastActiveDate: todayStr,
-            };
 
             setUser(updatedProfile);
             await updateUserProfile(updatedProfile);
           } else {
             setUser({ ...profile, userId: authUser.uid });
+          }
+
+          // Setup daily notification reminder if enabled
+          if (profile.reminderEnabled) {
+            setupDailyReminderTimer(profile.reminderTime || '20:00');
           }
 
           setVocabItems(items);
@@ -447,6 +466,8 @@ export function App() {
                 vocabItems={vocabItems}
                 userProfiles={userProfiles}
                 sharedContent={sharedContent}
+                streakFreezeActivated={streakFreezeActivated}
+                onCloseFreezeBanner={() => setStreakFreezeActivated(false)}
                 onSwitchProfile={handleSwitchProfile}
                 onAddNewLanguage={handleAddNewLanguage}
                 onStartReview={() => setCurrentTab('memorize')}
@@ -459,6 +480,17 @@ export function App() {
                 onDeleteItem={handleDeleteItem}
                 onOpenLevelTest={() => setShowLevelTest(true)}
                 t={t}
+              />
+            )}
+
+            {currentTab === 'wardrobe' && (
+              <Wardrobe
+                user={user}
+                onUpdateUser={async (updated) => {
+                  setUser(updated);
+                  await updateUserProfile(updated);
+                }}
+                onBackToHome={() => setCurrentTab('home')}
               />
             )}
 
@@ -486,8 +518,18 @@ export function App() {
               />
             )}
 
+            {currentTab === 'pronunciation' && (
+              <Pronunciation
+                userProfile={user}
+                vocabItems={vocabItems}
+                onSessionComplete={handleSessionComplete}
+                onBack={() => setCurrentTab('home')}
+                t={t}
+              />
+            )}
+
             {currentTab === 'reading' && (
-              <Reading onSaveVocabItem={handleSaveItem} t={t} />
+              <Reading onSaveVocabItem={handleSaveItem} userProfile={user} t={t} />
             )}
 
             {currentTab === 'import' && (

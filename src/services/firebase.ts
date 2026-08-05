@@ -327,6 +327,9 @@ export async function createUserAccountAndProfile(
     lastActiveDate: new Date().toISOString().split('T')[0],
     reminderEnabled: false,
     reminderTime: '20:00',
+    unlockedOutfits: ['base'],
+    activeOutfit: 'base',
+    streakFreezes: 0,
   };
 
   if (db && !userId.startsWith('local_user_')) {
@@ -388,6 +391,9 @@ export async function createNewLanguageProfile(
     reminderEnabled: false,
     reminderTime: '20:00',
     onboardingCompleted: false,
+    unlockedOutfits: ['base'],
+    activeOutfit: 'base',
+    streakFreezes: 0,
   };
 
   if (db && !userId.startsWith('local_user_')) {
@@ -444,6 +450,9 @@ export function getLocalUserProfile(): UserProfile {
     reminderEnabled: false,
     reminderTime: '20:00',
     onboardingCompleted: false,
+    unlockedOutfits: ['base'],
+    activeOutfit: 'base',
+    streakFreezes: 0,
   };
 }
 
@@ -480,6 +489,9 @@ export async function fetchUserProfile(userId: string): Promise<UserProfile> {
           onboardingCompleted: profileData.onboardingCompleted ?? accountData.onboardingCompleted ?? false,
           currentLevel: profileSnap.exists() ? (profileData.currentLevel || null) : (accountData.currentLevel || null),
           lastTestDate: profileSnap.exists() ? (profileData.lastTestDate || null) : (accountData.lastTestDate || null),
+          unlockedOutfits: profileData.unlockedOutfits || accountData.unlockedOutfits || ['base'],
+          activeOutfit: profileData.activeOutfit || accountData.activeOutfit || 'base',
+          streakFreezes: profileData.streakFreezes ?? accountData.streakFreezes ?? 0,
           activeProfileId,
           firstName: accountData.firstName,
           lastName: accountData.lastName,
@@ -517,6 +529,9 @@ export async function updateUserProfile(profile: UserProfile): Promise<void> {
           reminderTime: profile.reminderTime || '20:00',
           onboardingCompleted: profile.onboardingCompleted ?? false,
           lastTestDate: profile.lastTestDate || null,
+          unlockedOutfits: profile.unlockedOutfits || ['base'],
+          activeOutfit: profile.activeOutfit || 'base',
+          streakFreezes: profile.streakFreezes ?? 0,
         },
         { merge: true }
       );
@@ -635,9 +650,10 @@ export async function deleteVocabItem(userId: string, itemId: string, profileId?
 export async function fetchGrammarProgress(userId: string, profileId?: string): Promise<Record<string, GrammarTopicProgress>> {
   const targetProfileId = profileId || getLocalUserProfile().activeProfileId || 'en';
   let progressMap: Record<string, GrammarTopicProgress> = {};
+  const localKey = `${LOCAL_GRAMMAR_KEY}_${targetProfileId}`;
   
   try {
-    const saved = localStorage.getItem(LOCAL_GRAMMAR_KEY);
+    const saved = localStorage.getItem(localKey);
     if (saved) progressMap = JSON.parse(saved);
   } catch (e) {}
 
@@ -646,10 +662,11 @@ export async function fetchGrammarProgress(userId: string, profileId?: string): 
     try {
       const colRef = collection(db, 'users', userId, 'profiles', targetProfileId, 'grammarProgress');
       const snap = await getDocs(colRef);
+      progressMap = {};
       snap.forEach((docSnap) => {
         progressMap[docSnap.id] = docSnap.data() as GrammarTopicProgress;
       });
-      localStorage.setItem(LOCAL_GRAMMAR_KEY, JSON.stringify(progressMap));
+      localStorage.setItem(localKey, JSON.stringify(progressMap));
     } catch (e) {
       handleFirestoreError(e, OperationType.LIST, path);
     }
@@ -664,12 +681,13 @@ export async function saveGrammarProgressTopic(
   profileId?: string
 ): Promise<void> {
   const targetProfileId = profileId || getLocalUserProfile().activeProfileId || 'en';
+  const localKey = `${LOCAL_GRAMMAR_KEY}_${targetProfileId}`;
   
   try {
-    const saved = localStorage.getItem(LOCAL_GRAMMAR_KEY);
+    const saved = localStorage.getItem(localKey);
     const existing = saved ? JSON.parse(saved) : {};
     existing[progress.topicId] = progress;
-    localStorage.setItem(LOCAL_GRAMMAR_KEY, JSON.stringify(existing));
+    localStorage.setItem(localKey, JSON.stringify(existing));
   } catch (e) {}
 
   if (db && !userId.startsWith('local_user_')) {

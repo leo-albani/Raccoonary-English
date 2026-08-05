@@ -4,6 +4,13 @@ import { UserProfile, VocabItem } from '../types';
 import { TanaManager } from '../components/TanaManager';
 import { auth, isUserAdmin } from '../services/firebase';
 import { NATIVE_LANGUAGES, TARGET_LANGUAGES } from '../data/languages';
+import { isSoundEnabled, setSoundEnabled } from '../services/sound';
+import {
+  getNotificationStatus,
+  requestNotificationPermission,
+  sendRaccoonNotification,
+  setupDailyReminderTimer,
+} from '../services/notifications';
 
 interface SettingsProps {
   user: UserProfile;
@@ -43,6 +50,12 @@ export const Settings: React.FC<SettingsProps> = ({
   const [lastName, setLastName] = useState(user.lastName || '');
   const [username, setUsername] = useState(user.username || '');
   const [isAccountSaved, setIsAccountSaved] = useState(false);
+  const [soundActive, setSoundActive] = useState<boolean>(isSoundEnabled());
+
+  const handleToggleSound = (enabled: boolean) => {
+    setSoundActive(enabled);
+    setSoundEnabled(enabled);
+  };
 
   // Interface language dropdown state
   const [showNativeDropdown, setShowNativeDropdown] = useState(false);
@@ -137,8 +150,8 @@ export const Settings: React.FC<SettingsProps> = ({
 
   const activeTargetLang = TARGET_LANGUAGES.find((l) => l.code === user.activeProfileId) || {
     code: user.activeProfileId || 'en',
-    name: user.activeProfileId?.toUpperCase() || 'Inglese',
-    flag: '🇬🇧',
+    name: TARGET_LANGUAGES.find((l) => l.code === user.activeProfileId)?.name || user.activeProfileId?.toUpperCase() || 'Lingua',
+    flag: '🌐',
   };
 
   const currentNativeLang = NATIVE_LANGUAGES.find((l) => l.code === (user.nativeLanguage || 'it')) || {
@@ -314,6 +327,32 @@ export const Settings: React.FC<SettingsProps> = ({
           </div>
         </div>
 
+        {/* Sound Effects Toggle */}
+        <div className="border-t border-[#6B7C4F]/15 pt-4 flex items-center justify-between">
+          <div>
+            <div className="text-xs font-bold text-[#3A2B22] flex items-center gap-1.5">
+              <span>🔊</span>
+              <span>Effetti sonori</span>
+            </div>
+            <p className="text-[11px] text-[#3A2B22]/70 font-medium mt-0.5">
+              Attiva o disattiva il feedback audio durante gli esercizi e le risposte.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => handleToggleSound(!soundActive)}
+            className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+              soundActive ? 'bg-[#6B7C4F]' : 'bg-gray-300'
+            }`}
+          >
+            <span
+              className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${
+                soundActive ? 'translate-x-5' : 'translate-x-0'
+              }`}
+            />
+          </button>
+        </div>
+
         {/* Logout Action */}
         <div className="border-t border-[#6B7C4F]/15 pt-4">
           <button
@@ -444,8 +483,10 @@ export const Settings: React.FC<SettingsProps> = ({
           <div className="p-4 rounded-2xl bg-white border border-[#6B7C4F]/20 space-y-3">
             <div className="flex items-center justify-between">
               <div>
-                <div className="font-bold text-xs text-[#3A2B22] uppercase tracking-wider">⏰ Promemoria</div>
-                <div className="text-xs text-[#3A2B22]/60 font-medium">Notifica di ripasso</div>
+                <div className="font-bold text-xs text-[#3A2B22] uppercase tracking-wider flex items-center gap-1.5">
+                  <span>⏰</span> Promemoria Notifiche Push
+                </div>
+                <div className="text-xs text-[#3A2B22]/60 font-medium">Notifica di ripasso quotidiano</div>
               </div>
               <label className="relative inline-flex items-center cursor-pointer">
                 <input
@@ -459,14 +500,46 @@ export const Settings: React.FC<SettingsProps> = ({
             </div>
 
             {user.reminderEnabled && (
-              <div className="flex items-center justify-between border-t border-[#6B7C4F]/10 pt-2.5">
-                <span className="text-xs font-bold text-[#3A2B22]">Orario:</span>
-                <input
-                  type="time"
-                  value={user.reminderTime}
-                  onChange={(e) => handleTimeChange(e.target.value)}
-                  className="p-2 rounded-xl bg-[#F2E8D5]/50 border border-[#6B7C4F]/30 text-xs font-bold text-[#3A2B22]"
-                />
+              <div className="space-y-3 border-t border-[#6B7C4F]/10 pt-2.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-[#3A2B22]">Orario quotidiano:</span>
+                  <input
+                    type="time"
+                    value={user.reminderTime || '20:00'}
+                    onChange={(e) => handleTimeChange(e.target.value)}
+                    className="p-2 rounded-xl bg-[#F2E8D5]/50 border border-[#6B7C4F]/30 text-xs font-bold text-[#3A2B22]"
+                  />
+                </div>
+
+                {/* Status & Test Button */}
+                <div className="flex items-center justify-between gap-2 pt-1">
+                  <span className="text-[11px] font-medium text-[#3A2B22]/70">
+                    Stato: {typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted' ? '🟢 Attive' : '🟡 Richiede permesso'}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      const perm = await requestNotificationPermission();
+                      if (perm === 'granted') {
+                        sendRaccoonNotification('🦝 Raccoonary — Notifiche Attive!', {
+                          body: `Promemoria impostato per le ${user.reminderTime || '20:00'}. Ti ricorderemo di raccogliere le tue ghiande!`,
+                        });
+                      } else {
+                        alert('Si prega di abilitare i permessi di notifica nelle impostazioni del browser.');
+                      }
+                    }}
+                    className="py-1.5 px-3 rounded-xl bg-[#6B7C4F]/10 hover:bg-[#6B7C4F] hover:text-white text-[11px] font-bold text-[#6B7C4F] transition-all cursor-pointer"
+                  >
+                    Invia prova 🔔
+                  </button>
+                </div>
+
+                {/* iOS PWA Guidance */}
+                {typeof window !== 'undefined' && /iPad|iPhone|iPod/.test(navigator.userAgent) && (
+                  <p className="text-[10px] text-[#3A2B22]/60 bg-amber-50 p-2 rounded-xl border border-amber-200/60 leading-tight">
+                    📲 <strong>Su iOS Safari:</strong> per ricevere notifiche push, aggiungi Raccoonary alla Schermata Home (tasto Condividi ➔ Aggiungi a schermata Home).
+                  </p>
+                )}
               </div>
             )}
           </div>

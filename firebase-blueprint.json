@@ -20,7 +20,10 @@
         "username": { "type": "string", "maxLength": 128 },
         "nativeLanguage": { "type": "string", "maxLength": 16 },
         "activeProfileId": { "type": "string", "maxLength": 16 },
-        "legacyMigrated": { "type": "boolean" }
+        "legacyMigrated": { "type": "boolean" },
+        "unlockedOutfits": { "type": "array" },
+        "activeOutfit": { "type": "string", "maxLength": 64 },
+        "streakFreezes": { "type": "number" }
       },
       "required": ["userId", "createdAt"]
     },
@@ -89,7 +92,10 @@
         "totalAcorns": { "type": "number" },
         "lastActiveDate": { "type": "string", "maxLength": 32 },
         "reminderEnabled": { "type": "boolean" },
-        "reminderTime": { "type": "string", "maxLength": 16 }
+        "reminderTime": { "type": "string", "maxLength": 16 },
+        "unlockedOutfits": { "type": "array" },
+        "activeOutfit": { "type": "string", "maxLength": 64 },
+        "streakFreezes": { "type": "number" }
       },
       "required": ["targetLanguage", "createdAt", "streakCount", "totalAcorns"]
     },

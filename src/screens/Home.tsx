@@ -4,16 +4,19 @@ import { UserProfile, VocabItem, SharedLanguagePairContent } from '../types';
 import { GRAMMAR_SYLLABUS } from '../data/grammarSyllabus';
 import { Translator } from '../components/Translator';
 import { TARGET_LANGUAGES, NATIVE_LANGUAGES } from '../data/languages';
+import { NavTab } from '../components/Navigation';
 
 interface HomeProps {
   user: UserProfile;
   vocabItems: VocabItem[];
   userProfiles?: string[];
   sharedContent?: SharedLanguagePairContent | null;
+  streakFreezeActivated?: boolean;
+  onCloseFreezeBanner?: () => void;
   onSwitchProfile?: (targetLanguage: string) => void;
   onAddNewLanguage?: (targetLanguage: string) => void;
   onStartReview: () => void;
-  onNavigate: (tab: 'memorize' | 'grammar' | 'reading' | 'import' | 'settings') => void;
+  onNavigate: (tab: NavTab) => void;
   onSelectGrammarTopic: (topicId: string) => void;
   onAddVocabItem: (item: VocabItem) => void;
   onDeleteItem: (itemId: string) => void;
@@ -26,6 +29,8 @@ export const Home: React.FC<HomeProps> = ({
   vocabItems,
   userProfiles = ['en'],
   sharedContent,
+  streakFreezeActivated,
+  onCloseFreezeBanner,
   onSwitchProfile,
   onAddNewLanguage,
   onStartReview,
@@ -51,7 +56,7 @@ export const Home: React.FC<HomeProps> = ({
   const totalCount = vocabItems.length;
 
   // Level Test calculation for card
-  let levelTestCardSub = 'Fai il test Cambridge di 35 domande per scoprire il tuo livello CEFR';
+  let levelTestCardSub = `Fai il test di 35 domande per scoprire il tuo livello di ${activeLang.name}`;
   if (user.currentLevel) {
     if (user.lastTestDate) {
       const diffDays = Math.floor((now - user.lastTestDate) / (1000 * 60 * 60 * 24));
@@ -77,12 +82,37 @@ export const Home: React.FC<HomeProps> = ({
 
   return (
     <div className="pb-28 pt-4 px-4 sm:px-6 max-w-5xl mx-auto space-y-6">
+      {/* Streak Freeze Banner Notification */}
+      {streakFreezeActivated && (
+        <div className="bg-[#EEF6FF] border-2 border-[#3B82F6] rounded-2xl p-4 shadow-sm flex items-center justify-between gap-3 animate-fade-in">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-[#2563EB] text-white flex items-center justify-center text-xl shrink-0">
+              🛡️
+            </div>
+            <div>
+              <h4 className="font-bold text-sm text-[#1E293B]">Salvagente attivato!</h4>
+              <p className="text-xs text-[#1E293B]/80 font-medium">
+                La tua serie è salva per un pelo! Un salvagente è stato consumato automaticamente.
+              </p>
+            </div>
+          </div>
+          {onCloseFreezeBanner && (
+            <button
+              onClick={onCloseFreezeBanner}
+              className="text-xs font-bold px-3 py-1.5 rounded-xl bg-white text-[#2563EB] border border-[#3B82F6]/30 hover:bg-blue-50 cursor-pointer"
+            >
+              Capito!
+            </button>
+          )}
+        </div>
+      )}
+
       {/* Header Section */}
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white/60 backdrop-blur-md p-4 sm:p-5 rounded-3xl border border-[#6B7C4F]/20 shadow-xs relative">
         <div className="flex items-center gap-4">
-          <div className="relative shrink-0">
-            <div className="w-16 h-16 sm:w-20 sm:h-20 bg-[#6B7C4F]/10 rounded-full border-2 border-[#3A2B22] flex items-center justify-center overflow-hidden shadow-xs">
-              <Mascot pose={dueItems.length > 0 ? 'greeting' : 'sleeping'} size={75} />
+          <div className="relative shrink-0 cursor-pointer" onClick={() => onNavigate('wardrobe')} title="Apri il Guardaroba">
+            <div className="w-16 h-16 sm:w-20 sm:h-20 bg-[#6B7C4F]/10 rounded-full border-2 border-[#3A2B22] flex items-center justify-center overflow-hidden shadow-xs hover:scale-105 transition-transform">
+              <Mascot pose={dueItems.length > 0 ? 'greeting' : 'sleeping'} activeOutfit={user.activeOutfit} size={75} />
             </div>
           </div>
           <div>
@@ -161,7 +191,7 @@ export const Home: React.FC<HomeProps> = ({
             </div>
 
             <h1 className="text-2xl sm:text-3xl font-bold font-display text-[#3A2B22] leading-tight mt-0.5">
-              Tana di Raccoonary
+              La tua tana di {activeLang.name}
             </h1>
             <p className="text-xs sm:text-sm text-[#3A2B22]/75 font-medium mt-0.5">
               {raccoonGreeting}
@@ -171,20 +201,30 @@ export const Home: React.FC<HomeProps> = ({
 
         {/* Header Stats Badges */}
         <div className="flex gap-3 justify-between md:justify-end">
-          <div className="bg-white rounded-2xl px-4 py-2.5 flex items-center gap-3 border-b-4 border-gray-200 shadow-xs flex-1 md:flex-none">
+          <button
+            onClick={() => onNavigate('wardrobe')}
+            className="bg-white hover:bg-amber-50/50 rounded-2xl px-4 py-2.5 flex items-center gap-3 border-b-4 border-gray-200 hover:border-[#6B7C4F]/30 shadow-xs flex-1 md:flex-none cursor-pointer transition-all text-left"
+            title="Gestisci Salvagente e Guardaroba"
+          >
             <span className="text-2xl">🌙</span>
             <div>
               <p className="text-[10px] uppercase font-bold text-gray-400 leading-none">Streak</p>
-              <p className="text-base font-bold font-display text-[#3A2B22]">{user.streakCount} notti</p>
+              <p className="text-base font-bold font-display text-[#3A2B22]">
+                {user.streakCount} notti {user.streakFreezes ? `(🛡️${user.streakFreezes})` : ''}
+              </p>
             </div>
-          </div>
-          <div className="bg-white rounded-2xl px-4 py-2.5 flex items-center gap-3 border-b-4 border-gray-200 shadow-xs flex-1 md:flex-none">
+          </button>
+          <button
+            onClick={() => onNavigate('wardrobe')}
+            className="bg-white hover:bg-amber-50/50 rounded-2xl px-4 py-2.5 flex items-center gap-3 border-b-4 border-gray-200 hover:border-[#E8802F]/30 shadow-xs flex-1 md:flex-none cursor-pointer transition-all text-left"
+            title="Apri il Guardaroba"
+          >
             <span className="text-2xl">🌰</span>
             <div>
               <p className="text-[10px] uppercase font-bold text-gray-400 leading-none">Ghiande</p>
               <p className="text-base font-bold font-display text-[#E8802F]">{user.totalAcorns}</p>
             </div>
-          </div>
+          </button>
         </div>
       </header>
 
@@ -211,7 +251,7 @@ export const Home: React.FC<HomeProps> = ({
           </div>
           <div className="min-w-0">
             <div className="flex items-center gap-2">
-              <span className="badge-leaf bg-[#C99A3D] text-white">Test Cambridge</span>
+              <span className="badge-leaf bg-[#C99A3D] text-white">Test di Livello</span>
               {user.currentLevel && (
                 <span className="text-xs font-bold text-[#E8802F] font-display">
                   Livello attuale: {user.currentLevel}
@@ -309,49 +349,79 @@ export const Home: React.FC<HomeProps> = ({
           </div>
         </div>
 
-        {/* Quick Access Grid (3 Columns across desktop) */}
-        <div className="md:col-span-4 bento-card cursor-pointer hover:border-[#E8802F]/50 transition-all" onClick={() => onNavigate('import')}>
-          <div className="flex items-center gap-3 mb-3">
-            <div className="w-12 h-12 rounded-2xl bg-[#E8802F]/15 text-[#E8802F] flex items-center justify-center text-2xl font-bold">
+        {/* Quick Access Grid (4 Cards) */}
+        <div className="md:col-span-3 bento-card cursor-pointer hover:border-[#E8802F]/50 transition-all" onClick={() => onNavigate('import')}>
+          <div className="flex items-center gap-3 mb-2">
+            <div className="w-10 h-10 rounded-2xl bg-[#E8802F]/15 text-[#E8802F] flex items-center justify-center text-xl font-bold shrink-0">
               📥
             </div>
             <div>
-              <h3 className="font-bold font-display text-base text-[#3A2B22]">Importa Vocaboli</h3>
-              <p className="text-xs text-gray-500">Aggiungi file CSV o liste</p>
-            </div>
-          </div>
-          <div className="border-2 border-dashed border-gray-200 rounded-xl p-3 text-center text-gray-400 text-xs mt-2">
-            Importa le tue liste →
-          </div>
-        </div>
-
-        <div className="md:col-span-4 bento-card cursor-pointer hover:border-[#6B7C4F]/50 transition-all" onClick={() => onNavigate('grammar')}>
-          <div className="flex items-center gap-3 mb-3">
-            <div className="w-12 h-12 rounded-2xl bg-[#6B7C4F]/15 text-[#6B7C4F] flex items-center justify-center text-2xl font-bold">
-              🌲
-            </div>
-            <div>
-              <h3 className="font-bold font-display text-base text-[#3A2B22]">Grammatica</h3>
-              <p className="text-xs text-gray-500">19 argomenti da A1 a C2</p>
+              <h3 className="font-bold font-display text-sm text-[#3A2B22]">Importa Vocaboli</h3>
+              <p className="text-[11px] text-gray-500">Aggiungi file o liste</p>
             </div>
           </div>
           <p className="text-xs text-[#3A2B22]/70 italic mt-2 font-medium">
-            Esercizi guidati con risposte immediate e spiegazioni chiare.
+            Carica ed estrai coppie di parole.
           </p>
         </div>
 
-        <div className="md:col-span-4 bento-card cursor-pointer hover:border-[#C99A3D]/50 transition-all" onClick={() => onNavigate('reading')}>
-          <div className="flex items-center gap-3 mb-3">
-            <div className="w-12 h-12 rounded-2xl bg-[#C99A3D]/15 text-[#C99A3D] flex items-center justify-center text-2xl font-bold">
-              📚
+        <div className="md:col-span-3 bento-card cursor-pointer hover:border-[#6B7C4F]/50 transition-all" onClick={() => onNavigate('grammar')}>
+          <div className="flex items-center gap-3 mb-2">
+            <div className="w-10 h-10 rounded-2xl bg-[#6B7C4F]/15 text-[#6B7C4F] flex items-center justify-center text-xl font-bold shrink-0">
+              🌲
             </div>
             <div>
-              <h3 className="font-bold font-display text-base text-[#3A2B22]">Comprensione</h3>
-              <p className="text-xs text-gray-500">Letture interattive</p>
+              <h3 className="font-bold font-display text-sm text-[#3A2B22]">Grammatica</h3>
+              <p className="text-[11px] text-gray-500">Da A1 a C2</p>
             </div>
           </div>
           <p className="text-xs text-[#3A2B22]/70 italic mt-2 font-medium">
-            Tocca qualsiasi parola nel testo per salvarla in tana.
+            Esercizi e spiegazioni sul syllabus.
+          </p>
+        </div>
+
+        <div className="md:col-span-3 bento-card cursor-pointer hover:border-[#E8802F]/50 transition-all" onClick={() => onNavigate('pronunciation')}>
+          <div className="flex items-center gap-3 mb-2">
+            <div className="w-10 h-10 rounded-2xl bg-[#E8802F]/15 text-[#E8802F] flex items-center justify-center text-xl font-bold shrink-0">
+              🎙️
+            </div>
+            <div>
+              <h3 className="font-bold font-display text-sm text-[#3A2B22]">Pronuncia</h3>
+              <p className="text-[11px] text-gray-500">Ascolto & registrazione</p>
+            </div>
+          </div>
+          <p className="text-xs text-[#3A2B22]/70 italic mt-2 font-medium">
+            Registrati, confronta l'audio ed esercitati.
+          </p>
+        </div>
+
+        <div className="md:col-span-3 bento-card cursor-pointer hover:border-[#6B7C4F]/50 transition-all bg-gradient-to-br from-[#F2E8D5]/60 to-[#6B7C4F]/10 border-2 border-[#6B7C4F]/30" onClick={() => onNavigate('wardrobe')}>
+          <div className="flex items-center gap-3 mb-2">
+            <div className="w-10 h-10 rounded-2xl bg-[#6B7C4F]/20 text-[#6B7C4F] flex items-center justify-center text-xl font-bold shrink-0">
+              👗
+            </div>
+            <div>
+              <h3 className="font-bold font-display text-sm text-[#3A2B22]">Guardaroba</h3>
+              <p className="text-[11px] text-[#6B7C4F] font-bold">Outfit & Salvagente</p>
+            </div>
+          </div>
+          <p className="text-xs text-[#3A2B22]/70 italic mt-2 font-medium">
+            Spendi ghiande per sbloccare vestiti e proteggere la tua streak 🛡️.
+          </p>
+        </div>
+
+        <div className="md:col-span-3 bento-card cursor-pointer hover:border-[#C99A3D]/50 transition-all" onClick={() => onNavigate('reading')}>
+          <div className="flex items-center gap-3 mb-2">
+            <div className="w-10 h-10 rounded-2xl bg-[#C99A3D]/15 text-[#C99A3D] flex items-center justify-center text-xl font-bold shrink-0">
+              📚
+            </div>
+            <div>
+              <h3 className="font-bold font-display text-sm text-[#3A2B22]">Comprensione</h3>
+              <p className="text-[11px] text-gray-500">Letture interattive</p>
+            </div>
+          </div>
+          <p className="text-xs text-[#3A2B22]/70 italic mt-2 font-medium">
+            Tocca qualsiasi parola per la tana.
           </p>
         </div>
 

@@ -31,6 +31,9 @@ export interface UserLanguageProfile {
   lastActiveDate: string | null;
   reminderEnabled: boolean;
   reminderTime: string;
+  unlockedOutfits?: string[];
+  activeOutfit?: string;
+  streakFreezes?: number;
 }
 
 export interface UserProfile {
@@ -49,6 +52,9 @@ export interface UserProfile {
   username?: string;
   nativeLanguage?: string;
   activeProfileId?: string;
+  unlockedOutfits?: string[];
+  activeOutfit?: string;
+  streakFreezes?: number;
 }
 
 export type VocabOrigin = 'import' | 'grammar_error' | 'reading_error' | 'exercise_error' | 'translator_search' | 'translator_lookup' | 'level_test_error' | 'special_section';

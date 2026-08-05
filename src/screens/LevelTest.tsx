@@ -3,6 +3,8 @@ import { Mascot } from '../mascot/Mascot';
 import { CEFRLevel, LevelTestQuestion, LevelTestResult, UserProfile, VocabItem } from '../types';
 import { generateLevelTest } from '../services/gemini';
 import { fetchLevelTests, saveLevelTestResult } from '../services/firebase';
+import { NATIVE_LANGUAGES, TARGET_LANGUAGES } from '../data/languages';
+import { playSound } from '../services/sound';
 
 interface LevelTestProps {
   userProfile: UserProfile;
@@ -27,11 +29,18 @@ export const LevelTest: React.FC<LevelTestProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
+  const targetLang = userProfile.activeProfileId || 'en';
+  const nativeLang = userProfile.nativeLanguage || 'it';
+  const targetInfo = TARGET_LANGUAGES.find((l) => l.code === targetLang);
+  const nativeInfo = NATIVE_LANGUAGES.find((l) => l.code === nativeLang);
+  const targetName = targetInfo ? targetInfo.name : targetLang.toUpperCase();
+  const nativeName = nativeInfo ? nativeInfo.name : nativeLang.toUpperCase();
+
   // Results state
   const [testResult, setTestResult] = useState<LevelTestResult | null>(null);
   const [testHistory, setTestHistory] = useState<LevelTestResult[]>(() => {
     try {
-      const saved = localStorage.getItem('raccoonary_level_test_history');
+      const saved = localStorage.getItem(`raccoonary_level_test_history_${targetLang}`);
       return saved ? JSON.parse(saved) : [];
     } catch (e) {
       return [];
@@ -46,7 +55,7 @@ export const LevelTest: React.FC<LevelTestProps> = ({
     setCurrentIndex(0);
 
     try {
-      const generated = await generateLevelTest();
+      const generated = await generateLevelTest(targetLang, nativeLang, targetName, nativeName);
       if (!generated || generated.length === 0) {
         throw new Error('Nessuna domanda ricevuta');
       }
@@ -109,8 +118,8 @@ export const LevelTest: React.FC<LevelTestProps> = ({
           id: `level_test_${Date.now()}_${idx}_${Math.random().toString(36).substring(2, 6)}`,
           term: q.domanda,
           translation: q.rispostaCorretta,
-          sourceLang: 'en',
-          targetLang: 'it',
+          sourceLang: targetLang,
+          targetLang: nativeLang,
           synonyms: [],
           exampleSource: q.testo_contesto || q.domanda,
           exampleTranslation: `Risposta corretta del test: ${q.rispostaCorretta}`,
@@ -162,6 +171,7 @@ export const LevelTest: React.FC<LevelTestProps> = ({
     };
 
     setTestResult(newResult);
+    playSound('levelAchieved');
 
     // Save to history
     const updatedHistory = [newResult, ...testHistory];
@@ -196,7 +206,7 @@ export const LevelTest: React.FC<LevelTestProps> = ({
         >
           ← Chiudi Test
         </button>
-        <span className="badge-leaf">Cambridge Style CEFR Test</span>
+        <span className="badge-leaf">Test di Livello CEFR</span>
       </div>
 
       {isLoading ? (

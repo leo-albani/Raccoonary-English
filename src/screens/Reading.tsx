@@ -1,17 +1,24 @@
 import React, { useState, useEffect } from 'react';
 import { Mascot } from '../mascot/Mascot';
-import { CEFRLevel, ReadingText, VocabItem } from '../types';
+import { CEFRLevel, ReadingText, UserProfile, VocabItem } from '../types';
 import { generateReadingText, explainWordInContext } from '../services/gemini';
+import { NATIVE_LANGUAGES, TARGET_LANGUAGES } from '../data/languages';
 
 interface ReadingProps {
   onSaveVocabItem: (item: VocabItem) => void;
+  userProfile?: UserProfile;
   t?: (key: string, params?: Record<string, string | number>) => string;
 }
 
-export const Reading: React.FC<ReadingProps> = ({ onSaveVocabItem, t }) => {
+export const Reading: React.FC<ReadingProps> = ({ onSaveVocabItem, userProfile, t }) => {
   const [currentLevel, setCurrentLevel] = useState<CEFRLevel>('A1');
   const [readingText, setReadingText] = useState<ReadingText | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+
+  const targetLang = userProfile?.activeProfileId || 'en';
+  const nativeLang = userProfile?.nativeLanguage || 'it';
+  const targetName = TARGET_LANGUAGES.find((l) => l.code === targetLang)?.name || targetLang.toUpperCase();
+  const nativeName = NATIVE_LANGUAGES.find((l) => l.code === nativeLang)?.name || nativeLang.toUpperCase();
 
   // Comprehension answers state
   const [userAnswers, setUserAnswers] = useState<Record<string, string>>({});
@@ -37,7 +44,7 @@ export const Reading: React.FC<ReadingProps> = ({ onSaveVocabItem, t }) => {
     setUserAnswers({});
     setCheckedQuestions({});
     try {
-      const data = await generateReadingText(level);
+      const data = await generateReadingText(level, targetLang, nativeLang, targetName, nativeName);
       setReadingText(data);
     } catch (e) {
       console.error(e);
@@ -48,7 +55,7 @@ export const Reading: React.FC<ReadingProps> = ({ onSaveVocabItem, t }) => {
 
   useEffect(() => {
     loadText(currentLevel);
-  }, [currentLevel]);
+  }, [currentLevel, targetLang]);
 
   const handleWordTap = async (word: string) => {
     const cleanWord = word.replace(/[^a-zA-Z']/g, '').trim();
@@ -60,7 +67,7 @@ export const Reading: React.FC<ReadingProps> = ({ onSaveVocabItem, t }) => {
     setWordSavedSuccess(false);
 
     try {
-      const exp = await explainWordInContext(cleanWord, readingText?.testo || '');
+      const exp = await explainWordInContext(cleanWord, readingText?.testo || '', nativeName, targetName);
       setWordExplanation(exp);
     } catch (e) {
       console.error(e);
@@ -76,8 +83,8 @@ export const Reading: React.FC<ReadingProps> = ({ onSaveVocabItem, t }) => {
       id: `reading_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
       term: wordExplanation.term,
       translation: wordExplanation.translation,
-      sourceLang: 'en',
-      targetLang: 'it',
+      sourceLang: targetLang,
+      targetLang: nativeLang,
       synonyms: [],
       exampleSource: wordExplanation.exampleSource || wordExplanation.term,
       exampleTranslation: wordExplanation.exampleTranslation || wordExplanation.translation,

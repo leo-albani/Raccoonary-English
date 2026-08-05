@@ -3,6 +3,8 @@ import { Mascot } from '../mascot/Mascot';
 import { GrammarTopic, Exercise, VocabItem, GrammarTopicProgress, SharedLanguagePairContent, SpecialSectionItem } from '../types';
 import { GRAMMAR_SYLLABUS, IRREGULAR_VERBS } from '../data/grammarSyllabus';
 import { generateGrammarExercises } from '../services/gemini';
+import { NATIVE_LANGUAGES, TARGET_LANGUAGES } from '../data/languages';
+import { playSound } from '../services/sound';
 
 interface GrammarProps {
   onSaveErrorVocab: (item: VocabItem) => void;
@@ -59,6 +61,11 @@ export const Grammar: React.FC<GrammarProps> = ({
   // Categories
   const categories = ['Base', 'Intermedio', 'Avanzato'] as const;
 
+  const targetLang = sharedContent?.sourceLang || 'en';
+  const nativeLang = sharedContent?.targetLang || 'it';
+  const targetName = TARGET_LANGUAGES.find((l) => l.code === targetLang)?.name || targetLang.toUpperCase();
+  const nativeName = NATIVE_LANGUAGES.find((l) => l.code === nativeLang)?.name || nativeLang.toUpperCase();
+
   const startTopicExercises = async (topic: GrammarTopic) => {
     setSelectedTopic(topic);
     setIsLoading(true);
@@ -72,7 +79,7 @@ export const Grammar: React.FC<GrammarProps> = ({
     }
 
     try {
-      const generated = await generateGrammarExercises(topic.name, topic.level);
+      const generated = await generateGrammarExercises(topic.name, topic.level, targetLang, nativeLang, targetName, nativeName);
       setExercises(generated);
     } catch (e) {
       console.error(e);
@@ -119,6 +126,12 @@ export const Grammar: React.FC<GrammarProps> = ({
       onUpdateGrammarProgress(updatedProg);
     }
 
+    if (!prevProg?.passed && isPassed) {
+      playSound('levelAchieved');
+    } else {
+      playSound('sessionComplete');
+    }
+
     setSelectedTopic(null);
   };
 
@@ -146,14 +159,20 @@ export const Grammar: React.FC<GrammarProps> = ({
 
     setCheckedAnswers((prev) => ({ ...prev, [index]: true }));
 
+    if (isCorrect) {
+      playSound('correct');
+    } else {
+      playSound('review');
+    }
+
     if (!isCorrect && selectedTopic) {
       // Create vocabulary error item to review later in tana
       const errorVocab: VocabItem = {
         id: `grammar_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
         term: ex.domanda,
         translation: ex.rispostaCorretta,
-        sourceLang: 'en',
-        targetLang: 'it',
+        sourceLang: targetLang,
+        targetLang: nativeLang,
         synonyms: [],
         exampleSource: ex.domanda,
         exampleTranslation: ex.spiegazione,
@@ -287,8 +306,8 @@ export const Grammar: React.FC<GrammarProps> = ({
                             id: `special_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
                             term: item.voce,
                             translation: item.significato,
-                            sourceLang: 'en',
-                            targetLang: 'it',
+                            sourceLang: targetLang,
+                            targetLang: nativeLang,
                             synonyms: [],
                             exampleSource: item.esempio || '',
                             exampleTranslation: '',

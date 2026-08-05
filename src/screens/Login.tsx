@@ -52,7 +52,7 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
         <div className="space-y-2">
           <span className="badge-leaf">Benvenuto in Raccoonary</span>
           <h1 className="text-3xl font-extrabold text-[#3A2B22] font-display">
-            La tua tana di inglese
+            La tua tana per imparare le lingue
           </h1>
           <p className="text-xs sm:text-sm font-medium text-[#3A2B22]/75 max-w-sm mx-auto leading-relaxed">
             Memorizza vocaboli con la ripetizione dilazionata, esercitati con la grammatica ed esplora la lingua a piccoli passi.

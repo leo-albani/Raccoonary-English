@@ -1,6 +1,6 @@
 import React from 'react';
 
-export type NavTab = 'home' | 'memorize' | 'grammar' | 'reading' | 'import' | 'settings';
+export type NavTab = 'home' | 'memorize' | 'grammar' | 'pronunciation' | 'reading' | 'import' | 'settings' | 'wardrobe';
 
 interface NavigationProps {
   currentTab: NavTab;
@@ -18,6 +18,7 @@ export const Navigation: React.FC<NavigationProps> = ({
   const tabs: { id: NavTab; label: string; icon: string; badge?: number }[] = [
     { id: 'home', label: t ? t('nav.home') : 'Tana', icon: '🏠' },
     { id: 'memorize', label: t ? t('nav.memorize') : 'Ripasso', icon: '⚡', badge: dueCount },
+    { id: 'pronunciation', label: 'Pronuncia', icon: '🎙️' },
     { id: 'grammar', label: t ? t('nav.grammar') : 'Grammatica', icon: '✏️' },
     { id: 'reading', label: t ? t('nav.reading') : 'Lettura', icon: '📚' },
     { id: 'import', label: 'Importa', icon: '📥' },
@@ -25,8 +26,8 @@ export const Navigation: React.FC<NavigationProps> = ({
   ];
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-[#6B7C4F]/20 px-2 sm:px-4 pt-2 pb-safe pb-3 z-40 shadow-xl select-none">
-      <div className="max-w-xl mx-auto grid grid-cols-6 items-center gap-1">
+    <nav className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-[#6B7C4F]/20 px-1 sm:px-4 pt-2 pb-safe pb-3 z-40 shadow-xl select-none">
+      <div className="max-w-2xl mx-auto grid grid-cols-7 items-center gap-0.5 sm:gap-1">
         {tabs.map((tab) => {
           const isActive = currentTab === tab.id;
           return (

@@ -274,12 +274,17 @@ export const Translator: React.FC<TranslatorProps> = ({
   };
 
   // Language display logic for input & output panels
-  const detectedSourceLang = currentResult?.lingua_origine || (/[àèéìòù]/i.test(query) ? 'it' : 'en');
-  const inputLangLabel = directionMode === 'it-en' ? 'Italiano (IT)' : directionMode === 'en-it' ? 'Inglese (EN)' : detectedSourceLang === 'it' ? 'Italiano (IT)' : 'Inglese (EN)';
-  const outputLangLabel = directionMode === 'it-en' ? 'Inglese (EN)' : directionMode === 'en-it' ? 'Italiano (IT)' : detectedSourceLang === 'it' ? 'Inglese (EN)' : 'Italiano (IT)';
+  const nativeCodeUpper = (nativeLang || 'it').toUpperCase();
+  const targetCodeUpper = (targetLang || 'en').toUpperCase();
+  const nativeLabel = `${nativeName} (${nativeCodeUpper})`;
+  const targetLabel = `${targetName} (${targetCodeUpper})`;
 
-  const inputLangCode = (directionMode === 'it-en' || (directionMode === 'auto' && detectedSourceLang === 'it')) ? 'it-IT' : 'en-US';
-  const outputLangCode = inputLangCode === 'it-IT' ? 'en-US' : 'it-IT';
+  const detectedSourceLang = currentResult?.lingua_origine || (/[àèéìòù]/i.test(query) ? nativeLang : targetLang);
+  const inputLangLabel = directionMode === 'it-en' ? nativeLabel : directionMode === 'en-it' ? targetLabel : detectedSourceLang === nativeLang ? nativeLabel : targetLabel;
+  const outputLangLabel = directionMode === 'it-en' ? targetLabel : directionMode === 'en-it' ? nativeLabel : detectedSourceLang === nativeLang ? targetLabel : nativeLabel;
+
+  const inputLangCode = (directionMode === 'it-en' || (directionMode === 'auto' && detectedSourceLang === nativeLang)) ? `${nativeLang}-${nativeCodeUpper}` : `${targetLang}-${targetCodeUpper}`;
+  const outputLangCode = inputLangCode.startsWith(nativeLang) ? `${targetLang}-${targetCodeUpper}` : `${nativeLang}-${nativeCodeUpper}`;
 
   // Split sentence into words & whitespace for clickable tokens
   const renderClickableTokens = (text: string) => {
@@ -369,7 +374,7 @@ export const Translator: React.FC<TranslatorProps> = ({
           <textarea
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Scrivi o incolla una parola o frase in italiano o inglese..."
+            placeholder={`Scrivi o incolla una parola o frase in ${nativeName.toLowerCase()} o ${targetName.toLowerCase()}...`}
             rows={3}
             className="w-full bg-transparent text-[#3A2B22] placeholder-gray-400 font-medium text-sm sm:text-base outline-none resize-none leading-relaxed"
           />

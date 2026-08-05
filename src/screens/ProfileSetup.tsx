@@ -249,7 +249,7 @@ export const ProfileSetup: React.FC<ProfileSetupProps> = ({ userId, onComplete }
             {hasLegacyData && (
               <p className="text-xs text-[#C99A3D] font-bold bg-[#C99A3D]/10 p-3 rounded-2xl border border-[#C99A3D]/30 flex items-center gap-2 mt-2">
                 <span>🦝</span>
-                <span>Hai già progressi salvati in inglese, li ritroverai qui.</span>
+                <span>Hai già progressi salvati per la lingua selezionata, li ritroverai qui.</span>
               </p>
             )}
           </div>

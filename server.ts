@@ -363,13 +363,13 @@ Rispondi SOLO in JSON:
 // API 5: Parse unstructured file (PDF or raw text) for vocabulary import
 app.post("/api/parse-import", async (req, res) => {
   try {
-    const { content } = req.body;
+    const { content, targetLang = "en", nativeLang = "it", targetName = "Inglese", nativeName = "Italiano" } = req.body;
     if (!content) {
       return res.status(400).json({ error: "Content is required." });
     }
 
     const ai = getGeminiClient();
-    const prompt = `Estrai tutte le coppie di vocaboli (parola/espressione inglese e traduzione italiana o viceversa) contenute nel seguente testo.
+    const prompt = `Estrai tutte le coppie di vocaboli (parola/espressione in ${targetName} [${targetLang}] e traduzione in ${nativeName} [${nativeLang}] o viceversa) contenute nel seguente testo.
 Per ciascuna coppia estrai anche eventuali sinonimi ed una frase di esempio pulita se disponibile nel testo.
 Testo:
 """
@@ -380,8 +380,8 @@ Rispondi SOLO in JSON con un array di oggetti:
   {
     "term": "parola/frase originale",
     "translation": "traduzione",
-    "sourceLang": "it" | "en",
-    "targetLang": "it" | "en",
+    "sourceLang": "${targetLang}" | "${nativeLang}",
+    "targetLang": "${nativeLang}" | "${targetLang}",
     "synonyms": ["sinonimo1", "sinonimo2"],
     "exampleSource": "esempio in lingua origine senza tag HTML",
     "exampleTranslation": "traduzione esempio"
@@ -445,14 +445,14 @@ Rispondi SOLO in JSON:
 // API 7: Word Deep Dive for individual word in context
 app.post("/api/deep-dive", async (req, res) => {
   try {
-    const { word, contextSentence = "" } = req.body;
+    const { word, contextSentence = "", nativeName = "Italiano", targetName = "Inglese", nativeLang = "it", targetLang = "en" } = req.body;
     if (!word || !word.trim()) {
       return res.status(400).json({ error: "Word is required." });
     }
 
     const ai = getGeminiClient();
-    const prompt = `Fornisci un approfondimento sulla parola/espressione "${word.trim()}" in inglese, nel contesto della frase "${contextSentence.trim()}".
-Includi: definizione breve, eventuale nota d'uso/registro, 2-3 frasi di esempio tipiche in inglese con traduzione italiana.
+    const prompt = `Fornisci un approfondimento sulla parola/espressione "${word.trim()}" in ${targetName} (${targetLang}), nel contesto della frase "${contextSentence.trim()}".
+Includi: definizione breve in ${nativeName}, eventuale nota d'uso/registro, 2-3 frasi di esempio tipiche in ${targetName} con traduzione in ${nativeName}.
 Rispondi SOLO in JSON:
 {"definizione": "...", "nota_uso": "...", "esempi": [{"en": "...", "it": "..."}]}`;
 
@@ -471,7 +471,7 @@ Rispondi SOLO in JSON:
     const word = (req.body.word || "").trim();
     res.json({
       definizione: `Definizione di base per "${word}"`,
-      nota_uso: "Termine comune in lingua inglese.",
+      nota_uso: "Termine comune.",
       esempi: [
         { en: `Example with ${word}`, it: `Esempio con ${word}` }
       ],
@@ -623,15 +623,15 @@ function getFallbackLevelTestQuestions() {
 }
 app.post("/api/deep-dive-phrase", async (req, res) => {
   try {
-    const { phrase } = req.body;
+    const { phrase, nativeName = "Italiano", targetName = "Inglese", nativeLang = "it", targetLang = "en" } = req.body;
     if (!phrase || !phrase.trim()) {
       return res.status(400).json({ error: "Phrase is required." });
     }
 
     const ai = getGeminiClient();
-    const prompt = `Fornisci un approfondimento sulla frase/espressione inglese "${phrase.trim()}".
-Se è un'espressione idiomatica o un modo di dire, spiegalo chiaramente: non si traduce parola per parola, indica il significato reale d'uso. Se invece è una frase letterale, indicalo comunque.
-Includi: quando si usa (contesto/registro tipico), 2-3 frasi di esempio in inglese con traduzione italiana che mostrano l'uso reale dell'espressione.
+    const prompt = `Fornisci un approfondimento sulla frase/espressione in ${targetName} (${targetLang}) "${phrase.trim()}".
+Se è un'espressione idiomatica o un modo di dire, spiegalo chiaramente in ${nativeName}: non si traduce parola per parola, indica il significato reale d'uso. Se invece è una frase letterale, indicalo comunque.
+Includi: quando si usa (contesto/registro tipico), 2-3 frasi di esempio in ${targetName} con traduzione in ${nativeName} che mostrano l'uso reale dell'espressione.
 Rispondi SOLO in JSON:
 {"tipo": "idiomatico|letterale", "quando_si_usa": "...", "esempi": [{"en": "...", "it": "..."}]}`;
 

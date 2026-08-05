@@ -28,7 +28,7 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete, skipSlides =
     },
     {
       title: t ? t('onboarding.slide3.title') : 'Testi al tuo livello',
-      subtitle: t ? t('onboarding.slide3.subtitle') : 'Da A1 a C2, in stile Cambridge. Quello che non torna finisce comunque in tana.',
+      subtitle: t ? t('onboarding.slide3.subtitle') : 'Da A1 a C2, in stile esame ufficiale. Quello che non torna finisce comunque in tana.',
       pose: 'reading',
       speech: t ? t('onboarding.slide3.speech') : 'Letture interattive con traduzioni a portata di tap.',
     },

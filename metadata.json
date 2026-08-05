@@ -1,6 +1,6 @@
 {
   "name": "Raccoonary",
-  "description": "App per imparare l'inglese con il procione guida Raccoonary",
+  "description": "App per imparare le lingue con il procione guida Raccoonary",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

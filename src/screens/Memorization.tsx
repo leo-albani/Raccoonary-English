@@ -4,6 +4,8 @@ import { VocabItem, AnswerEvaluationResult } from '../types';
 import { evaluateUserAnswer } from '../services/gemini';
 import { calculateNextReview, filterDueItems } from '../services/leitner';
 import { TanaManager } from '../components/TanaManager';
+import { TARGET_LANGUAGES, NATIVE_LANGUAGES } from '../data/languages';
+import { playSound } from '../services/sound';
 
 interface MemorizationProps {
   vocabItems: VocabItem[];
@@ -75,6 +77,11 @@ export const Memorization: React.FC<MemorizationProps> = ({
 
   const currentItem = sessionPool[currentIndex];
 
+  const sourceLangCode = currentItem.sourceLang || 'en';
+  const targetLangCode = currentItem.targetLang || 'it';
+  const sourceLangName = TARGET_LANGUAGES.find((l) => l.code === sourceLangCode)?.name || NATIVE_LANGUAGES.find((l) => l.code === sourceLangCode)?.name || sourceLangCode.toUpperCase();
+  const targetLangName = NATIVE_LANGUAGES.find((l) => l.code === targetLangCode)?.name || TARGET_LANGUAGES.find((l) => l.code === targetLangCode)?.name || targetLangCode.toUpperCase();
+
   // Random 50/50 direction choice per item occurrence
   // Direction A (true): Term -> Translation
   // Direction B (false): Translation -> Term
@@ -109,6 +116,11 @@ export const Memorization: React.FC<MemorizationProps> = ({
         isTermToTranslation ? currentItem.synonyms : []
       );
       setEvaluation(result);
+      if (result.corretto) {
+        playSound('correct');
+      } else {
+        playSound('review');
+      }
 
       // Update Leitner stats
       const { box, nextReviewAt, correctStreakChange } = calculateNextReview(
@@ -151,6 +163,7 @@ export const Memorization: React.FC<MemorizationProps> = ({
         wrongCount: currentItem.wrongCount + 1,
       };
       onSaveItem(updatedItem);
+      playSound('review');
 
       setEvaluation({
         corretto: false,
@@ -170,6 +183,7 @@ export const Memorization: React.FC<MemorizationProps> = ({
       setCurrentIndex((prev) => prev + 1);
     } else {
       setIsFinished(true);
+      playSound('sessionComplete');
       const acornsEarned = (correctCount + (evaluation?.corretto ? 1 : 0)) * 5;
       onSessionComplete(acornsEarned);
     }
@@ -258,8 +272,8 @@ export const Memorization: React.FC<MemorizationProps> = ({
             size={110}
             speechBubble={
               isTermToTranslation
-                ? `Come si dice "${promptText}" in italiano?`
-                : `Come si dice "${promptText}" in inglese?`
+                ? `Come si dice "${promptText}" in ${targetLangName.toLowerCase()}?`
+                : `Come si dice "${promptText}" in ${sourceLangName.toLowerCase()}?`
             }
           />
         )}
@@ -272,7 +286,7 @@ export const Memorization: React.FC<MemorizationProps> = ({
             Box Leitner {currentItem.box}
           </span>
           <span className="text-[11px] font-bold text-[#6B7C4F] bg-[#6B7C4F]/10 px-2 py-0.5 rounded-full font-display uppercase">
-            {isTermToTranslation ? 'EN ➔ IT' : 'IT ➔ EN'}
+            {isTermToTranslation ? `${sourceLangCode.toUpperCase()} ➔ ${targetLangCode.toUpperCase()}` : `${targetLangCode.toUpperCase()} ➔ ${sourceLangCode.toUpperCase()}`}
           </span>
         </div>
         <h3 className="text-3xl font-bold font-display text-[#3A2B22]">
