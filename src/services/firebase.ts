@@ -22,7 +22,20 @@ import { UserProfile, UserAccount, VocabItem, GrammarTopicProgress, SharedLangua
 import { SEED_IT_EN_CONTENT } from '../data/sharedContentSeed';
 import { NATIVE_LANGUAGES, TARGET_LANGUAGES } from '../data/languages';
 import { IT_TRANSLATIONS } from '../i18n/translations';
-import firebaseConfig from '../../firebase-applet-config.json';
+// Load config dynamically if present or fallback to embedded config
+const configModules = import.meta.glob('../../firebase-applet-config.json', { eager: true });
+const configPath = Object.keys(configModules)[0];
+const loadedConfig = configPath ? (configModules[configPath] as any)?.default : null;
+
+const firebaseConfig = loadedConfig || {
+  apiKey: "AIzaSyAFxfsquFnviXy77UJrqnghISyN_gxvUUc",
+  authDomain: "gen-lang-client-0939401223.firebaseapp.com",
+  projectId: "gen-lang-client-0939401223",
+  storageBucket: "gen-lang-client-0939401223.firebasestorage.app",
+  messagingSenderId: "664049459009",
+  appId: "1:664049459009:web:a1f7610f41ad08788d8bc0",
+  measurementId: "G-0KS05ZRPCY"
+};
 
 // Storage keys for local resilience
 const LOCAL_USER_KEY = 'raccoonary_local_user';
@@ -57,20 +70,25 @@ export interface FirestoreErrorInfo {
 }
 
 // App & Service Initialization
-const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
-export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
-export const auth = getAuth(app);
+const app = firebaseConfig && firebaseConfig.apiKey
+  ? (getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0])
+  : null;
+
+export const db = app
+  ? (firebaseConfig.firestoreDatabaseId ? getFirestore(app, firebaseConfig.firestoreDatabaseId) : getFirestore(app))
+  : null;
+export const auth = app ? getAuth(app) : null;
 
 export function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
   const errInfo: FirestoreErrorInfo = {
     error: error instanceof Error ? error.message : String(error),
     authInfo: {
-      userId: auth.currentUser?.uid,
-      email: auth.currentUser?.email,
-      emailVerified: auth.currentUser?.emailVerified,
-      isAnonymous: auth.currentUser?.isAnonymous,
-      tenantId: auth.currentUser?.tenantId,
-      providerInfo: auth.currentUser?.providerData?.map((provider) => ({
+      userId: auth?.currentUser?.uid,
+      email: auth?.currentUser?.email,
+      emailVerified: auth?.currentUser?.emailVerified,
+      isAnonymous: auth?.currentUser?.isAnonymous,
+      tenantId: auth?.currentUser?.tenantId,
+      providerInfo: auth?.currentUser?.providerData?.map((provider) => ({
         providerId: provider.providerId,
         email: provider.email,
       })) || [],
@@ -84,6 +102,7 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
 
 // Connection Validation
 async function testConnection() {
+  if (!db) return;
   try {
     await getDocFromServer(doc(db, 'test', 'connection'));
   } catch (error) {
@@ -103,11 +122,13 @@ export function initFirebase() {
 // Ensure anonymous auth
 export async function ensureAuth(): Promise<string> {
   try {
-    if (!auth.currentUser) {
+    if (auth && !auth.currentUser) {
       const cred = await signInAnonymously(auth);
       return cred.user.uid;
     }
-    return auth.currentUser.uid;
+    if (auth?.currentUser) {
+      return auth.currentUser.uid;
+    }
   } catch (e) {
     console.warn('Firebase auth failed, using local user ID:', e);
   }
@@ -121,6 +142,9 @@ export async function ensureAuth(): Promise<string> {
 }
 
 export async function loginWithGoogle(): Promise<{ user: User; isLinked: boolean; warningMessage?: string }> {
+  if (!auth) {
+    throw new Error('Integrazione Firebase non attiva. Collega un progetto Firebase per abilitare l\'accesso.');
+  }
   const provider = new GoogleAuthProvider();
   const currentUser = auth.currentUser;
 
@@ -162,7 +186,9 @@ function translateAuthError(error: any): Error {
 }
 
 export async function logoutUser(): Promise<void> {
-  await signOut(auth);
+  if (auth) {
+    await signOut(auth);
+  }
 }
 
 // ------------------- ADMIN UTILS -------------------

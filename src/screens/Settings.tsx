@@ -50,7 +50,7 @@ export const Settings: React.FC<SettingsProps> = ({
     t ? t(key, params) : getTranslation(key, null, params);
 
   // Group 1: Account state
-  const currentUser = auth.currentUser;
+  const currentUser = auth?.currentUser;
   const currentUserEmail = currentUser?.email;
   const isAdmin = isUserAdmin(currentUserEmail);
 

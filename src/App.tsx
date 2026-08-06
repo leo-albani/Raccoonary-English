@@ -165,6 +165,10 @@ export function App() {
 
   // Initialize Auth state listener
   useEffect(() => {
+    if (!auth) {
+      setIsLoading(false);
+      return;
+    }
     const unsubscribe = onAuthStateChanged(auth, async (authUser) => {
       if (authUser && !authUser.isAnonymous) {
         setIsLoading(true);
