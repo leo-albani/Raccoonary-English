@@ -89,7 +89,9 @@ const app = firebaseConfig && firebaseConfig.apiKey
   : null;
 
 export const db = app
-  ? (firebaseConfig.firestoreDatabaseId ? getFirestore(app, firebaseConfig.firestoreDatabaseId) : getFirestore(app))
+  ? (firebaseConfig.firestoreDatabaseId && firebaseConfig.firestoreDatabaseId !== '(default)'
+      ? getFirestore(app, firebaseConfig.firestoreDatabaseId)
+      : getFirestore(app))
   : null;
 export const auth = app ? getAuth(app) : null;
 
