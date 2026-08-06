@@ -42,6 +42,20 @@ const LOCAL_USER_KEY = 'raccoonary_local_user';
 const LOCAL_VOCAB_KEY = 'raccoonary_local_vocab';
 const LOCAL_GRAMMAR_KEY = 'raccoonary_local_grammar';
 
+// Helper for timing out hanging Firestore operations
+export function withTimeout<T>(
+  promise: Promise<T>,
+  timeoutMs: number = 8000,
+  errorMsg: string = 'Operazione su Firestore scaduta'
+): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) =>
+      setTimeout(() => reject(new Error(errorMsg)), timeoutMs)
+    ),
+  ]);
+}
+
 // Error Handling Infrastructure
 export enum OperationType {
   CREATE = 'create',
@@ -205,7 +219,7 @@ export async function getUserAccount(userId: string): Promise<UserAccount | null
     const path = `users/${userId}`;
     try {
       const docRef = doc(db, 'users', userId);
-      const snap = await getDoc(docRef);
+      const snap = await withTimeout(getDoc(docRef), 8000);
       if (snap.exists()) {
         const data = snap.data();
         if (
@@ -366,8 +380,14 @@ export async function createUserAccountAndProfile(
   if (db && !userId.startsWith('local_user_')) {
     const userPath = `users/${userId}`;
     try {
-      await setDoc(doc(db, 'users', userId), accountDoc, { merge: true });
-      await setDoc(doc(db, 'users', userId, 'profiles', data.targetLanguage), profileDoc, { merge: true });
+      await withTimeout(
+        Promise.all([
+          setDoc(doc(db, 'users', userId), accountDoc, { merge: true }),
+          setDoc(doc(db, 'users', userId, 'profiles', data.targetLanguage), profileDoc, { merge: true }),
+        ]),
+        8000,
+        'Timeout durante il salvataggio del profilo'
+      );
     } catch (e) {
       handleFirestoreError(e, OperationType.WRITE, userPath);
     }
