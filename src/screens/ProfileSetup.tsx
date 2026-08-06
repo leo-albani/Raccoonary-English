@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Mascot } from '../mascot/Mascot';
 import { NATIVE_LANGUAGES, TARGET_LANGUAGES } from '../data/languages';
 import { createUserAccountAndProfile, checkUserHasLegacyData } from '../services/firebase';
+import { Gender } from '../types';
 
 interface ProfileSetupProps {
   userId: string;
@@ -12,6 +13,7 @@ export const ProfileSetup: React.FC<ProfileSetupProps> = ({ userId, onComplete }
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [username, setUsername] = useState('');
+  const [gender, setGender] = useState<Gender>('undisclosed');
   const [nativeLanguage, setNativeLanguage] = useState('it');
   const [targetLanguage, setTargetLanguage] = useState('en');
   
@@ -64,6 +66,7 @@ export const ProfileSetup: React.FC<ProfileSetupProps> = ({ userId, onComplete }
         username: username.trim(),
         nativeLanguage,
         targetLanguage,
+        gender,
       });
       onComplete();
     } catch (err: any) {
@@ -145,6 +148,48 @@ export const ProfileSetup: React.FC<ProfileSetupProps> = ({ userId, onComplete }
               required
               className="w-full p-3.5 rounded-2xl bg-[#F2E8D5]/40 border-2 border-[#3A2B22]/15 focus:border-[#6B7C4F] focus:bg-white focus:outline-none font-medium text-sm text-[#3A2B22] transition-all"
             />
+          </div>
+
+          {/* Sesso (Gender Selector) */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-[#3A2B22] font-display uppercase tracking-wider">
+              Sesso
+            </label>
+            <div className="grid grid-cols-3 gap-2">
+              <button
+                type="button"
+                onClick={() => setGender('M')}
+                className={`py-3 px-2 rounded-2xl border-2 font-display text-xs font-bold transition-all cursor-pointer text-center ${
+                  gender === 'M'
+                    ? 'border-[#6B7C4F] bg-[#6B7C4F] text-white shadow-xs'
+                    : 'border-[#3A2B22]/15 bg-[#F2E8D5]/40 hover:border-[#6B7C4F]/50 text-[#3A2B22]'
+                }`}
+              >
+                M
+              </button>
+              <button
+                type="button"
+                onClick={() => setGender('F')}
+                className={`py-3 px-2 rounded-2xl border-2 font-display text-xs font-bold transition-all cursor-pointer text-center ${
+                  gender === 'F'
+                    ? 'border-[#6B7C4F] bg-[#6B7C4F] text-white shadow-xs'
+                    : 'border-[#3A2B22]/15 bg-[#F2E8D5]/40 hover:border-[#6B7C4F]/50 text-[#3A2B22]'
+                }`}
+              >
+                F
+              </button>
+              <button
+                type="button"
+                onClick={() => setGender('undisclosed')}
+                className={`py-3 px-2 rounded-2xl border-2 font-display text-xs font-bold transition-all cursor-pointer text-center ${
+                  gender === 'undisclosed'
+                    ? 'border-[#6B7C4F] bg-[#6B7C4F] text-white shadow-xs'
+                    : 'border-[#3A2B22]/15 bg-[#F2E8D5]/40 hover:border-[#6B7C4F]/50 text-[#3A2B22]'
+                }`}
+              >
+                Preferisco non dirlo
+              </button>
+            </div>
           </div>
 
           {/* Native Language (Searchable dropdown) */}

@@ -5,6 +5,7 @@ import { GRAMMAR_SYLLABUS } from '../data/grammarSyllabus';
 import { Translator } from '../components/Translator';
 import { TARGET_LANGUAGES, NATIVE_LANGUAGES } from '../data/languages';
 import { NavTab } from '../components/Navigation';
+import { genderedWord } from '../utils/gender';
 
 interface HomeProps {
   user: UserProfile;
@@ -73,6 +74,18 @@ export const Home: React.FC<HomeProps> = ({
   if (hour >= 18 || hour < 5) timeGreeting = 'Buonasera';
   else if (hour >= 12) timeGreeting = 'Buon pomeriggio';
 
+  const namePart = user.username ? user.username.toUpperCase() : user.firstName ? user.firstName.toUpperCase() : '';
+  const titleWord = genderedWord(user.gender, 'ESPLORATORE', 'ESPLORATRICE', '');
+
+  let headerGreeting = timeGreeting.toUpperCase();
+  if (titleWord && namePart) {
+    headerGreeting += `, ${titleWord} ${namePart}`;
+  } else if (titleWord && !namePart) {
+    headerGreeting += `, ${titleWord}`;
+  } else if (!titleWord && namePart) {
+    headerGreeting += `, ${namePart}`;
+  }
+
   const raccoonGreeting =
     dueItems.length > 0
       ? `Ci sono ${dueItems.length} parole pronte per il ripasso.`
@@ -118,7 +131,7 @@ export const Home: React.FC<HomeProps> = ({
           <div>
             <div className="flex items-center gap-2 flex-wrap">
               <span className="text-xs font-bold uppercase tracking-wider text-[#6B7C4F] font-display">
-                {timeGreeting}, Esploratore
+                {headerGreeting}
               </span>
 
               {/* Language Switcher Pill */}

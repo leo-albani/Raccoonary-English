@@ -10,6 +10,7 @@ import {
   deleteVocabItem,
   resetAllData,
   adminResetTestData,
+  adminSimulateNewUser,
   getLocalUserProfile,
   getLocalVocabItems,
   logoutUser,
@@ -348,6 +349,12 @@ export function App() {
     setCurrentTab('home');
   };
 
+  const handleAdminSimulateNewUser = async () => {
+    setIsLoading(true);
+    await adminSimulateNewUser(userId);
+    window.location.reload();
+  };
+
   const handleLogout = async () => {
     setIsLoading(true);
     await logoutUser();
@@ -601,6 +608,7 @@ export function App() {
                 onDeleteItem={handleDeleteItem}
                 onResetData={handleResetData}
                 onAdminResetData={handleAdminResetData}
+                onAdminSimulateNewUser={handleAdminSimulateNewUser}
                 onLogout={handleLogout}
                 onRestartTutorial={handleRestartTutorial}
                 t={t}

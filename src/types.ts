@@ -12,6 +12,8 @@ export interface UITranslationSet {
   generatedAt?: number;
 }
 
+export type Gender = 'M' | 'F' | 'undisclosed';
+
 export interface UserAccount {
   userId: string;
   firstName: string;
@@ -21,6 +23,7 @@ export interface UserAccount {
   activeProfileId: string; // Target language code e.g. "en"
   createdAt: number;
   tutorialCompleted?: boolean;
+  gender?: Gender;
 }
 
 export interface UserLanguageProfile {
@@ -57,6 +60,7 @@ export interface UserProfile {
   activeOutfit?: string;
   streakFreezes?: number;
   tutorialCompleted?: boolean;
+  gender?: Gender;
 }
 
 export type VocabOrigin = 'import' | 'grammar_error' | 'reading_error' | 'exercise_error' | 'translator_search' | 'translator_lookup' | 'level_test_error' | 'special_section';

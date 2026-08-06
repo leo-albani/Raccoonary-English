@@ -4,18 +4,24 @@ import { RACCOON_OUTFITS, Outfit, getOutfitById } from '../data/outfits';
 import { Mascot } from '../mascot/Mascot';
 import { playSound } from '../services/sound';
 import { Shield, Sparkles, Check, ArrowLeft, Lock, Info } from 'lucide-react';
+import { getTranslation } from '../i18n/translations';
 
 interface WardrobeProps {
   userProfile: UserProfile;
   onUpdateProfile: (updated: UserProfile) => Promise<void>;
   onBack: () => void;
+  t?: (key: string, params?: Record<string, string | number>) => string;
 }
 
 export const Wardrobe: React.FC<WardrobeProps> = ({
   userProfile,
   onUpdateProfile,
   onBack,
+  t,
 }) => {
+  const tr = (key: string, params?: Record<string, string | number>) =>
+    t ? t(key, params) : getTranslation(key, null, params);
+
   const [activeCategory, setActiveCategory] = useState<'all' | 'semplice' | 'medio' | 'elaborato'>('all');
   const [feedbackMsg, setFeedbackMsg] = useState<string | null>(null);
 
@@ -38,12 +44,12 @@ export const Wardrobe: React.FC<WardrobeProps> = ({
     };
     await onUpdateProfile(updated);
     playSound('correct');
-    showNotification(`Hai indossato "${outfit.name}"! 🦝✨`);
+    showNotification(tr('wardrobe.wearingNotification', { name: outfit.name }));
   };
 
   const handleUnlock = async (outfit: Outfit) => {
     if (currentAcorns < outfit.cost) {
-      showNotification('Ghiande insufficienti! Completa più esercizi per guadagnarne altre. 🌰');
+      showNotification(tr('wardrobe.insufficientAcorns'));
       return;
     }
 
@@ -57,13 +63,13 @@ export const Wardrobe: React.FC<WardrobeProps> = ({
 
     await onUpdateProfile(updated);
     playSound('levelAchieved');
-    showNotification(`Hai sbloccato e indossato "${outfit.name}"! 🎉`);
+    showNotification(tr('wardrobe.unlockedNotification', { name: outfit.name }));
   };
 
   const handleBuyStreakFreeze = async () => {
     const FREEZE_COST = 200;
     if (currentAcorns < FREEZE_COST) {
-      showNotification('Ghiande insufficienti! Servono 200 🌰 per un Salvagente Streak.');
+      showNotification(tr('wardrobe.insufficientAcornsFreeze'));
       return;
     }
 
@@ -75,7 +81,7 @@ export const Wardrobe: React.FC<WardrobeProps> = ({
 
     await onUpdateProfile(updated);
     playSound('acorn');
-    showNotification('🛡️ Salvagente Streak acquistato! Ora la tua serie è al sicuro.');
+    showNotification(tr('wardrobe.freezePurchased'));
   };
 
   const filteredOutfits = RACCOON_OUTFITS.filter((o) => {
@@ -92,10 +98,10 @@ export const Wardrobe: React.FC<WardrobeProps> = ({
         <button
           onClick={onBack}
           id="btn-wardrobe-back"
-          className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white border border-[#6B7C4F]/20 text-[#3A2B22] hover:bg-[#F2E8D5]/50 transition-colors text-sm font-medium shadow-sm"
+          className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white border border-[#6B7C4F]/20 text-[#3A2B22] hover:bg-[#F2E8D5]/50 transition-colors text-sm font-medium shadow-sm cursor-pointer"
         >
           <ArrowLeft className="w-4 h-4 text-[#6B7C4F]" />
-          Torna alla Home
+          {tr('wardrobe.backHome')}
         </button>
 
         <div className="flex items-center gap-3">
@@ -103,14 +109,14 @@ export const Wardrobe: React.FC<WardrobeProps> = ({
           <div className="flex items-center gap-1.5 px-3 py-1.5 bg-[#FFF8EE] border border-[#D97706]/30 rounded-xl shadow-sm text-sm font-bold text-[#D97706]">
             <span>🌰</span>
             <span>{currentAcorns}</span>
-            <span className="text-xs font-normal text-[#8A7A6A] hidden sm:inline">ghiande</span>
+            <span className="text-xs font-normal text-[#8A7A6A] hidden sm:inline">{tr('wardrobe.acorns')}</span>
           </div>
 
           {/* Streak Freeze Badge */}
           <div className="flex items-center gap-1.5 px-3 py-1.5 bg-[#EEF6FF] border border-[#3B82F6]/30 rounded-xl shadow-sm text-sm font-bold text-[#2563EB]">
             <Shield className="w-4 h-4 text-[#2563EB]" />
             <span>{streakFreezes}</span>
-            <span className="text-xs font-normal text-[#5B7B9C] hidden sm:inline">salvagente</span>
+            <span className="text-xs font-normal text-[#5B7B9C] hidden sm:inline">{tr('wardrobe.streakFreeze')}</span>
           </div>
         </div>
       </div>
@@ -128,21 +134,20 @@ export const Wardrobe: React.FC<WardrobeProps> = ({
         <div className="shrink-0 flex flex-col items-center">
           <Mascot activeOutfit={activeOutfitId} pose="greeting" size={150} />
           <span className="mt-2 text-xs font-semibold px-2.5 py-0.5 bg-[#6B7C4F]/10 text-[#54633E] rounded-full">
-            In uso: {activeOutfitObj.name}
+            {tr('wardrobe.inUseBadge', { name: activeOutfitObj.name })}
           </span>
         </div>
 
         <div className="flex-1 space-y-3 text-center md:text-left">
-          <h1 className="text-2xl font-bold text-[#3A2B22]">Guardaroba del Procione 🦝👗</h1>
+          <h1 className="text-2xl font-bold text-[#3A2B22]">{tr('wardrobe.title')}</h1>
           <p className="text-sm text-[#6C5C4C] leading-relaxed">
-            Spendi le ghiande guadagnate con lo studio per sbloccare vestiti e accessori per il tuo procione.
-            Ogni outfit aggiunge un fantastico tocco di stile al tuo compagno d'avventura!
+            {tr('wardrobe.subtitle')}
           </p>
 
           <div className="pt-2 flex flex-wrap items-center justify-center md:justify-start gap-3">
             <div className="text-xs text-[#8A7A6A] bg-white/70 px-3 py-1.5 rounded-xl border border-[#6B7C4F]/15 flex items-center gap-1.5">
               <Sparkles className="w-3.5 h-3.5 text-[#D97706]" />
-              <span>{unlockedOutfits.length} su {RACCOON_OUTFITS.length} outfit sbloccati</span>
+              <span>{tr('wardrobe.unlockedCount', { unlocked: unlockedOutfits.length, total: RACCOON_OUTFITS.length })}</span>
             </div>
           </div>
         </div>
@@ -156,11 +161,11 @@ export const Wardrobe: React.FC<WardrobeProps> = ({
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h3 className="font-bold text-sm text-[#1E293B]">Salvagente Streak</h3>
-              <span className="text-[10px] font-semibold px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full">Protezione</span>
+              <h3 className="font-bold text-sm text-[#1E293B]">{tr('wardrobe.streakFreezeTitle')}</h3>
+              <span className="text-[10px] font-semibold px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full">{tr('wardrobe.streakFreezeProtection')}</span>
             </div>
             <p className="text-xs text-[#64748B] mt-0.5">
-              Protegge automaticamente la tua serie se salti un giorno di studio. (Posseduti: <strong>{streakFreezes}</strong>)
+              {tr('wardrobe.streakFreezeDesc', { count: streakFreezes })}
             </p>
           </div>
         </div>
@@ -171,27 +176,27 @@ export const Wardrobe: React.FC<WardrobeProps> = ({
           id="btn-buy-streak-freeze"
           className={`shrink-0 px-4 py-2 rounded-xl font-medium text-xs sm:text-sm flex items-center gap-2 transition-all shadow-sm ${
             currentAcorns >= 200
-              ? 'bg-[#2563EB] text-white hover:bg-[#1D4ED8] active:scale-95'
+              ? 'bg-[#2563EB] text-white hover:bg-[#1D4ED8] active:scale-95 cursor-pointer'
               : 'bg-gray-100 text-gray-400 border border-gray-200 cursor-not-allowed'
           }`}
         >
           <Shield className="w-4 h-4" />
-          <span>Compra per 200 🌰</span>
+          <span>{tr('wardrobe.buyStreakFreeze')}</span>
         </button>
       </div>
 
       {/* Outfits Category Tabs */}
       <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
         {[
-          { id: 'all', label: 'Tutti gli outfit' },
-          { id: 'semplice', label: 'Semplici (60-100 🌰)' },
-          { id: 'medio', label: 'Medi (160-220 🌰)' },
-          { id: 'elaborato', label: 'Elaborati (300-450 🌰)' },
+          { id: 'all', label: tr('wardrobe.catAll') },
+          { id: 'semplice', label: tr('wardrobe.catSimple') },
+          { id: 'medio', label: tr('wardrobe.catMedium') },
+          { id: 'elaborato', label: tr('wardrobe.catElaborate') },
         ].map((cat) => (
           <button
             key={cat.id}
             onClick={() => setActiveCategory(cat.id as any)}
-            className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
+            className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
               activeCategory === cat.id
                 ? 'bg-[#6B7C4F] text-white shadow-sm'
                 : 'bg-white border border-[#6B7C4F]/20 text-[#6C5C4C] hover:bg-[#F2E8D5]/40'
@@ -233,12 +238,12 @@ export const Wardrobe: React.FC<WardrobeProps> = ({
                   {/* Status Badge */}
                   {isEquipped && (
                     <span className="absolute top-2 right-2 bg-[#6B7C4F] text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm flex items-center gap-1">
-                      <Check className="w-3 h-3" /> Indossato
+                      <Check className="w-3 h-3" /> {tr('wardrobe.equipped')}
                     </span>
                   )}
                   {!isUnlocked && (
                     <span className="absolute top-2 right-2 bg-gray-900/80 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm flex items-center gap-1">
-                      <Lock className="w-3 h-3" /> Bloccato
+                      <Lock className="w-3 h-3" /> {tr('wardrobe.locked')}
                     </span>
                   )}
                 </div>
@@ -249,7 +254,7 @@ export const Wardrobe: React.FC<WardrobeProps> = ({
 
               <div className="mt-4 pt-3 border-t border-gray-100 flex items-center justify-between gap-2">
                 <div className="text-xs font-bold text-[#D97706]">
-                  {outfit.cost === 0 ? 'Gratuito' : `${outfit.cost} 🌰`}
+                  {outfit.cost === 0 ? tr('wardrobe.free') : `${outfit.cost} 🌰`}
                 </div>
 
                 {isEquipped ? (
@@ -257,15 +262,15 @@ export const Wardrobe: React.FC<WardrobeProps> = ({
                     disabled
                     className="px-3 py-1.5 rounded-xl bg-[#6B7C4F]/10 text-[#54633E] text-xs font-bold flex items-center gap-1 cursor-default"
                   >
-                    <Check className="w-3.5 h-3.5" /> In uso
+                    <Check className="w-3.5 h-3.5" /> {tr('wardrobe.inUse')}
                   </button>
                 ) : isUnlocked ? (
                   <button
                     onClick={() => handleEquip(outfit.id)}
                     id={`btn-equip-${outfit.id}`}
-                    className="px-3 py-1.5 rounded-xl bg-[#6B7C4F] text-white text-xs font-bold hover:bg-[#54633E] transition-all shadow-sm active:scale-95"
+                    className="px-3 py-1.5 rounded-xl bg-[#6B7C4F] text-white text-xs font-bold hover:bg-[#54633E] transition-all shadow-sm active:scale-95 cursor-pointer"
                   >
-                    Indossa
+                    {tr('wardrobe.equip')}
                   </button>
                 ) : (
                   <button
@@ -274,12 +279,12 @@ export const Wardrobe: React.FC<WardrobeProps> = ({
                     id={`btn-unlock-${outfit.id}`}
                     className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shadow-sm flex items-center gap-1 ${
                       canAfford
-                        ? 'bg-[#D97706] text-white hover:bg-[#B45309] active:scale-95'
+                        ? 'bg-[#D97706] text-white hover:bg-[#B45309] active:scale-95 cursor-pointer'
                         : 'bg-gray-200 text-gray-400 cursor-not-allowed'
                     }`}
                   >
                     <Sparkles className="w-3.5 h-3.5" />
-                    <span>Sblocca</span>
+                    <span>{tr('wardrobe.unlock')}</span>
                   </button>
                 )}
               </div>
@@ -291,7 +296,7 @@ export const Wardrobe: React.FC<WardrobeProps> = ({
       {/* Info note */}
       <div className="p-3 bg-[#F2E8D5]/50 border border-[#6B7C4F]/20 rounded-xl text-xs text-[#6C5C4C] flex items-center gap-2">
         <Info className="w-4 h-4 text-[#6B7C4F] shrink-0" />
-        <span>Completa le sessioni di memorizzazione, grammatica e pronuncia per guadagnare altre ghiande e sbloccare tutti gli outfit!</span>
+        <span>{tr('wardrobe.earnMoreTip')}</span>
       </div>
     </div>
   );

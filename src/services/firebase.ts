@@ -18,7 +18,7 @@ import {
   deleteDoc,
   getDocFromServer,
 } from 'firebase/firestore';
-import { UserProfile, UserAccount, VocabItem, GrammarTopicProgress, SharedLanguagePairContent, UITranslationSet } from '../types';
+import { UserProfile, UserAccount, VocabItem, GrammarTopicProgress, SharedLanguagePairContent, UITranslationSet, Gender } from '../types';
 import { SEED_IT_EN_CONTENT } from '../data/sharedContentSeed';
 import { NATIVE_LANGUAGES, TARGET_LANGUAGES } from '../data/languages';
 import { IT_TRANSLATIONS } from '../i18n/translations';
@@ -88,7 +88,9 @@ async function testConnection() {
     await getDocFromServer(doc(db, 'test', 'connection'));
   } catch (error) {
     if (error instanceof Error && error.message.includes('the client is offline')) {
-      console.error('Please check your Firebase configuration.');
+      console.warn('Firebase client offline during initial connection check:', error.message);
+    } else {
+      console.warn('Firebase connection check info:', error);
     }
   }
 }
@@ -195,6 +197,7 @@ export async function getUserAccount(userId: string): Promise<UserAccount | null
             nativeLanguage: data.nativeLanguage,
             activeProfileId: data.activeProfileId,
             createdAt: data.createdAt || Date.now(),
+            gender: data.gender || 'undisclosed',
           };
         }
       }
@@ -305,6 +308,7 @@ export async function createUserAccountAndProfile(
     username: string;
     nativeLanguage: string;
     targetLanguage: string;
+    gender?: Gender;
   }
 ): Promise<void> {
   const accountDoc = {
@@ -316,6 +320,7 @@ export async function createUserAccountAndProfile(
     activeProfileId: data.targetLanguage,
     createdAt: Date.now(),
     legacyMigrated: true,
+    gender: data.gender || 'undisclosed',
   };
 
   const profileDoc = {
@@ -352,6 +357,7 @@ export async function createUserAccountAndProfile(
     username: data.username,
     nativeLanguage: data.nativeLanguage,
     activeProfileId: data.targetLanguage,
+    gender: data.gender || 'undisclosed',
   });
 }
 
@@ -454,6 +460,7 @@ export function getLocalUserProfile(): UserProfile {
     activeOutfit: 'base',
     streakFreezes: 0,
     tutorialCompleted: false,
+    gender: 'undisclosed',
   };
 }
 
@@ -499,6 +506,7 @@ export async function fetchUserProfile(userId: string): Promise<UserProfile> {
           lastName: accountData.lastName,
           username: accountData.username,
           nativeLanguage: accountData.nativeLanguage,
+          gender: accountData.gender || 'undisclosed',
         };
 
         saveLocalUserProfile(unifiedProfile);
@@ -547,6 +555,7 @@ export async function updateUserProfile(profile: UserProfile): Promise<void> {
       if (profile.username) rootUpdates.username = profile.username;
       if (profile.nativeLanguage) rootUpdates.nativeLanguage = profile.nativeLanguage;
       if (profile.tutorialCompleted !== undefined) rootUpdates.tutorialCompleted = profile.tutorialCompleted;
+      if (profile.gender) rootUpdates.gender = profile.gender;
       await setDoc(userRef, rootUpdates, { merge: true });
     } catch (e) {
       handleFirestoreError(e, OperationType.WRITE, path);
@@ -861,6 +870,53 @@ export async function adminResetTestData(userId: string, profileId?: string): Pr
 
   const refreshedUser = await fetchUserProfile(userId);
   saveLocalUserProfile(refreshedUser);
+}
+
+export async function adminSimulateNewUser(userId: string): Promise<void> {
+  // 1. Clear all localStorage
+  localStorage.clear();
+
+  // 2. Clear Firestore user document and all subcollections
+  if (db && userId && !userId.startsWith('local_user_')) {
+    try {
+      const profilesCol = collection(db, 'users', userId, 'profiles');
+      let profilesSnap;
+      try {
+        profilesSnap = await getDocs(profilesCol);
+      } catch (e) {}
+
+      const profileIds = new Set<string>();
+      if (profilesSnap) {
+        profilesSnap.forEach((docSnap) => profileIds.add(docSnap.id));
+      }
+      ['en', 'es', 'fr', 'de', 'pt'].forEach((id) => profileIds.add(id));
+
+      const subcollections = ['vocabItems', 'grammarProgress', 'readingProgress', 'levelTests'];
+
+      for (const pId of profileIds) {
+        for (const sub of subcollections) {
+          try {
+            const subColRef = collection(db, 'users', userId, 'profiles', pId, sub);
+            const subSnap = await getDocs(subColRef);
+            for (const docSnap of subSnap.docs) {
+              await deleteDoc(docSnap.ref);
+            }
+          } catch (e) {}
+        }
+        try {
+          const profileDocRef = doc(db, 'users', userId, 'profiles', pId);
+          await deleteDoc(profileDocRef);
+        } catch (e) {}
+      }
+
+      try {
+        const userRef = doc(db, 'users', userId);
+        await deleteDoc(userRef);
+      } catch (e) {}
+    } catch (e) {
+      console.error('Error during adminSimulateNewUser:', e);
+    }
+  }
 }
 
 export async function deleteLanguageProfile(userId: string, targetLanguage: string): Promise<void> {

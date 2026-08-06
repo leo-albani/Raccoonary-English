@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Mascot } from '../mascot/Mascot';
-import { UserProfile, VocabItem } from '../types';
+import { UserProfile, VocabItem, Gender } from '../types';
 import { TanaManager } from '../components/TanaManager';
 import { auth, isUserAdmin } from '../services/firebase';
 import { NATIVE_LANGUAGES, TARGET_LANGUAGES } from '../data/languages';
 import { isSoundEnabled, setSoundEnabled } from '../services/sound';
+import { getTranslation } from '../i18n/translations';
 import {
   getNotificationStatus,
   requestNotificationPermission,
@@ -23,6 +24,7 @@ interface SettingsProps {
   onDeleteItem: (itemId: string) => void;
   onResetData: () => void;
   onAdminResetData?: () => void;
+  onAdminSimulateNewUser?: () => void;
   onLogout: () => void;
   onRestartTutorial?: () => void;
   t?: (key: string, params?: Record<string, string | number>) => string;
@@ -39,10 +41,14 @@ export const Settings: React.FC<SettingsProps> = ({
   onDeleteItem,
   onResetData,
   onAdminResetData,
+  onAdminSimulateNewUser,
   onLogout,
   onRestartTutorial,
   t,
 }) => {
+  const tr = (key: string, params?: Record<string, string | number>) =>
+    t ? t(key, params) : getTranslation(key, null, params);
+
   // Group 1: Account state
   const currentUser = auth.currentUser;
   const currentUserEmail = currentUser?.email;
@@ -51,6 +57,7 @@ export const Settings: React.FC<SettingsProps> = ({
   const [firstName, setFirstName] = useState(user.firstName || '');
   const [lastName, setLastName] = useState(user.lastName || '');
   const [username, setUsername] = useState(user.username || '');
+  const [gender, setGender] = useState<Gender>(user.gender || 'undisclosed');
   const [isAccountSaved, setIsAccountSaved] = useState(false);
   const [soundActive, setSoundActive] = useState<boolean>(isSoundEnabled());
 
@@ -75,13 +82,17 @@ export const Settings: React.FC<SettingsProps> = ({
   // Group 4: Admin modal state
   const [showAdminResetModal, setShowAdminResetModal] = useState(false);
   const [adminConfirmInput, setAdminConfirmInput] = useState('');
+  const [showSimulateNewUserModal, setShowSimulateNewUserModal] = useState(false);
+  const [simulateNewUserConfirmInput, setSimulateNewUserConfirmInput] = useState('');
+  const [isSimulatingNewUser, setIsSimulatingNewUser] = useState(false);
 
   // Sync state if user prop changes
   useEffect(() => {
     setFirstName(user.firstName || '');
     setLastName(user.lastName || '');
     setUsername(user.username || '');
-  }, [user.firstName, user.lastName, user.username]);
+    setGender(user.gender || 'undisclosed');
+  }, [user.firstName, user.lastName, user.username, user.gender]);
 
   const handleSaveAccountInfo = () => {
     onUpdateUser({
@@ -89,6 +100,7 @@ export const Settings: React.FC<SettingsProps> = ({
       firstName: firstName.trim(),
       lastName: lastName.trim(),
       username: username.trim(),
+      gender: gender || 'undisclosed',
     });
     setIsAccountSaved(true);
     setTimeout(() => setIsAccountSaved(false), 2500);
@@ -175,7 +187,7 @@ export const Settings: React.FC<SettingsProps> = ({
         <Mascot pose="greeting" size={85} />
         <div>
           <div className="flex items-center gap-2 flex-wrap justify-center sm:justify-start mb-2">
-            <span className="badge-leaf">Pannello Impostazioni</span>
+            <span className="badge-leaf">{tr('settings.headerBadge')}</span>
             {isAdmin && (
               <span className="text-[10px] font-extrabold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-[#3A2B22] text-[#F2E8D5] font-mono shadow-xs">
                 👑 Admin
@@ -183,10 +195,10 @@ export const Settings: React.FC<SettingsProps> = ({
             )}
           </div>
           <h1 className="text-2xl sm:text-3xl font-bold font-display text-[#3A2B22]">
-            {t ? t('nav.profile') : 'Opzioni & Profilo'}
+            {tr('nav.profile')}
           </h1>
           <p className="text-xs sm:text-sm text-[#3A2B22]/70 font-medium">
-            Gestisci il tuo account, i profili di studio e la lingua dell'interfaccia.
+            {tr('settings.headerSub')}
           </p>
         </div>
       </div>
@@ -197,7 +209,7 @@ export const Settings: React.FC<SettingsProps> = ({
           <div className="flex items-center gap-2">
             <span className="text-xl">👤</span>
             <h2 className="text-sm font-bold font-display uppercase tracking-wider text-[#6B7C4F]">
-              1. Account Utente
+              {tr('settings.section1Title')}
             </h2>
           </div>
           {isAdmin && (
@@ -221,7 +233,7 @@ export const Settings: React.FC<SettingsProps> = ({
             </div>
           )}
           <div className="flex-1 min-w-0">
-            <div className="text-xs font-bold text-[#3A2B22]/60 uppercase tracking-wider">Account Autenticato</div>
+            <div className="text-xs font-bold text-[#3A2B22]/60 uppercase tracking-wider">{tr('settings.authHeader')}</div>
             <div className="text-sm font-bold text-[#3A2B22] truncate">
               {currentUser?.displayName || currentUserEmail || 'Utente Google'}
             </div>
@@ -233,29 +245,29 @@ export const Settings: React.FC<SettingsProps> = ({
         <div className="space-y-3 pt-1">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-bold text-[#3A2B22] mb-1">Nome</label>
+              <label className="block text-xs font-bold text-[#3A2B22] mb-1">{tr('settings.firstNameLabel')}</label>
               <input
                 type="text"
                 value={firstName}
                 onChange={(e) => setFirstName(e.target.value)}
-                placeholder="Il tuo nome"
+                placeholder={tr('settings.firstNamePlaceholder')}
                 className="w-full p-3 rounded-xl bg-white border border-[#6B7C4F]/30 text-xs font-medium text-[#3A2B22] focus:border-[#6B7C4F] focus:outline-none"
               />
             </div>
             <div>
-              <label className="block text-xs font-bold text-[#3A2B22] mb-1">Cognome</label>
+              <label className="block text-xs font-bold text-[#3A2B22] mb-1">{tr('settings.lastNameLabel')}</label>
               <input
                 type="text"
                 value={lastName}
                 onChange={(e) => setLastName(e.target.value)}
-                placeholder="Il tuo cognome"
+                placeholder={tr('settings.lastNamePlaceholder')}
                 className="w-full p-3 rounded-xl bg-white border border-[#6B7C4F]/30 text-xs font-medium text-[#3A2B22] focus:border-[#6B7C4F] focus:outline-none"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-[#3A2B22] mb-1">Nome Utente</label>
+            <label className="block text-xs font-bold text-[#3A2B22] mb-1">{tr('settings.usernameLabel')}</label>
             <input
               type="text"
               value={username}
@@ -265,22 +277,61 @@ export const Settings: React.FC<SettingsProps> = ({
             />
           </div>
 
+          <div>
+            <label className="block text-xs font-bold text-[#3A2B22] mb-1">{tr('settings.genderLabel')}</label>
+            <div className="grid grid-cols-3 gap-2">
+              <button
+                type="button"
+                onClick={() => setGender('M')}
+                className={`py-2.5 px-2 rounded-xl border font-display text-xs font-bold transition-all cursor-pointer text-center ${
+                  gender === 'M'
+                    ? 'border-[#6B7C4F] bg-[#6B7C4F] text-white shadow-xs'
+                    : 'border-[#6B7C4F]/30 bg-white hover:border-[#6B7C4F] text-[#3A2B22]'
+                }`}
+              >
+                {tr('settings.genderM')}
+              </button>
+              <button
+                type="button"
+                onClick={() => setGender('F')}
+                className={`py-2.5 px-2 rounded-xl border font-display text-xs font-bold transition-all cursor-pointer text-center ${
+                  gender === 'F'
+                    ? 'border-[#6B7C4F] bg-[#6B7C4F] text-white shadow-xs'
+                    : 'border-[#6B7C4F]/30 bg-white hover:border-[#6B7C4F] text-[#3A2B22]'
+                }`}
+              >
+                {tr('settings.genderF')}
+              </button>
+              <button
+                type="button"
+                onClick={() => setGender('undisclosed')}
+                className={`py-2.5 px-2 rounded-xl border font-display text-xs font-bold transition-all cursor-pointer text-center ${
+                  gender === 'undisclosed'
+                    ? 'border-[#6B7C4F] bg-[#6B7C4F] text-white shadow-xs'
+                    : 'border-[#6B7C4F]/30 bg-white hover:border-[#6B7C4F] text-[#3A2B22]'
+                }`}
+              >
+                {tr('settings.genderUndisclosed')}
+              </button>
+            </div>
+          </div>
+
           <div className="flex items-center justify-between pt-1">
             <button
               onClick={handleSaveAccountInfo}
               className="py-2.5 px-5 rounded-xl bg-[#6B7C4F] hover:bg-[#586740] text-white text-xs font-bold font-display shadow-xs transition-all cursor-pointer"
             >
-              Salva dati account
+              {tr('settings.saveAccountBtn')}
             </button>
-            {isAccountSaved && <span className="text-xs font-bold text-green-700 animate-fade-in">✓ Salvato!</span>}
+            {isAccountSaved && <span className="text-xs font-bold text-green-700 animate-fade-in">{tr('settings.savedCheck')}</span>}
           </div>
 
           {/* Tutorial Restart Button */}
           {onRestartTutorial && (
             <div className="pt-3 border-t border-[#6B7C4F]/10 flex items-center justify-between gap-3">
               <div>
-                <div className="font-bold text-xs text-[#3A2B22]">Tutorial guidato con Rocky</div>
-                <div className="text-[11px] text-[#3A2B22]/65 font-medium">Rivivi la panoramica delle sezioni della tana</div>
+                <div className="font-bold text-xs text-[#3A2B22]">{tr('settings.tutorialTitle')}</div>
+                <div className="text-[11px] text-[#3A2B22]/65 font-medium">{tr('settings.tutorialSub')}</div>
               </div>
               <button
                 type="button"
@@ -289,7 +340,7 @@ export const Settings: React.FC<SettingsProps> = ({
                 className="py-2 px-3.5 rounded-xl bg-[#6B7C4F]/10 hover:bg-[#6B7C4F] hover:text-white text-xs font-bold text-[#6B7C4F] transition-all cursor-pointer border border-[#6B7C4F]/20 flex items-center gap-1.5 shrink-0"
               >
                 <span>🦝</span>
-                <span>Rivedi il tutorial</span>
+                <span>{tr('settings.reviewTutorial')}</span>
               </button>
             </div>
           )}
@@ -298,10 +349,10 @@ export const Settings: React.FC<SettingsProps> = ({
         {/* Interface Language Selector (Searchable) */}
         <div className="border-t border-[#6B7C4F]/15 pt-4 space-y-2">
           <label className="block text-xs font-bold text-[#3A2B22] uppercase tracking-wider">
-            🌐 Lingua dell'interfaccia (Spoken Language)
+            🌐 {tr('settings.interfaceLangTitle')}
           </label>
           <p className="text-xs text-[#3A2B22]/70 font-medium">
-            Scegli la lingua con cui l'app ti parla, traduce e spiega le regole di grammatica.
+            {tr('settings.interfaceLangSub')}
           </p>
 
           <div className="relative">
@@ -322,7 +373,7 @@ export const Settings: React.FC<SettingsProps> = ({
                   type="text"
                   value={nativeSearch}
                   onChange={(e) => setNativeSearch(e.target.value)}
-                  placeholder="Cerca lingua..."
+                  placeholder={tr('settings.searchLangPlaceholder')}
                   className="w-full p-2.5 rounded-xl bg-[#F2E8D5]/50 border border-[#6B7C4F]/30 text-xs font-bold text-[#3A2B22] focus:outline-none"
                   autoFocus
                 />
@@ -353,10 +404,10 @@ export const Settings: React.FC<SettingsProps> = ({
           <div>
             <div className="text-xs font-bold text-[#3A2B22] flex items-center gap-1.5">
               <span>🔊</span>
-              <span>Effetti sonori</span>
+              <span>{tr('settings.soundEffectsTitle')}</span>
             </div>
             <p className="text-[11px] text-[#3A2B22]/70 font-medium mt-0.5">
-              Attiva o disattiva il feedback audio durante gli esercizi e le risposte.
+              {tr('settings.soundEffectsSub')}
             </p>
           </div>
           <button
@@ -381,7 +432,7 @@ export const Settings: React.FC<SettingsProps> = ({
             className="w-full py-3.5 rounded-2xl bg-white text-[#3A2B22] border-2 border-[#3A2B22]/15 font-bold font-display text-xs hover:border-[#6B7C4F] hover:bg-gray-50 transition-all text-center cursor-pointer shadow-xs flex items-center justify-center gap-2"
           >
             <span>🚪</span>
-            <span>Esci dall'account</span>
+            <span>{tr('settings.logoutBtn')}</span>
           </button>
         </div>
       </section>
@@ -392,7 +443,7 @@ export const Settings: React.FC<SettingsProps> = ({
           <div className="flex items-center gap-2">
             <span className="text-xl">🌍</span>
             <h2 className="text-sm font-bold font-display uppercase tracking-wider text-[#6B7C4F]">
-              2. Le mie lingue ({userProfiles.length})
+              {tr('settings.section2Title', { count: userProfiles.length })}
             </h2>
           </div>
           <button
@@ -400,12 +451,12 @@ export const Settings: React.FC<SettingsProps> = ({
             className="py-1.5 px-3 rounded-xl bg-[#6B7C4F] hover:bg-[#586740] text-white text-xs font-extrabold font-display shadow-xs transition-all cursor-pointer flex items-center gap-1"
           >
             <span>+</span>
-            <span>Aggiungi lingua</span>
+            <span>{tr('settings.addLanguageBtn')}</span>
           </button>
         </div>
 
         <p className="text-xs text-[#3A2B22]/70 font-medium leading-relaxed">
-          Puoi studiare più lingue contemporaneamente. Seleziona una lingua per attivarla oppure aggiungine una nuova.
+          {tr('settings.section2Sub')}
         </p>
 
         <div className="space-y-2.5">
@@ -436,14 +487,14 @@ export const Settings: React.FC<SettingsProps> = ({
                       <span className="font-bold text-sm text-[#3A2B22] font-display">{targetInfo.name}</span>
                       {isActive && (
                         <span className="px-2 py-0.5 rounded-full bg-[#6B7C4F] text-white text-[10px] font-extrabold tracking-wider uppercase">
-                          Attivo
+                          {tr('settings.activeBadge')}
                         </span>
                       )}
                     </div>
                     <div className="text-xs text-[#3A2B22]/60 font-medium">
                       {isActive
-                        ? `Livello: ${user.currentLevel || 'Nessun test fatto'} • ${user.streakCount || 0} 🔥 streak`
-                        : 'Tocca per attivare questo profilo'}
+                        ? tr('settings.activeLangSub', { level: user.currentLevel || tr('settings.noTestLevel'), streak: user.streakCount || 0 })
+                        : tr('settings.tapToActivate')}
                     </div>
                   </div>
                 </div>
@@ -455,9 +506,9 @@ export const Settings: React.FC<SettingsProps> = ({
                         e.stopPropagation();
                         onSwitchProfile(langCode);
                       }}
-                      className="py-1.5 px-3 rounded-xl bg-gray-100 hover:bg-[#6B7C4F] hover:text-white text-xs font-bold text-[#3A2B22] transition-colors"
+                      className="py-1.5 px-3 rounded-xl bg-gray-100 hover:bg-[#6B7C4F] hover:text-white text-xs font-bold text-[#3A2B22] transition-colors cursor-pointer"
                     >
-                      Seleziona
+                      {tr('settings.selectBtn')}
                     </button>
                   )}
 
@@ -468,7 +519,7 @@ export const Settings: React.FC<SettingsProps> = ({
                         e.stopPropagation();
                         setLangToDelete(langCode);
                       }}
-                      title="Elimina questo profilo lingua"
+                      title={tr('settings.deleteProfileTitle')}
                       className="p-2 rounded-xl text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
                     >
                       🗑️
@@ -487,7 +538,7 @@ export const Settings: React.FC<SettingsProps> = ({
           <div className="flex items-center gap-2">
             <span className="text-xl">{activeTargetLang.flag}</span>
             <h2 className="text-sm font-bold font-display uppercase tracking-wider text-[#6B7C4F]">
-              3. Profilo attivo — {activeTargetLang.name}
+              {tr('settings.section3Title', { name: activeTargetLang.name })}
             </h2>
           </div>
           <span className="text-[10px] font-extrabold px-2.5 py-0.5 rounded-full bg-[#6B7C4F] text-white">
@@ -496,7 +547,7 @@ export const Settings: React.FC<SettingsProps> = ({
         </div>
 
         <p className="text-xs text-[#3A2B22]/70 font-medium leading-relaxed">
-          Tutte le impostazioni e le azioni di questa sezione si applicano <strong>esclusivamente</strong> al profilo di studio attualmente attivo (<strong>{activeTargetLang.name}</strong>).
+          {tr('settings.section3Sub', { name: activeTargetLang.name })}
         </p>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -505,9 +556,9 @@ export const Settings: React.FC<SettingsProps> = ({
             <div className="flex items-center justify-between">
               <div>
                 <div className="font-bold text-xs text-[#3A2B22] uppercase tracking-wider flex items-center gap-1.5">
-                  <span>⏰</span> Promemoria Notifiche Push
+                  <span>⏰</span> {tr('settings.reminderTitle')}
                 </div>
-                <div className="text-xs text-[#3A2B22]/60 font-medium">Notifica di ripasso quotidiano</div>
+                <div className="text-xs text-[#3A2B22]/60 font-medium">{tr('settings.reminderSub')}</div>
               </div>
               <label className="relative inline-flex items-center cursor-pointer">
                 <input
@@ -523,7 +574,7 @@ export const Settings: React.FC<SettingsProps> = ({
             {user.reminderEnabled && (
               <div className="space-y-3 border-t border-[#6B7C4F]/10 pt-2.5">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-[#3A2B22]">Orario quotidiano:</span>
+                  <span className="text-xs font-bold text-[#3A2B22]">{tr('settings.dailyTimeLabel')}</span>
                   <input
                     type="time"
                     value={user.reminderTime || '20:00'}
@@ -535,7 +586,7 @@ export const Settings: React.FC<SettingsProps> = ({
                 {/* Status & Test Button */}
                 <div className="flex items-center justify-between gap-2 pt-1">
                   <span className="text-[11px] font-medium text-[#3A2B22]/70">
-                    Stato: {typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted' ? '🟢 Attive' : '🟡 Richiede permesso'}
+                    {tr('settings.statusLabel', { status: typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted' ? tr('settings.statusActive') : tr('settings.statusNeedsPerm') })}
                   </span>
                   <button
                     type="button"
@@ -551,7 +602,7 @@ export const Settings: React.FC<SettingsProps> = ({
                     }}
                     className="py-1.5 px-3 rounded-xl bg-[#6B7C4F]/10 hover:bg-[#6B7C4F] hover:text-white text-[11px] font-bold text-[#6B7C4F] transition-all cursor-pointer"
                   >
-                    Invia prova 🔔
+                    {tr('settings.sendTestNotification')} 🔔
                   </button>
                 </div>
 
@@ -568,14 +619,14 @@ export const Settings: React.FC<SettingsProps> = ({
           {/* Manage Tana (Vocabulary) */}
           <div className="p-4 rounded-2xl bg-white border border-[#6B7C4F]/20 space-y-3 flex flex-col justify-between">
             <div>
-              <div className="font-bold text-xs text-[#3A2B22] uppercase tracking-wider">📦 Gestisci la Tana</div>
-              <div className="text-xs text-[#3A2B22]/60 font-medium">{vocabItems.length} parole salvate per {activeTargetLang.name}</div>
+              <div className="font-bold text-xs text-[#3A2B22] uppercase tracking-wider">📦 {tr('settings.manageTanaTitle')}</div>
+              <div className="text-xs text-[#3A2B22]/60 font-medium">{tr('settings.savedCount', { count: vocabItems.length, name: activeTargetLang.name })}</div>
             </div>
             <button
               onClick={() => setShowTanaManagerModal(true)}
               className="w-full py-2.5 px-3 rounded-xl bg-[#6B7C4F] hover:bg-[#586740] text-white text-xs font-bold font-display transition-all cursor-pointer shadow-xs"
             >
-              Apri gestione tana ({vocabItems.length})
+              {tr('settings.openTanaManager', { count: vocabItems.length })}
             </button>
           </div>
         </div>
@@ -584,9 +635,9 @@ export const Settings: React.FC<SettingsProps> = ({
         <div className="p-4 rounded-2xl bg-red-50/60 border border-red-200 space-y-2">
           <div className="flex items-center justify-between">
             <div>
-              <div className="font-bold text-xs text-red-700 uppercase tracking-wider">⚠️ Reset Progressi {activeTargetLang.name}</div>
+              <div className="font-bold text-xs text-red-700 uppercase tracking-wider">⚠️ {tr('settings.resetProfileTitle', { name: activeTargetLang.name })}</div>
               <div className="text-xs text-[#3A2B22]/70 font-medium">
-                Azzera parole, grammatica e test solo per questo profilo
+                {tr('settings.resetProfileSub')}
               </div>
             </div>
             <button
@@ -611,17 +662,28 @@ export const Settings: React.FC<SettingsProps> = ({
             </span>
           </div>
           <p className="text-xs text-[#3A2B22]/75 font-medium leading-relaxed">
-            Strumenti avanzati di collaudo per l'amministratore. Effettua il reset completo di test su Firestore e in locale.
+            Strumenti avanzati di collaudo per l'amministratore. Effettua il reset dei dati di test del profilo attivo oppure simula il primissimo accesso di un nuovo utente.
           </p>
-          <button
-            onClick={() => {
-              setAdminConfirmInput('');
-              setShowAdminResetModal(true);
-            }}
-            className="w-full py-3.5 px-4 rounded-2xl bg-[#C99A3D] hover:bg-[#C99A3D]/90 text-white font-extrabold font-display text-xs sm:text-sm shadow-xs transition-all cursor-pointer flex items-center justify-center gap-2"
-          >
-            <span>🔄</span> Reset completo dati di test admin
-          </button>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <button
+              onClick={() => {
+                setAdminConfirmInput('');
+                setShowAdminResetModal(true);
+              }}
+              className="py-3 px-4 rounded-2xl bg-[#C99A3D] hover:bg-[#C99A3D]/90 text-white font-extrabold font-display text-xs sm:text-sm shadow-xs transition-all cursor-pointer flex items-center justify-center gap-2"
+            >
+              <span>🔄</span> Reset dati test admin
+            </button>
+            <button
+              onClick={() => {
+                setSimulateNewUserConfirmInput('');
+                setShowSimulateNewUserModal(true);
+              }}
+              className="py-3 px-4 rounded-2xl bg-red-600 hover:bg-red-700 text-white font-extrabold font-display text-xs sm:text-sm shadow-xs transition-all cursor-pointer flex items-center justify-center gap-2"
+            >
+              <span>🚀</span> Simula nuovo utente (reset totale)
+            </button>
+          </div>
         </section>
       )}
 
@@ -818,6 +880,56 @@ export const Settings: React.FC<SettingsProps> = ({
                 className="flex-1 py-3 rounded-2xl bg-red-600 text-white font-bold text-xs disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 Conferma Reset
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Simulate New User Total Reset */}
+      {showSimulateNewUserModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fade-in">
+          <div className="bg-white rounded-3xl p-6 max-w-sm w-full space-y-4 text-center border-2 border-red-600 shadow-2xl">
+            <Mascot pose="thinking" size={90} />
+            <h3 className="text-lg font-bold font-display text-[#3A2B22]">
+              Simula Nuovo Utente (Reset Totale)
+            </h3>
+            <p className="text-xs text-[#3A2B22]/80 leading-relaxed">
+              🚨 <strong>Azione distruttiva:</strong> Verrà eliminato l'intero documento <code className="bg-red-100 text-red-700 px-1 rounded font-bold">users/{user.userId}</code> e tutte le sottocollezioni collegate. L'app verrà riavviata al primissimo accesso (nome, lingua, onboarding e tour Rocky).
+            </p>
+            <p className="text-xs font-bold text-[#3A2B22]">
+              Digita <span className="text-red-600 font-mono underline">RESET</span> per confermare:
+            </p>
+            <input
+              type="text"
+              value={simulateNewUserConfirmInput}
+              onChange={(e) => setSimulateNewUserConfirmInput(e.target.value)}
+              placeholder="Scrivi RESET..."
+              className="w-full p-3 rounded-xl bg-[#F2E8D5]/50 border-2 border-[#6B7C4F]/30 focus:border-red-600 focus:outline-none text-center font-bold text-sm text-[#3A2B22]"
+            />
+
+            <div className="flex gap-2 pt-2">
+              <button
+                disabled={isSimulatingNewUser}
+                onClick={() => {
+                  setShowSimulateNewUserModal(false);
+                  setSimulateNewUserConfirmInput('');
+                }}
+                className="flex-1 py-3 rounded-2xl bg-gray-100 text-[#3A2B22] font-bold text-xs cursor-pointer"
+              >
+                Annulla
+              </button>
+              <button
+                disabled={simulateNewUserConfirmInput.trim() !== 'RESET' || isSimulatingNewUser}
+                onClick={async () => {
+                  setIsSimulatingNewUser(true);
+                  if (onAdminSimulateNewUser) {
+                    await onAdminSimulateNewUser();
+                  }
+                }}
+                className="flex-1 py-3 rounded-2xl bg-red-600 text-white font-bold text-xs disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+              >
+                {isSimulatingNewUser ? 'Eliminazione...' : 'Conferma Reset'}
               </button>
             </div>
           </div>

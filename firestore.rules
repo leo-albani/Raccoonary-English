@@ -22,6 +22,11 @@ service cloud.firestore {
       ];
     }
 
+    // Connection test document
+    match /test/{docId} {
+      allow read: if true;
+    }
+
     // Shared Language Pair Content (read/write for authenticated users)
     match /sharedContent/{pairId} {
       allow read, write: if isSignedIn();

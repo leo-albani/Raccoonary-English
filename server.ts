@@ -431,14 +431,7 @@ Rispondi SOLO in JSON:
     res.json(JSON.parse(cleanJsonOutput(rawText)));
   } catch (err: any) {
     console.error("Error translating text:", err);
-    // Smart fallback if API fails
-    const text = (req.body.text || "").trim();
-    const isEn = /[a-zA-Z]/.test(text) && !/[àèéìòù]/i.test(text);
-    res.json({
-      lingua_origine: isEn ? "en" : "it",
-      traduzione_principale: `Traduzione per "${text}"`,
-      alternative: [],
-    });
+    res.status(500).json({ error: "Non sono riuscito a tradurre in questo momento." });
   }
 });
 

@@ -28,6 +28,7 @@ export const Translator: React.FC<TranslatorProps> = ({
   const [directionMode, setDirectionMode] = useState<'auto' | 'it-en' | 'en-it'>('auto');
   const [isTranslating, setIsTranslating] = useState(false);
   const [currentResult, setCurrentResult] = useState<TranslationResult | null>(null);
+  const [translationError, setTranslationError] = useState<string | null>(null);
   const [searchedText, setSearchedText] = useState('');
   const [hasSpeech, setHasSpeech] = useState(false);
 
@@ -89,11 +90,13 @@ export const Translator: React.FC<TranslatorProps> = ({
     const cleanText = textToTranslate.trim();
     if (!cleanText) {
       setCurrentResult(null);
+      setTranslationError(null);
       return;
     }
 
     setIsTranslating(true);
     setCurrentResult(null);
+    setTranslationError(null);
     setPhraseDeepDiveData(null);
     setSearchedText(cleanText);
     saveQueryToHistory(cleanText);
@@ -103,33 +106,11 @@ export const Translator: React.FC<TranslatorProps> = ({
       setCurrentResult(res);
     } catch (err) {
       console.error(err);
-      // Fallback result
-      const isEn = /[a-zA-Z]/.test(cleanText) && !/[àèéìòù]/i.test(cleanText);
-      const fallbackRes: TranslationResult = {
-        lingua_origine: isEn ? 'en' : 'it',
-        traduzione_principale: `Traduzione per "${cleanText}"`,
-        alternative: [],
-      };
-      setCurrentResult(fallbackRes);
+      setTranslationError('Non sono riuscito a tradurre in questo momento.');
     } finally {
       setIsTranslating(false);
     }
   };
-
-  // Debounced auto-translate on query change
-  useEffect(() => {
-    const trimmed = query.trim();
-    if (!trimmed) {
-      setCurrentResult(null);
-      return;
-    }
-
-    const timer = setTimeout(() => {
-      handleSearchSubmit(trimmed);
-    }, 600);
-
-    return () => clearTimeout(timer);
-  }, [query, directionMode]);
 
   const handleSwapDirection = () => {
     if (directionMode === 'auto') {
@@ -361,6 +342,7 @@ export const Translator: React.FC<TranslatorProps> = ({
                   onClick={() => {
                     setQuery('');
                     setCurrentResult(null);
+                    setTranslationError(null);
                   }}
                   className="text-gray-400 hover:text-gray-600 text-xs font-bold cursor-pointer px-1"
                   title="Cancella testo"
@@ -373,7 +355,13 @@ export const Translator: React.FC<TranslatorProps> = ({
 
           <textarea
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={(e) => {
+              setQuery(e.target.value);
+              if (!e.target.value.trim()) {
+                setCurrentResult(null);
+                setTranslationError(null);
+              }
+            }}
             placeholder={`Scrivi o incolla una parola o frase in ${nativeName.toLowerCase()} o ${targetName.toLowerCase()}...`}
             rows={3}
             className="w-full bg-transparent text-[#3A2B22] placeholder-gray-400 font-medium text-sm sm:text-base outline-none resize-none leading-relaxed"
@@ -442,6 +430,22 @@ export const Translator: React.FC<TranslatorProps> = ({
               <p className="text-xs sm:text-sm font-semibold text-[#3A2B22] font-display">
                 Il procione sta analizzando e traducendo...
               </p>
+            </div>
+          ) : translationError ? (
+            <div className="flex flex-col sm:flex-row items-center gap-3 py-2 text-center sm:text-left">
+              <Mascot pose="thinking" size={48} />
+              <div className="space-y-1.5 flex-1">
+                <p className="text-xs sm:text-sm font-bold text-[#3A2B22] font-display">
+                  Non sono riuscito a tradurre in questo momento.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => handleSearchSubmit(query)}
+                  className="px-3.5 py-1.5 bg-[#E8802F] hover:bg-[#E8802F]/90 text-white font-bold text-xs rounded-xl shadow-xs cursor-pointer transition-all inline-flex items-center gap-1.5"
+                >
+                  <span>🔄</span> Riprova
+                </button>
+              </div>
             </div>
           ) : currentResult ? (
             <div className="py-1">

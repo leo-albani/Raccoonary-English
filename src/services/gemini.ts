@@ -124,17 +124,30 @@ export async function translateText(
   nativeName?: string,
   targetName?: string
 ): Promise<TranslationResult> {
-  const res = await fetch('/api/translate', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ text, nativeLang, targetLang, nativeName, targetName }),
-  });
+  const executeCall = async () => {
+    const res = await fetch('/api/translate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text, nativeLang, targetLang, nativeName, targetName }),
+    });
 
-  if (!res.ok) {
-    throw new Error('Traduzione non disponibile al momento.');
+    if (!res.ok) {
+      throw new Error('Traduzione non disponibile al momento.');
+    }
+
+    return await res.json();
+  };
+
+  try {
+    return await executeCall();
+  } catch (firstError) {
+    console.warn('First translate attempt failed, retrying once...', firstError);
+    try {
+      return await executeCall();
+    } catch (retryError) {
+      throw new Error('Non sono riuscito a tradurre in questo momento.');
+    }
   }
-
-  return await res.json();
 }
 
 export async function getWordDeepDive(word: string, contextSentence: string = ''): Promise<WordDeepDiveResult> {

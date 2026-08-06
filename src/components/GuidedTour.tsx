@@ -2,63 +2,64 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Mascot } from '../mascot/Mascot';
 import { RaccoonPose } from '../types';
 import { X, ChevronRight, Sparkles } from 'lucide-react';
+import { getTranslation } from '../i18n/translations';
 
 export interface TourStep {
   id: string;
   targetId: string | null;
-  text: string;
+  textKey: string;
   pose: RaccoonPose;
-  title?: string;
+  titleKey?: string;
 }
 
 export const TOUR_STEPS: TourStep[] = [
   {
     id: 'streak',
     targetId: 'tour-target-streak',
-    text: 'Ciao, sono Rocky! Qui vedi il tuo streak e le ghiande raccolte — più torni, più crescono.',
+    textKey: 'tour.step.streak',
     pose: 'greeting',
   },
   {
     id: 'translator',
     targetId: 'tour-target-translator',
-    text: 'Cerca qui qualsiasi parola o frase. Ti do la traduzione e, se ti serve, la salvi in tana con la stella.',
+    textKey: 'tour.step.translator',
     pose: 'thinking',
   },
   {
     id: 'review',
     targetId: 'tour-target-review-btn',
-    text: 'Da qui parti con gli esercizi di memorizzazione, basati su quello che hai già in tana.',
+    textKey: 'tour.step.review',
     pose: 'happy',
   },
   {
     id: 'grammar',
     targetId: 'tour-target-nav-grammar',
-    text: 'Argomenti, phrasal verbs, falsi amici — con un percorso che tiene traccia di cosa hai già superato.',
+    textKey: 'tour.step.grammar',
     pose: 'reading',
   },
   {
     id: 'reading',
     targetId: 'tour-target-nav-reading',
-    text: 'Testi pensati per il tuo livello, dalla A1 alla C2.',
+    textKey: 'tour.step.reading',
     pose: 'reading',
   },
   {
     id: 'import',
     targetId: 'tour-target-nav-import',
-    text: 'Hai già delle parole cercate altrove? Le carichi da qui.',
+    textKey: 'tour.step.import',
     pose: 'digging',
   },
   {
     id: 'settings',
     targetId: 'tour-target-nav-settings',
-    text: 'Account, lingue, promemoria e guardaroba — tutto qui.',
+    textKey: 'tour.step.settings',
     pose: 'greeting',
   },
   {
     id: 'final',
     targetId: null,
-    title: 'Tutto chiaro!',
-    text: 'Tutto chiaro. Ci vediamo in tana.',
+    titleKey: 'tour.finalTitle',
+    textKey: 'tour.step.final',
     pose: 'happy',
   },
 ];
@@ -68,6 +69,7 @@ interface GuidedTourProps {
   onComplete: () => void;
   onSkip: () => void;
   activeOutfit?: string;
+  t?: (key: string, params?: Record<string, string | number>) => string;
 }
 
 interface SpotlightRect {
@@ -82,6 +84,7 @@ export const GuidedTour: React.FC<GuidedTourProps> = ({
   onComplete,
   onSkip,
   activeOutfit = 'base',
+  t,
 }) => {
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [spotlight, setSpotlight] = useState<SpotlightRect | null>(null);
@@ -91,7 +94,11 @@ export const GuidedTour: React.FC<GuidedTourProps> = ({
     isAbove: false,
   });
 
+  const tr = (key: string, params?: Record<string, string | number>) =>
+    t ? t(key, params) : getTranslation(key, null, params);
+
   const currentStep = TOUR_STEPS[currentStepIndex];
+  const stepText = currentStep ? tr(currentStep.textKey) : '';
 
   // Function to calculate and update spotlight rect
   const updateTargetRect = useCallback(() => {
@@ -191,7 +198,7 @@ export const GuidedTour: React.FC<GuidedTourProps> = ({
           id="btn-tour-skip"
           className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-black/60 hover:bg-black/80 text-white text-xs font-bold border border-white/30 backdrop-blur-md shadow-lg transition-all cursor-pointer active:scale-95"
         >
-          <span>Salta tour</span>
+          <span>{tr('tour.skip')}</span>
           <X className="w-3.5 h-3.5 text-white/80" />
         </button>
       </div>
@@ -238,7 +245,7 @@ export const GuidedTour: React.FC<GuidedTourProps> = ({
               <div className="flex items-center justify-between border-b border-[#6B7C4F]/15 pb-2">
                 <div className="flex items-center gap-1.5 text-xs font-bold text-[#E8802F] uppercase tracking-wider">
                   <Sparkles className="w-3.5 h-3.5 text-[#E8802F]" />
-                  <span>Guida di Rocky</span>
+                  <span>{tr('tour.guideTitle')}</span>
                 </div>
                 <span className="text-[11px] font-bold text-[#3A2B22]/60 px-2 py-0.5 bg-[#F2E8D5] rounded-full">
                   {currentStepIndex + 1} / {TOUR_STEPS.length - 1}
@@ -252,7 +259,7 @@ export const GuidedTour: React.FC<GuidedTourProps> = ({
                 </div>
                 <div className="flex-1 min-w-0 pt-1">
                   <p className="text-xs sm:text-sm text-[#3A2B22] font-semibold leading-relaxed">
-                    "{currentStep.text}"
+                    "{stepText}"
                   </p>
                 </div>
               </div>
@@ -264,7 +271,7 @@ export const GuidedTour: React.FC<GuidedTourProps> = ({
                   id="btn-tour-next"
                   className="px-5 py-2.5 rounded-2xl bg-[#6B7C4F] hover:bg-[#54633E] text-white text-xs font-bold shadow-md flex items-center gap-2 transition-all cursor-pointer active:scale-95"
                 >
-                  <span>Avanti</span>
+                  <span>{tr('tour.next')}</span>
                   <ChevronRight className="w-4 h-4" />
                 </button>
               </div>
@@ -280,14 +287,14 @@ export const GuidedTour: React.FC<GuidedTourProps> = ({
             <div className="flex justify-center">
               <Mascot pose={currentStep.pose} activeOutfit={activeOutfit} size={100} />
             </div>
-            <p className="text-sm font-semibold text-[#3A2B22]">"{currentStep.text}"</p>
+            <p className="text-sm font-semibold text-[#3A2B22]">"{stepText}"</p>
             <div className="flex justify-center pt-2">
               <button
                 onClick={handleNext}
                 id="btn-tour-next-fallback"
                 className="px-6 py-2.5 rounded-2xl bg-[#6B7C4F] text-white text-xs font-bold shadow-md flex items-center gap-2"
               >
-                <span>Avanti</span>
+                <span>{tr('tour.next')}</span>
                 <ChevronRight className="w-4 h-4" />
               </button>
             </div>
@@ -308,10 +315,10 @@ export const GuidedTour: React.FC<GuidedTourProps> = ({
 
             <div className="space-y-2">
               <h3 className="text-xl sm:text-2xl font-bold font-display text-[#3A2B22]">
-                Tutto chiaro!
+                {tr('tour.finalTitle')}
               </h3>
               <p className="text-sm sm:text-base text-[#3A2B22]/80 font-medium leading-relaxed px-2">
-                "Tutto chiaro. Ci vediamo in tana."
+                "{stepText}"
               </p>
             </div>
 
@@ -322,7 +329,7 @@ export const GuidedTour: React.FC<GuidedTourProps> = ({
                 className="w-full py-3.5 px-6 rounded-2xl bg-[#E8802F] hover:bg-[#D47023] text-white font-bold font-display text-base shadow-lg hover:shadow-xl transition-all cursor-pointer active:scale-95 flex items-center justify-center gap-2"
               >
                 <Sparkles className="w-5 h-5 text-amber-200" />
-                <span>Inizia</span>
+                <span>{tr('tour.finish')}</span>
               </button>
             </div>
           </div>

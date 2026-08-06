@@ -1,12 +1,17 @@
 import React, { useState } from 'react';
 import { Mascot } from '../mascot/Mascot';
 import { loginWithGoogle } from '../services/firebase';
+import { getTranslation } from '../i18n/translations';
 
 interface LoginProps {
   onLoginSuccess?: (warningMsg?: string) => void;
+  t?: (key: string, params?: Record<string, string | number>) => string;
 }
 
-export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
+export const Login: React.FC<LoginProps> = ({ onLoginSuccess, t }) => {
+  const tr = (key: string, params?: Record<string, string | number>) =>
+    t ? t(key, params) : getTranslation(key, null, params);
+
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [warningMessage, setWarningMessage] = useState<string | null>(null);
@@ -26,7 +31,7 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
       }
     } catch (err: any) {
       console.error('Google Login Error:', err);
-      setErrorMessage(err.message || 'Impossibile accedere con Google in questo momento. Riprova più tardi.');
+      setErrorMessage(err.message || tr('login.loginError'));
     } finally {
       setIsLoggingIn(false);
     }
@@ -44,18 +49,18 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
               ? warningMessage
               : errorMessage
               ? errorMessage
-              : 'Ciao! Accedi per sincronizzare i tuoi vocaboli e progressi in tana.'
+              : tr('login.mascotGreeting')
           }
         />
 
         {/* Title & Subtitle */}
         <div className="space-y-2">
-          <span className="badge-leaf">Benvenuto in Raccoonary</span>
+          <span className="badge-leaf">{tr('login.welcomeBadge')}</span>
           <h1 className="text-3xl font-extrabold text-[#3A2B22] font-display">
-            La tua tana per imparare le lingue
+            {tr('login.title')}
           </h1>
           <p className="text-xs sm:text-sm font-medium text-[#3A2B22]/75 max-w-sm mx-auto leading-relaxed">
-            Memorizza vocaboli con la ripetizione dilazionata, esercitati con la grammatica ed esplora la lingua a piccoli passi.
+            {tr('login.subtitle')}
           </p>
         </div>
 
@@ -63,7 +68,7 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
         <div className="bento-card p-6 space-y-4 border-2 border-[#6B7C4F]/30 bg-white/80 backdrop-blur-xs">
           {warningMessage && (
             <div className="p-3.5 rounded-2xl bg-[#C99A3D]/15 border border-[#C99A3D]/40 text-left text-xs text-[#3A2B22] font-medium leading-relaxed">
-              <span className="font-bold text-[#C99A3D]">⚠️ Avviso:</span> {warningMessage}
+              <span className="font-bold text-[#C99A3D]">⚠️ {tr('login.warningPrefix')}</span> {warningMessage}
             </div>
           )}
 
@@ -81,7 +86,7 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
             {isLoggingIn ? (
               <div className="flex items-center gap-2">
                 <div className="w-5 h-5 border-2 border-[#6B7C4F] border-t-transparent rounded-full animate-spin" />
-                <span>Accesso in corso...</span>
+                <span>{tr('login.loggingIn')}</span>
               </div>
             ) : (
               <>
@@ -104,7 +109,7 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
                     d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
                   />
                 </svg>
-                <span>Accedi con Google</span>
+                <span>{tr('login.loginWithGoogle')}</span>
               </>
             )}
           </button>
@@ -112,7 +117,7 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
 
         {/* Subtle footer */}
         <p className="text-[11px] text-[#3A2B22]/50 font-medium">
-          I tuoi dati rimarranno al sicuro e sincronizzati nella tua tana.
+          {tr('login.footer')}
         </p>
       </div>
     </div>
