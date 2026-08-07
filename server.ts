@@ -431,7 +431,7 @@ Rispondi SOLO in JSON:
     res.json(JSON.parse(cleanJsonOutput(rawText)));
   } catch (err: any) {
     console.error("Error translating text:", err);
-    res.status(500).json({ error: "Non sono riuscito a tradurre in questo momento." });
+    res.status(500).json({ error: "Non sono riuscito a tradurre in questo momento.", details: err.message || String(err) });
   }
 });
 

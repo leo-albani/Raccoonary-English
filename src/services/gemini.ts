@@ -71,7 +71,9 @@ export async function generateReadingText(
   });
 
   if (!res.ok) {
-    throw new Error('Non sono riuscito a generare il brano di lettura.');
+    const errData = await res.json().catch(() => ({}));
+    const detailMsg = errData.details ? `: ${errData.details}` : (errData.error ? `: ${errData.error}` : '');
+    throw new Error(`Non sono riuscito a generare il brano di lettura${detailMsg}`);
   }
 
   return await res.json();
@@ -132,7 +134,9 @@ export async function translateText(
     });
 
     if (!res.ok) {
-      throw new Error('Traduzione non disponibile al momento.');
+      const errData = await res.json().catch(() => ({}));
+      const detailMsg = errData.details ? `: ${errData.details}` : (errData.error ? `: ${errData.error}` : '');
+      throw new Error(`Traduzione non disponibile al momento${detailMsg}`);
     }
 
     return await res.json();
@@ -140,12 +144,12 @@ export async function translateText(
 
   try {
     return await executeCall();
-  } catch (firstError) {
+  } catch (firstError: any) {
     console.warn('First translate attempt failed, retrying once...', firstError);
     try {
       return await executeCall();
-    } catch (retryError) {
-      throw new Error('Non sono riuscito a tradurre in questo momento.');
+    } catch (retryError: any) {
+      throw new Error(retryError.message || 'Non sono riuscito a tradurre in questo momento.');
     }
   }
 }
