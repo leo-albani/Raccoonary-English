@@ -59,6 +59,7 @@ export async function generateGrammarExercises(
 
 export async function generateReadingText(
   level: string = 'A1',
+  genre: string = 'Sorprendimi',
   targetLang?: string,
   nativeLang?: string,
   targetName?: string,
@@ -67,7 +68,7 @@ export async function generateReadingText(
   const res = await fetch('/api/generate-reading', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ level, targetLang, nativeLang, targetName, nativeName }),
+    body: JSON.stringify({ level, genre, targetLang, nativeLang, targetName, nativeName }),
   });
 
   if (!res.ok) {

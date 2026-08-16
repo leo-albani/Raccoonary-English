@@ -305,16 +305,36 @@ Rispondi SOLO in JSON con la seguente struttura esatta:
 // API 3: Generate Reading Text & Questions
 router.post("/generate-reading", async (req, res) => {
   try {
-    const { level = "A1", targetLang = "en", nativeLang = "it", targetName = "Inglese", nativeName = "Italiano" } = req.body;
-    
+    const {
+      level = "A1",
+      genre = "Sorprendimi",
+      targetLang = "en",
+      nativeLang = "it",
+      targetName = "Inglese",
+      nativeName = "Italiano"
+    } = req.body;
+
+    const wordLengths: Record<string, string> = {
+      A1: "100-150 parole",
+      A2: "120-180 parole",
+      B1: "200-250 parole",
+      B2: "250-320 parole",
+      C1: "350-450 parole",
+      C2: "450-550 parole",
+    };
+    const wordRange = wordLengths[level] || "150-250 parole";
+
     const ai = getGeminiClient();
-    const prompt = `Genera un brano di lettura e comprensione adatto al livello CEFR ${level}.
-La lingua del testo deve essere in ${targetName} (${targetLang}).
+    const genreInstruction = genre && genre !== "Sorprendimi"
+      ? `Argomento: genere "${genre}".`
+      : 'Argomento: genere "Sorprendimi" (scegli tu un argomento vario, curioso e interessante).';
+
+    const prompt = `Scrivi un testo in ${targetName} (${targetLang}) di livello CEFR ${level}, lunghezza ${wordRange}, stile simile ai testi degli esami Cambridge per quel livello. ${genreInstruction}
 La persona che legge è di madrelingua ${nativeName} (${nativeLang}).
-Il testo deve essere piacevole, interessante e naturale per il livello ${level} (lunghezza proporzionata: 100-150 parole per A1-A2, 200-300 per B1-B2, 350-450 per C1-C2).
+
 Includi:
 1. Titolo in ${targetName} e traduzione in ${nativeName}.
-2. Testo suddiviso in paragrafi.
+2. Testo suddiviso in paragrafi ben articolati e piacevoli da leggere.
 3. 3-4 domande di comprensione a scelta multipla (domande e opzioni in ${targetName}, con spiegazione in ${nativeName}).
 4. 4-6 vocaboli chiave evidenziati nel testo con traduzione in ${nativeName}, pronuncia IPA approssimata e contesto d'uso.
 
@@ -323,6 +343,7 @@ Rispondi SOLO in JSON con la struttura esatta:
   "title": "Titolo in ${targetName}",
   "titleTranslation": "Titolo in ${nativeName}",
   "level": "${level}",
+  "genre": "${genre || 'Sorprendimi'}",
   "targetLanguage": "${targetLang}",
   "paragraphs": ["Paragrafo 1...", "Paragrafo 2..."],
   "vocabulary": [
@@ -603,11 +624,11 @@ router.post("/generate-level-test", async (req, res) => {
     const levelPrompts = [
       {
         level: "A1",
-        count: 5,
-        prompt: `Genera esattamente 5 domande di livello CEFR A1 per verificare la competenza nella lingua ${targetName} (${targetLang}) rivolte ad una persona madrelingua ${nativeName} (${nativeLang}).
+        count: 6,
+        prompt: `Genera esattamente 6 domande di livello CEFR A1 per verificare la competenza nella lingua ${targetName} (${targetLang}) rivolte ad una persona madrelingua ${nativeName} (${nativeLang}).
 Tipi ammessi: "multiple_choice" o "fill_in_blank".
 Domande e opzioni devono essere in ${targetName} con istruzioni chiare in ${nativeName}.
-Rispondi SOLO in JSON con un array di 5 oggetti con struttura esatta:
+Rispondi SOLO in JSON con un array di 6 oggetti con struttura esatta:
 [
   {
     "level": "A1",
@@ -620,11 +641,11 @@ Rispondi SOLO in JSON con un array di 5 oggetti con struttura esatta:
       },
       {
         level: "A2",
-        count: 5,
-        prompt: `Genera esattamente 5 domande di livello CEFR A2 per verificare la competenza nella lingua ${targetName} (${targetLang}) rivolte ad una persona madrelingua ${nativeName} (${nativeLang}).
+        count: 6,
+        prompt: `Genera esattamente 6 domande di livello CEFR A2 per verificare la competenza nella lingua ${targetName} (${targetLang}) rivolte ad una persona madrelingua ${nativeName} (${nativeLang}).
 Tipi ammessi: "multiple_choice" o "fill_in_blank".
 Domande e opzioni devono essere in ${targetName} con istruzioni chiare in ${nativeName}.
-Rispondi SOLO in JSON con un array di 5 oggetti con struttura esatta:
+Rispondi SOLO in JSON con un array di 6 oggetti con struttura esatta:
 [
   {
     "level": "A2",
@@ -688,10 +709,10 @@ Rispondi SOLO in JSON con un array di 6 oggetti con struttura esatta:
       },
       {
         level: "C2",
-        count: 7,
-        prompt: `Genera esattamente 7 domande di livello CEFR C2 per verificare la competenza nella lingua ${targetName} (${targetLang}) rivolte ad una persona madrelingua ${nativeName} (${nativeLang}).
-Tipi ammessi: "multiple_choice", "sentence_transformation", oppure 1 breve testo di comprensione con 3 domande "reading_comprehension" (includi il brano in ${targetName} nel campo "testo_contesto").
-Rispondi SOLO in JSON con un array di 7 oggetti con struttura esatta:
+        count: 6,
+        prompt: `Genera esattamente 6 domande di livello CEFR C2 per verificare la competenza nella lingua ${targetName} (${targetLang}) rivolte ad una persona madrelingua ${nativeName} (${nativeLang}).
+Tipi ammessi: "multiple_choice", "sentence_transformation", oppure 1 breve testo di comprensione con 2 domande "reading_comprehension" (includi il brano in ${targetName} nel campo "testo_contesto").
+Rispondi SOLO in JSON con un array di 6 oggetti con struttura esatta:
 [
   {
     "level": "C2",
@@ -744,7 +765,7 @@ Rispondi SOLO in JSON con un array di 7 oggetti con struttura esatta:
       }
     });
 
-    if (allQuestions.length < 20) {
+    if (allQuestions.length < 24) {
       console.warn("Generated fewer questions than minimum threshold, returning fallback level test.");
       return res.json({ questions: getFallbackLevelTestQuestions() });
     }
@@ -758,42 +779,44 @@ Rispondi SOLO in JSON con un array di 7 oggetti con struttura esatta:
 
 function getFallbackLevelTestQuestions() {
   return [
-    // A1 (5)
+    // A1 (6)
     { id: "q1", level: "A1", tipo: "multiple_choice", domanda: "She ___ from Italy.", opzioni: ["is", "are", "am", "be"], rispostaCorretta: "is" },
     { id: "q2", level: "A1", tipo: "fill_in_blank", domanda: "I have two ___ (dog).", rispostaCorretta: "dogs" },
     { id: "q3", level: "A1", tipo: "multiple_choice", domanda: "What time ___ you get up in the morning?", opzioni: ["do", "does", "are", "have"], rispostaCorretta: "do" },
     { id: "q4", level: "A1", tipo: "multiple_choice", domanda: "There isn't ___ milk left in the fridge.", opzioni: ["any", "some", "a", "many"], rispostaCorretta: "any" },
     { id: "q5", level: "A1", tipo: "fill_in_blank", domanda: "My birthday is ___ July.", rispostaCorretta: "in" },
+    { id: "q6", level: "A1", tipo: "multiple_choice", domanda: "They ___ English and Italian.", opzioni: ["speak", "speaks", "speaking", "are speak"], rispostaCorretta: "speak" },
 
-    // A2 (5)
-    { id: "q6", level: "A2", tipo: "multiple_choice", domanda: "Yesterday I ___ to the cinema with my friends.", opzioni: ["went", "go", "gone", "was going"], rispostaCorretta: "went" },
-    { id: "q7", level: "A2", tipo: "multiple_choice", domanda: "This car is ___ than that one.", opzioni: ["more expensive", "expensiver", "most expensive", "as expensive"], rispostaCorretta: "more expensive" },
-    { id: "q8", level: "A2", tipo: "fill_in_blank", domanda: "While I was studying, the phone ___ (ring).", rispostaCorretta: "rang" },
-    { id: "q9", level: "A2", tipo: "multiple_choice", domanda: "You ___ wear a helmet when riding a motorbike. It's the law.", opzioni: ["must", "can", "might", "would"], rispostaCorretta: "must" },
-    { id: "q10", level: "A2", tipo: "fill_in_blank", domanda: "Have you ever ___ (be) to Paris?", rispostaCorretta: "been" },
+    // A2 (6)
+    { id: "q7", level: "A2", tipo: "multiple_choice", domanda: "Yesterday I ___ to the cinema with my friends.", opzioni: ["went", "go", "gone", "was going"], rispostaCorretta: "went" },
+    { id: "q8", level: "A2", tipo: "multiple_choice", domanda: "This car is ___ than that one.", opzioni: ["more expensive", "expensiver", "most expensive", "as expensive"], rispostaCorretta: "more expensive" },
+    { id: "q9", level: "A2", tipo: "fill_in_blank", domanda: "While I was studying, the phone ___ (ring).", rispostaCorretta: "rang" },
+    { id: "q10", level: "A2", tipo: "multiple_choice", domanda: "You ___ wear a helmet when riding a motorbike. It's the law.", opzioni: ["must", "can", "might", "would"], rispostaCorretta: "must" },
+    { id: "q11", level: "A2", tipo: "fill_in_blank", domanda: "Have you ever ___ (be) to Paris?", rispostaCorretta: "been" },
+    { id: "q12", level: "A2", tipo: "fill_in_blank", domanda: "I usually go to work ___ bus.", rispostaCorretta: "by" },
 
     // B1 (6)
-    { id: "q11", level: "B1", tipo: "multiple_choice", domanda: "I've been living in London ___ three years.", opzioni: ["for", "since", "during", "from"], rispostaCorretta: "for" },
-    { id: "q12", level: "B1", tipo: "sentence_transformation", domanda: "Complete: If it rains tomorrow, we ___ (stay) inside.", rispostaCorretta: "will stay" },
-    { id: "q13", level: "B1", tipo: "multiple_choice", domanda: "The girl ___ won the prize is my cousin.", opzioni: ["who", "which", "whose", "whom"], rispostaCorretta: "who" },
-    { id: "q14", level: "B1", tipo: "fill_in_blank", domanda: "I am really looking forward to ___ (meet) you.", rispostaCorretta: "meeting" },
-    { id: "q15", level: "B1", tipo: "multiple_choice", domanda: "If I won the lottery, I ___ buy a big house.", opzioni: ["would", "will", "must", "can"], rispostaCorretta: "would" },
-    { id: "q16", level: "B1", tipo: "sentence_transformation", domanda: "Transform into reported speech: 'I am tired,' he said. -> He said that he ___ tired.", rispostaCorretta: "was" },
+    { id: "q13", level: "B1", tipo: "multiple_choice", domanda: "I've been living in London ___ three years.", opzioni: ["for", "since", "during", "from"], rispostaCorretta: "for" },
+    { id: "q14", level: "B1", tipo: "sentence_transformation", domanda: "Complete: If it rains tomorrow, we ___ (stay) inside.", rispostaCorretta: "will stay" },
+    { id: "q15", level: "B1", tipo: "multiple_choice", domanda: "The girl ___ won the prize is my cousin.", opzioni: ["who", "which", "whose", "whom"], rispostaCorretta: "who" },
+    { id: "q16", level: "B1", tipo: "fill_in_blank", domanda: "I am really looking forward to ___ (meet) you.", rispostaCorretta: "meeting" },
+    { id: "q17", level: "B1", tipo: "multiple_choice", domanda: "If I won the lottery, I ___ buy a big house.", opzioni: ["would", "will", "must", "can"], rispostaCorretta: "would" },
+    { id: "q18", level: "B1", tipo: "sentence_transformation", domanda: "Transform into reported speech: 'I am tired,' he said. -> He said that he ___ tired.", rispostaCorretta: "was" },
 
     // B2 (6)
-    { id: "q17", level: "B2", tipo: "multiple_choice", domanda: "The new bridge ___ next year.", opzioni: ["will be built", "will build", "is building", "built"], rispostaCorretta: "will be built" },
-    { id: "q18", level: "B2", tipo: "sentence_transformation", domanda: "Complete with phrasal verb: Don't ___ (surrender/quit) even when it gets tough.", rispostaCorretta: "give up" },
-    { id: "q19", level: "B2", tipo: "multiple_choice", domanda: "He succeeded ___ passing the exam despite the difficulty.", opzioni: ["in", "on", "at", "to"], rispostaCorretta: "in" },
-    { id: "q20", level: "B2", tipo: "sentence_transformation", domanda: "It's a pity I didn't study harder. -> I wish I ___ harder.", rispostaCorretta: "had studied" },
+    { id: "q19", level: "B2", tipo: "multiple_choice", domanda: "The new bridge ___ next year.", opzioni: ["will be built", "will build", "is building", "built"], rispostaCorretta: "will be built" },
+    { id: "q20", level: "B2", tipo: "sentence_transformation", domanda: "Complete with phrasal verb: Don't ___ (surrender/quit) even when it gets tough.", rispostaCorretta: "give up" },
+    { id: "q21", level: "B2", tipo: "multiple_choice", domanda: "He succeeded ___ passing the exam despite the difficulty.", opzioni: ["in", "on", "at", "to"], rispostaCorretta: "in" },
+    { id: "q22", level: "B2", tipo: "sentence_transformation", domanda: "It's a pity I didn't study harder. -> I wish I ___ harder.", rispostaCorretta: "had studied" },
     {
-      id: "q21", level: "B2", tipo: "reading_comprehension",
+      id: "q23", level: "B2", tipo: "reading_comprehension",
       testo_contesto: "Urban green spaces provide environmental and health benefits. Recent studies show that city dwellers living near parks experience lower stress levels and improved cardiovascular health.",
       domanda: "According to the passage, what effect do urban parks have on residents?",
       opzioni: ["They lower stress and improve heart health.", "They increase noise levels.", "They make housing expensive.", "They have no noticeable effect."],
       rispostaCorretta: "They lower stress and improve heart health."
     },
     {
-      id: "q22", level: "B2", tipo: "reading_comprehension",
+      id: "q24", level: "B2", tipo: "reading_comprehension",
       testo_contesto: "Urban green spaces provide environmental and health benefits. Recent studies show that city dwellers living near parks experience lower stress levels and improved cardiovascular health.",
       domanda: "Who benefits from these green spaces?",
       opzioni: ["City dwellers living near parks", "Only athletes", "Suburban commuters", "Farmers"],
@@ -801,50 +824,43 @@ function getFallbackLevelTestQuestions() {
     },
 
     // C1 (6)
-    { id: "q23", level: "C1", tipo: "multiple_choice", domanda: "She didn't answer the phone; she ___ have been sleeping.", opzioni: ["must", "should", "would", "can"], rispostaCorretta: "must" },
-    { id: "q24", level: "C1", tipo: "sentence_transformation", domanda: "Complete 3rd conditional: If I had known about the traffic, I ___ (leave) earlier.", rispostaCorretta: "would have left" },
-    { id: "q25", level: "C1", tipo: "multiple_choice", domanda: "The project was cancelled owing ___ a lack of funding.", opzioni: ["to", "of", "for", "with"], rispostaCorretta: "to" },
-    { id: "q26", level: "C1", tipo: "sentence_transformation", domanda: "Rephrase with inversion: I have rarely seen such dedication. -> Rarely ___ such dedication.", rispostaCorretta: "have I seen" },
+    { id: "q25", level: "C1", tipo: "multiple_choice", domanda: "She didn't answer the phone; she ___ have been sleeping.", opzioni: ["must", "should", "would", "can"], rispostaCorretta: "must" },
+    { id: "q26", level: "C1", tipo: "sentence_transformation", domanda: "Complete 3rd conditional: If I had known about the traffic, I ___ (leave) earlier.", rispostaCorretta: "would have left" },
+    { id: "q27", level: "C1", tipo: "multiple_choice", domanda: "The project was cancelled owing ___ a lack of funding.", opzioni: ["to", "of", "for", "with"], rispostaCorretta: "to" },
+    { id: "q28", level: "C1", tipo: "sentence_transformation", domanda: "Rephrase with inversion: I have rarely seen such dedication. -> Rarely ___ such dedication.", rispostaCorretta: "have I seen" },
     {
-      id: "q27", level: "C1", tipo: "reading_comprehension",
+      id: "q29", level: "C1", tipo: "reading_comprehension",
       testo_contesto: "Artificial Intelligence has transitioned from theoretical speculation to a ubiquitous force reshaping industries. While automation enhances productivity, ethical dilemmas regarding bias and labor displacement demand robust regulatory frameworks.",
       domanda: "What main concern is highlighted regarding AI deployment?",
       opzioni: ["Ethical issues such as bias and labor displacement", "Its inability to boost productivity", "High hardware manufacturing costs", "Lack of interest from tech companies"],
       rispostaCorretta: "Ethical issues such as bias and labor displacement"
     },
     {
-      id: "q28", level: "C1", tipo: "reading_comprehension",
+      id: "q30", level: "C1", tipo: "reading_comprehension",
       testo_contesto: "Artificial Intelligence has transitioned from theoretical speculation to a ubiquitous force reshaping industries. While automation enhances productivity, ethical dilemmas regarding bias and labor displacement demand robust regulatory frameworks.",
       domanda: "What solution does the text advocate for these AI challenges?",
       opzioni: ["Robust regulatory frameworks", "Banning all AI research", "Ignoring ethical dilemmas", "Promoting unmonitored automation"],
       rispostaCorretta: "Robust regulatory frameworks"
     },
 
-    // C2 (7)
-    { id: "q29", level: "C2", tipo: "multiple_choice", domanda: "Little ___ that the decision would alter the course of history.", opzioni: ["did he know", "he knew", "he was knowing", "knew he"], rispostaCorretta: "did he know" },
-    { id: "q30", level: "C2", tipo: "sentence_transformation", domanda: "Complete idiom meaning 'to face a difficult situation with courage': You just have to bite the ___.", rispostaCorretta: "bullet" },
-    { id: "q31", level: "C2", tipo: "multiple_choice", domanda: "Had I known about the consequences, I ___ taken the risk.", opzioni: ["would never have", "will never have", "had never", "should never"], rispostaCorretta: "would never have" },
-    { id: "q32", level: "C2", tipo: "sentence_transformation", domanda: "Inversion: He not only completed the marathon, but he also broke the record. -> Not only ___ the marathon, but he also broke the record.", rispostaCorretta: "did he complete" },
+    // C2 (6)
+    { id: "q31", level: "C2", tipo: "multiple_choice", domanda: "Little ___ that the decision would alter the course of history.", opzioni: ["did he know", "he knew", "he was knowing", "knew he"], rispostaCorretta: "did he know" },
+    { id: "q32", level: "C2", tipo: "sentence_transformation", domanda: "Complete idiom meaning 'to face a difficult situation with courage': You just have to bite the ___.", rispostaCorretta: "bullet" },
+    { id: "q33", level: "C2", tipo: "multiple_choice", domanda: "Had I known about the consequences, I ___ taken the risk.", opzioni: ["would never have", "will never have", "had never", "should never"], rispostaCorretta: "would never have" },
+    { id: "q34", level: "C2", tipo: "sentence_transformation", domanda: "Inversion: He not only completed the marathon, but he also broke the record. -> Not only ___ the marathon, but he also broke the record.", rispostaCorretta: "did he complete" },
     {
-      id: "q33", level: "C2", tipo: "reading_comprehension",
+      id: "q35", level: "C2", tipo: "reading_comprehension",
       testo_contesto: "The nuance of literary translation lies not merely in verbatim rendition, but in capturing the subtext, cadence, and cultural resonance of the source material. A literal translation frequently stifles the aesthetic vitality of prose.",
       domanda: "Why is literal translation discouraged for literary works?",
       opzioni: ["It stifles the aesthetic vitality of the prose.", "It is too fast to produce.", "It enhances the cultural resonance too much.", "It is strictly illegal."],
       rispostaCorretta: "It stifles the aesthetic vitality of the prose."
     },
     {
-      id: "q34", level: "C2", tipo: "reading_comprehension",
+      id: "q36", level: "C2", tipo: "reading_comprehension",
       testo_contesto: "The nuance of literary translation lies not merely in verbatim rendition, but in capturing the subtext, cadence, and cultural resonance of the source material. A literal translation frequently stifles the aesthetic vitality of prose.",
       domanda: "What key elements must a literary translator capture beyond words?",
       opzioni: ["Subtext, cadence, and cultural resonance", "Only grammatical punctuation", "The translator's personal memoirs", "Word count equivalence"],
       rispostaCorretta: "Subtext, cadence, and cultural resonance"
-    },
-    {
-      id: "q35", level: "C2", tipo: "reading_comprehension",
-      testo_contesto: "The nuance of literary translation lies not merely in verbatim rendition, but in capturing the subtext, cadence, and cultural resonance of the source material. A literal translation frequently stifles the aesthetic vitality of prose.",
-      domanda: "The word 'verbatim' in the passage most nearly means:",
-      opzioni: ["Word-for-word", "Poetic", "Summary", "Inaccurate"],
-      rispostaCorretta: "Word-for-word"
     }
   ];
 }

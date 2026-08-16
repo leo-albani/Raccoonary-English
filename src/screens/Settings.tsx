@@ -4,6 +4,7 @@ import { UserProfile, VocabItem, Gender } from '../types';
 import { TanaManager } from '../components/TanaManager';
 import { auth, isUserAdmin } from '../services/firebase';
 import { NATIVE_LANGUAGES, TARGET_LANGUAGES } from '../data/languages';
+import { INTEREST_OPTIONS, INTEREST_ICONS } from '../data/interests';
 import { isSoundEnabled, setSoundEnabled } from '../services/sound';
 import { getTranslation } from '../i18n/translations';
 import {
@@ -58,12 +59,19 @@ export const Settings: React.FC<SettingsProps> = ({
   const [lastName, setLastName] = useState(user.lastName || '');
   const [username, setUsername] = useState(user.username || '');
   const [gender, setGender] = useState<Gender>(user.gender || 'undisclosed');
+  const [interessi, setInteressi] = useState<string[]>(user.interessi || []);
   const [isAccountSaved, setIsAccountSaved] = useState(false);
   const [soundActive, setSoundActive] = useState<boolean>(isSoundEnabled());
 
   const handleToggleSound = (enabled: boolean) => {
     setSoundActive(enabled);
     setSoundEnabled(enabled);
+  };
+
+  const toggleInterest = (interest: string) => {
+    setInteressi((prev) =>
+      prev.includes(interest) ? prev.filter((i) => i !== interest) : [...prev, interest]
+    );
   };
 
   // Interface language dropdown state
@@ -92,7 +100,8 @@ export const Settings: React.FC<SettingsProps> = ({
     setLastName(user.lastName || '');
     setUsername(user.username || '');
     setGender(user.gender || 'undisclosed');
-  }, [user.firstName, user.lastName, user.username, user.gender]);
+    setInteressi(user.interessi || []);
+  }, [user.firstName, user.lastName, user.username, user.gender, user.interessi]);
 
   const handleSaveAccountInfo = () => {
     onUpdateUser({
@@ -101,6 +110,7 @@ export const Settings: React.FC<SettingsProps> = ({
       lastName: lastName.trim(),
       username: username.trim(),
       gender: gender || 'undisclosed',
+      interessi,
     });
     setIsAccountSaved(true);
     setTimeout(() => setIsAccountSaved(false), 2500);
@@ -313,6 +323,41 @@ export const Settings: React.FC<SettingsProps> = ({
               >
                 {tr('settings.genderUndisclosed')}
               </button>
+            </div>
+          </div>
+
+          <div>
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="block text-xs font-bold text-[#3A2B22]">
+                I tuoi interessi
+              </label>
+              <span className="text-[11px] text-[#3A2B22]/60 font-medium">
+                {interessi.length > 0 ? `${interessi.length} selezionati` : 'Nessuno selezionato'}
+              </span>
+            </div>
+            <p className="text-[11px] text-[#3A2B22]/65 mb-2">
+              Seleziona i tuoi temi preferiti per personalizzare le letture nel Sentiero.
+            </p>
+            <div className="flex flex-wrap gap-1.5">
+              {INTEREST_OPTIONS.map((interest) => {
+                const isSelected = interessi.includes(interest);
+                return (
+                  <button
+                    key={interest}
+                    type="button"
+                    onClick={() => toggleInterest(interest)}
+                    className={`py-1.5 px-2.5 rounded-xl border text-xs font-bold font-display transition-all cursor-pointer flex items-center gap-1.5 ${
+                      isSelected
+                        ? 'border-[#6B7C4F] bg-[#6B7C4F] text-white shadow-xs'
+                        : 'border-[#6B7C4F]/30 bg-white hover:border-[#6B7C4F] text-[#3A2B22]'
+                    }`}
+                  >
+                    <span>{INTEREST_ICONS[interest] || '✨'}</span>
+                    <span>{interest}</span>
+                    {isSelected && <span className="text-[10px] font-black ml-0.5">✓</span>}
+                  </button>
+                );
+              })}
             </div>
           </div>
 

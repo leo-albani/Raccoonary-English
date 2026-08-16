@@ -17,6 +17,8 @@ import {
   getUserAccount,
   fetchGrammarProgress,
   saveGrammarProgressTopic,
+  fetchReadingProgress,
+  incrementReadingProgress,
   fetchUserProfiles,
   createNewLanguageProfile,
   switchActiveProfile,
@@ -41,6 +43,8 @@ import { Settings } from './screens/Settings';
 import { LevelTest } from './screens/LevelTest';
 import { Pronunciation } from './screens/Pronunciation';
 import { Wardrobe } from './screens/Wardrobe';
+import { TranslatorScreen } from './screens/TranslatorScreen';
+import { Trail } from './screens/Trail';
 import { Navigation, NavTab } from './components/Navigation';
 import { GuidedTour } from './components/GuidedTour';
 import { setupDailyReminderTimer } from './services/notifications';
@@ -189,6 +193,7 @@ export function App() {
           const profile = await fetchUserProfile(authUser.uid);
           const items = await fetchVocabItems(authUser.uid, profile.activeProfileId);
           const grammarMap = await fetchGrammarProgress(authUser.uid, profile.activeProfileId);
+          const readingMap = await fetchReadingProgress(authUser.uid, profile.activeProfileId);
 
           // Update streak logic and streak freeze protection
           const todayStr = new Date().toISOString().split('T')[0];
@@ -235,6 +240,7 @@ export function App() {
 
           setVocabItems(items);
           setGrammarProgress(grammarMap);
+          setReadingProgress(readingMap);
           setIsAuthenticated(true);
         } catch (e) {
           console.warn('Profile sync error:', e);
@@ -260,6 +266,20 @@ export function App() {
       return {};
     }
   });
+
+  const [readingProgress, setReadingProgress] = useState<Record<string, { textsCompleted: number; lastReadAt?: number }>>(() => {
+    try {
+      const saved = localStorage.getItem('raccoonary_reading_progress');
+      return saved ? JSON.parse(saved) : {};
+    } catch (e) {
+      return {};
+    }
+  });
+
+  const handleCompleteReading = async (level: any) => {
+    const updated = await incrementReadingProgress(userId, level, user.activeProfileId);
+    setReadingProgress(updated);
+  };
   const [lastActiveTopicId, setLastActiveTopicId] = useState<string | null>(() => {
     try {
       return localStorage.getItem('raccoonary_last_active_topic');
@@ -372,9 +392,11 @@ export function App() {
       const updatedProfile = await switchActiveProfile(userId, targetLanguage);
       const items = await fetchVocabItems(userId, targetLanguage);
       const grammarMap = await fetchGrammarProgress(userId, targetLanguage);
+      const readingMap = await fetchReadingProgress(userId, targetLanguage);
       setUser(updatedProfile);
       setVocabItems(items);
       setGrammarProgress(grammarMap);
+      setReadingProgress(readingMap);
       setShowLevelTest(false);
       setCurrentTab('home');
     } catch (e) {
@@ -392,11 +414,13 @@ export function App() {
       const updatedProfile = await fetchUserProfile(userId);
       const items = await fetchVocabItems(userId, targetLanguage);
       const grammarMap = await fetchGrammarProgress(userId, targetLanguage);
+      const readingMap = await fetchReadingProgress(userId, targetLanguage);
 
       setUserProfiles(updatedProfiles);
       setUser(updatedProfile);
       setVocabItems(items);
       setGrammarProgress(grammarMap);
+      setReadingProgress(readingMap);
       setShowLevelTest(false);
       setCurrentTab('home');
     } catch (e) {
@@ -420,11 +444,13 @@ export function App() {
       const updatedUser = await fetchUserProfile(userId);
       const items = await fetchVocabItems(userId, updatedUser.activeProfileId);
       const grammarMap = await fetchGrammarProgress(userId, updatedUser.activeProfileId);
+      const readingMap = await fetchReadingProgress(userId, updatedUser.activeProfileId);
 
       setUserProfiles(updatedProfiles);
       setUser(updatedUser);
       setVocabItems(items);
       setGrammarProgress(grammarMap);
+      setReadingProgress(readingMap);
     } catch (e) {
       console.error('Error deleting language profile:', e);
     } finally {
@@ -544,6 +570,7 @@ export function App() {
                 vocabItems={vocabItems}
                 userProfiles={userProfiles}
                 sharedContent={sharedContent}
+                grammarProgress={grammarProgress}
                 streakFreezeActivated={streakFreezeActivated}
                 onCloseFreezeBanner={() => setStreakFreezeActivated(false)}
                 onSwitchProfile={handleSwitchProfile}
@@ -556,6 +583,33 @@ export function App() {
                 }}
                 onAddVocabItem={handleSaveItem}
                 onDeleteItem={handleDeleteItem}
+                onOpenLevelTest={() => setShowLevelTest(true)}
+                onUpdateProfile={async (updated) => {
+                  const u = { ...user, ...updated };
+                  setUser(u);
+                  await updateUserProfile(u);
+                }}
+                t={t}
+              />
+            )}
+
+            {currentTab === 'translator' && (
+              <TranslatorScreen
+                user={user}
+                vocabItems={vocabItems}
+                onAddVocabItem={handleSaveItem}
+                onDeleteItem={handleDeleteItem}
+                t={t}
+              />
+            )}
+
+            {currentTab === 'trail' && (
+              <Trail
+                user={user}
+                vocabItems={vocabItems}
+                grammarProgress={grammarProgress}
+                readingProgress={readingProgress}
+                onNavigate={(tab) => setCurrentTab(tab)}
                 onOpenLevelTest={() => setShowLevelTest(true)}
                 t={t}
               />
@@ -592,6 +646,7 @@ export function App() {
                 lastActiveTopicId={lastActiveTopicId}
                 onSetLastActiveTopicId={handleSetLastActiveTopicId}
                 sharedContent={sharedContent}
+                userProfile={user}
                 t={t}
               />
             )}
@@ -607,7 +662,12 @@ export function App() {
             )}
 
             {currentTab === 'reading' && (
-              <Reading onSaveVocabItem={handleSaveItem} userProfile={user} t={t} />
+              <Reading
+                onSaveVocabItem={handleSaveItem}
+                onCompleteReading={handleCompleteReading}
+                userProfile={user}
+                t={t}
+              />
             )}
 
             {currentTab === 'import' && (

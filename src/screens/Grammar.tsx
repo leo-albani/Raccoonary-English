@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Mascot } from '../mascot/Mascot';
-import { GrammarTopic, Exercise, VocabItem, GrammarTopicProgress, SharedLanguagePairContent, SpecialSectionItem } from '../types';
+import { GrammarTopic, Exercise, VocabItem, GrammarTopicProgress, SharedLanguagePairContent, SpecialSectionItem, UserProfile } from '../types';
 import { GRAMMAR_SYLLABUS, IRREGULAR_VERBS } from '../data/grammarSyllabus';
 import { generateGrammarExercises } from '../services/gemini';
 import { NATIVE_LANGUAGES, TARGET_LANGUAGES } from '../data/languages';
@@ -14,6 +14,7 @@ interface GrammarProps {
   lastActiveTopicId?: string | null;
   onSetLastActiveTopicId?: (topicId: string) => void;
   sharedContent?: SharedLanguagePairContent | null;
+  userProfile?: UserProfile;
   t?: (key: string, params?: Record<string, string | number>) => string;
 }
 
@@ -25,6 +26,7 @@ export const Grammar: React.FC<GrammarProps> = ({
   lastActiveTopicId,
   onSetLastActiveTopicId,
   sharedContent,
+  userProfile,
   t,
 }) => {
   // Get topics from sharedContent if available, or fallback
@@ -42,7 +44,13 @@ export const Grammar: React.FC<GrammarProps> = ({
     : true;
   const irregularVerbs = sharedContent?.irregularVerbsEquivalent?.verbi || IRREGULAR_VERBS;
 
+  const activeStudyLevel = userProfile?.livelloStudioAttivo || 'A1';
+  const CEFR_LEVELS = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'];
+  const activeLevelIdx = CEFR_LEVELS.indexOf(activeStudyLevel);
+  const nextStudyLevel = activeLevelIdx >= 0 && activeLevelIdx < CEFR_LEVELS.length - 1 ? CEFR_LEVELS[activeLevelIdx + 1] : null;
+
   const [activeTab, setActiveTab] = useState<'syllabus' | 'special' | 'irregular'>('syllabus');
+  const [selectedLevelFilter, setSelectedLevelFilter] = useState<string>(activeStudyLevel);
   const [selectedSpecialIdx, setSelectedSpecialIdx] = useState(0);
   const [specialFilter, setSpecialFilter] = useState('');
 
@@ -514,72 +522,361 @@ export const Grammar: React.FC<GrammarProps> = ({
           ) : null}
         </div>
       ) : (
-        /* Syllabus Topic List categorized into Bento Grid */
+        /* Syllabus Topic List categorized or filtered by level */
         <div className="space-y-6">
-          {categories.map((cat) => {
-            const topics = allTopics.filter((t) => t.category === cat);
-            return (
-              <div key={cat} className="space-y-3">
-                <div className="flex items-center gap-2 px-1">
-                  <span className="badge-leaf">Livello {cat}</span>
-                </div>
+          {/* Level Filter Bar */}
+          <div className="flex items-center justify-between gap-2 overflow-x-auto no-scrollbar pb-1">
+            <div className="flex items-center gap-1.5 bg-white/70 backdrop-blur-xs p-1 rounded-2xl border border-[#6B7C4F]/20 shadow-xs">
+              {(['TUTTI', 'A1', 'A2', 'B1', 'B2', 'C1', 'C2'] as const).map((lvl) => {
+                const isSelected = selectedLevelFilter === lvl;
+                const isUserActiveLevel = activeStudyLevel === lvl;
+                return (
+                  <button
+                    key={lvl}
+                    onClick={() => setSelectedLevelFilter(lvl)}
+                    className={`px-3 py-1.5 rounded-xl font-bold font-display text-xs transition-all cursor-pointer whitespace-nowrap flex items-center gap-1 ${
+                      isSelected
+                        ? 'bg-[#6B7C4F] text-white shadow-xs'
+                        : 'text-[#3A2B22]/70 hover:text-[#3A2B22] hover:bg-gray-100/50'
+                    }`}
+                  >
+                    <span>{lvl === 'TUTTI' ? 'Tutti i livelli' : lvl}</span>
+                    {isUserActiveLevel && <span className="text-[10px]" title="Il tuo livello attivo">🎯</span>}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {topics.map((t) => {
-                    const prog = grammarProgress[t.id];
-                    const isPassed = prog?.passed;
-                    const isLastActive = lastActiveTopicId === t.id;
+          {selectedLevelFilter === 'TUTTI' ? (
+            categories.map((cat) => {
+              const topics = allTopics.filter((t) => t.category === cat);
+              return (
+                <div key={cat} className="space-y-3">
+                  <div className="flex items-center gap-2 px-1">
+                    <span className="badge-leaf">Livello {cat}</span>
+                  </div>
 
-                    return (
-                      <div
-                        key={t.id}
-                        onClick={() => startTopicExercises(t)}
-                        className={`bento-card hover:border-[#6B7C4F] cursor-pointer flex items-center justify-between gap-3 group relative overflow-hidden transition-all ${
-                          isPassed ? 'border-2 border-[#6B7C4F]/60 bg-[#6B7C4F]/5' : ''
-                        }`}
-                      >
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-1 flex-wrap">
-                            <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-[#C99A3D]/20 text-[#C99A3D] font-display">
-                              {t.level}
-                            </span>
-                            {isPassed && (
-                              <span className="text-[10px] font-extrabold px-2 py-0.5 rounded bg-[#6B7C4F] text-white font-display">
-                                ✓ Superato
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {topics.map((t) => {
+                      const prog = grammarProgress[t.id];
+                      const isPassed = prog?.passed;
+                      const isLastActive = lastActiveTopicId === t.id;
+                      const isMatchingActiveLevel = activeStudyLevel === t.level;
+
+                      return (
+                        <div
+                          key={t.id}
+                          onClick={() => startTopicExercises(t)}
+                          className={`bento-card hover:border-[#6B7C4F] cursor-pointer flex items-center justify-between gap-3 group relative overflow-hidden transition-all ${
+                            isPassed
+                              ? 'border-2 border-[#6B7C4F]/60 bg-[#6B7C4F]/5'
+                              : isMatchingActiveLevel
+                              ? 'border-2 border-[#6B7C4F]/40 bg-[#6B7C4F]/5'
+                              : ''
+                          }`}
+                        >
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1 flex-wrap">
+                              <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-[#C99A3D]/20 text-[#C99A3D] font-display">
+                                {t.level}
                               </span>
-                            )}
-                            {prog && prog.bestScorePercent !== undefined && (
-                              <span className="text-[10px] font-bold text-[#3A2B22]/60 font-display">
-                                Best: {prog.bestScorePercent}%
-                              </span>
-                            )}
+                              {isMatchingActiveLevel && (
+                                <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-[#6B7C4F]/20 text-[#6B7C4F] font-display">
+                                  🎯 Tuo livello
+                                </span>
+                              )}
+                              {isPassed && (
+                                <span className="text-[10px] font-extrabold px-2 py-0.5 rounded bg-[#6B7C4F] text-white font-display">
+                                  ✓ Superato
+                                </span>
+                              )}
+                              {prog && prog.bestScorePercent !== undefined && (
+                                <span className="text-[10px] font-bold text-[#3A2B22]/60 font-display">
+                                  Best: {prog.bestScorePercent}%
+                                </span>
+                              )}
+                            </div>
+                            <h3 className="font-bold text-base text-[#3A2B22] font-display truncate">
+                              {t.name}
+                            </h3>
+                            <p className="text-xs text-[#3A2B22]/70 line-clamp-2 mt-1 font-medium">
+                              {t.summary}
+                            </p>
                           </div>
-                          <h3 className="font-bold text-base text-[#3A2B22] font-display truncate">
-                            {t.name}
-                          </h3>
-                          <p className="text-xs text-[#3A2B22]/70 line-clamp-2 mt-1 font-medium">
-                            {t.summary}
+
+                          {/* Mascot indicator for last active topic */}
+                          {isLastActive && (
+                            <div className="shrink-0 flex items-center gap-1 bg-[#F2E8D5] px-2 py-1 rounded-xl border border-[#6B7C4F]/30 shadow-xs">
+                              <span className="text-sm">🦝</span>
+                              <span className="text-[10px] font-bold text-[#6B7C4F]">Qui</span>
+                            </div>
+                          )}
+
+                          <span className="text-[#E8802F] font-bold text-xl group-hover:translate-x-1 transition-transform shrink-0">
+                            →
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })
+          ) : selectedLevelFilter === activeStudyLevel ? (
+            /* Dual-Group Display: Active Level (Consolidation) + Advance Level (i+1 ~30%) */
+            (() => {
+              const activeTopics = allTopics.filter((t) => t.level === activeStudyLevel);
+              const nextTopics = nextStudyLevel ? allTopics.filter((t) => t.level === nextStudyLevel) : [];
+              const advanceCount = Math.max(1, Math.round(activeTopics.length * 0.3));
+              const advanceTopics = nextTopics.slice(0, advanceCount);
+
+              return (
+                <div className="space-y-8">
+                  {/* Sezione 1: Il tuo livello (livello attivo) */}
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between px-1">
+                      <div className="space-y-0.5">
+                        <div className="flex items-center gap-2">
+                          <span className="badge-leaf bg-[#6B7C4F] text-white">
+                            Il tuo livello ({activeStudyLevel})
+                          </span>
+                          <span className="text-xs font-bold text-[#6B7C4F] font-display">
+                            Consolidamento
+                          </span>
+                        </div>
+                        <p className="text-xs text-[#3A2B22]/70 font-medium">
+                          Tutti gli argomenti fondamentali per consolidare il tuo livello attuale.
+                        </p>
+                      </div>
+                      <span className="text-xs font-bold text-[#3A2B22]/60 font-display">
+                        {activeTopics.length} {activeTopics.length === 1 ? 'argomento' : 'argomenti'}
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {activeTopics.map((t) => {
+                        const prog = grammarProgress[t.id];
+                        const isPassed = prog?.passed;
+                        const isLastActive = lastActiveTopicId === t.id;
+
+                        return (
+                          <div
+                            key={t.id}
+                            onClick={() => startTopicExercises(t)}
+                            className={`bento-card hover:border-[#6B7C4F] cursor-pointer flex items-center justify-between gap-3 group relative overflow-hidden transition-all ${
+                              isPassed
+                                ? 'border-2 border-[#6B7C4F]/60 bg-[#6B7C4F]/5'
+                                : 'border-2 border-[#6B7C4F]/30 hover:border-[#6B7C4F]'
+                            }`}
+                          >
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-1 flex-wrap">
+                                <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-[#6B7C4F]/20 text-[#6B7C4F] font-display">
+                                  {t.level}
+                                </span>
+                                {isPassed && (
+                                  <span className="text-[10px] font-extrabold px-2 py-0.5 rounded bg-[#6B7C4F] text-white font-display">
+                                    ✓ Superato
+                                  </span>
+                                )}
+                                {prog && prog.bestScorePercent !== undefined && (
+                                  <span className="text-[10px] font-bold text-[#3A2B22]/60 font-display">
+                                    Best: {prog.bestScorePercent}%
+                                  </span>
+                                )}
+                              </div>
+                              <h3 className="font-bold text-base text-[#3A2B22] font-display truncate">
+                                {t.name}
+                              </h3>
+                              <p className="text-xs text-[#3A2B22]/70 line-clamp-2 mt-1 font-medium">
+                                {t.summary}
+                              </p>
+                            </div>
+
+                            {isLastActive && (
+                              <div className="shrink-0 flex items-center gap-1 bg-[#F2E8D5] px-2 py-1 rounded-xl border border-[#6B7C4F]/30 shadow-xs">
+                                <span className="text-sm">🦝</span>
+                                <span className="text-[10px] font-bold text-[#6B7C4F]">Qui</span>
+                              </div>
+                            )}
+
+                            <span className="text-[#E8802F] font-bold text-xl group-hover:translate-x-1 transition-transform shrink-0">
+                              →
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Sezione 2: Un passo avanti (livello successivo i+1 ~30%) */}
+                  {nextStudyLevel && advanceTopics.length > 0 && activeStudyLevel !== 'C2' && (
+                    <div className="space-y-3 pt-2">
+                      <div className="flex items-center justify-between px-1">
+                        <div className="space-y-0.5">
+                          <div className="flex items-center gap-2">
+                            <span className="badge-leaf bg-[#E8802F] text-white">
+                              Un passo avanti ({nextStudyLevel})
+                            </span>
+                            <span className="text-xs font-bold text-[#E8802F] font-display">
+                              ✨ Avanzamento (i+1)
+                            </span>
+                          </div>
+                          <p className="text-xs text-[#3A2B22]/70 font-medium">
+                            Argomenti selezionati in anticipo ({advanceTopics.length} di {nextTopics.length}) per iniziare a esplorare il livello {nextStudyLevel}.
                           </p>
                         </div>
-
-                        {/* Mascot indicator for last active topic */}
-                        {isLastActive && (
-                          <div className="shrink-0 flex items-center gap-1 bg-[#F2E8D5] px-2 py-1 rounded-xl border border-[#6B7C4F]/30 shadow-xs">
-                            <span className="text-sm">🦝</span>
-                            <span className="text-[10px] font-bold text-[#6B7C4F]">Qui</span>
-                          </div>
-                        )}
-
-                        <span className="text-[#E8802F] font-bold text-xl group-hover:translate-x-1 transition-transform shrink-0">
-                          →
+                        <span className="text-xs font-bold text-[#E8802F] font-display bg-[#E8802F]/10 px-2 py-0.5 rounded-full">
+                          Facoltativo
                         </span>
                       </div>
-                    );
-                  })}
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {advanceTopics.map((t) => {
+                          const prog = grammarProgress[t.id];
+                          const isPassed = prog?.passed;
+                          const isLastActive = lastActiveTopicId === t.id;
+
+                          return (
+                            <div
+                              key={t.id}
+                              onClick={() => startTopicExercises(t)}
+                              className={`bento-card cursor-pointer flex items-center justify-between gap-3 group relative overflow-hidden transition-all border-2 border-[#E8802F]/40 hover:border-[#E8802F] bg-gradient-to-br from-white to-[#E8802F]/5 ${
+                                isPassed ? 'border-[#6B7C4F] bg-[#6B7C4F]/5' : ''
+                              }`}
+                            >
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 mb-1 flex-wrap">
+                                  <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-[#E8802F]/20 text-[#E8802F] font-display">
+                                    {t.level} • Avanzato
+                                  </span>
+                                  {isPassed ? (
+                                    <span className="text-[10px] font-extrabold px-2 py-0.5 rounded bg-[#6B7C4F] text-white font-display">
+                                      ✓ Superato
+                                    </span>
+                                  ) : (
+                                    <span className="text-[9px] font-bold px-2 py-0.5 rounded bg-[#E8802F]/15 text-[#E8802F] font-display">
+                                      ✨ i+1
+                                    </span>
+                                  )}
+                                  {prog && prog.bestScorePercent !== undefined && (
+                                    <span className="text-[10px] font-bold text-[#3A2B22]/60 font-display">
+                                      Best: {prog.bestScorePercent}%
+                                    </span>
+                                  )}
+                                </div>
+                                <h3 className="font-bold text-base text-[#3A2B22] font-display truncate">
+                                  {t.name}
+                                </h3>
+                                <p className="text-xs text-[#3A2B22]/70 line-clamp-2 mt-1 font-medium">
+                                  {t.summary}
+                                </p>
+                              </div>
+
+                              {isLastActive && (
+                                <div className="shrink-0 flex items-center gap-1 bg-[#F2E8D5] px-2 py-1 rounded-xl border border-[#6B7C4F]/30 shadow-xs">
+                                  <span className="text-sm">🦝</span>
+                                  <span className="text-[10px] font-bold text-[#6B7C4F]">Qui</span>
+                                </div>
+                              )}
+
+                              <span className="text-[#E8802F] font-bold text-xl group-hover:translate-x-1 transition-transform shrink-0">
+                                →
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
                 </div>
-              </div>
-            );
-          })}
+              );
+            })()
+          ) : (
+            /* Single specific level filter chosen by user */
+            (() => {
+              const filteredTopics = allTopics.filter((t) => t.level === selectedLevelFilter);
+              return (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between px-1">
+                    <div className="flex items-center gap-2">
+                      <span className="badge-leaf bg-[#6B7C4F] text-white">Livello {selectedLevelFilter}</span>
+                      {activeStudyLevel === selectedLevelFilter && (
+                        <span className="text-xs font-bold text-[#6B7C4F] font-display">
+                          (Il tuo livello di studio attivo)
+                        </span>
+                      )}
+                    </div>
+                    <span className="text-xs font-bold text-[#3A2B22]/60 font-display">
+                      {filteredTopics.length} {filteredTopics.length === 1 ? 'argomento' : 'argomenti'}
+                    </span>
+                  </div>
+
+                  {filteredTopics.length === 0 ? (
+                    <div className="bento-card text-center py-8">
+                      <p className="text-xs font-medium text-[#3A2B22]/70">
+                        Nessun argomento specifico trovato per il livello {selectedLevelFilter}.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {filteredTopics.map((t) => {
+                        const prog = grammarProgress[t.id];
+                        const isPassed = prog?.passed;
+                        const isLastActive = lastActiveTopicId === t.id;
+
+                        return (
+                          <div
+                            key={t.id}
+                            onClick={() => startTopicExercises(t)}
+                            className={`bento-card hover:border-[#6B7C4F] cursor-pointer flex items-center justify-between gap-3 group relative overflow-hidden transition-all ${
+                              isPassed ? 'border-2 border-[#6B7C4F]/60 bg-[#6B7C4F]/5' : ''
+                            }`}
+                          >
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-1 flex-wrap">
+                                <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-[#C99A3D]/20 text-[#C99A3D] font-display">
+                                  {t.level}
+                                </span>
+                                {isPassed && (
+                                  <span className="text-[10px] font-extrabold px-2 py-0.5 rounded bg-[#6B7C4F] text-white font-display">
+                                    ✓ Superato
+                                  </span>
+                                )}
+                                {prog && prog.bestScorePercent !== undefined && (
+                                  <span className="text-[10px] font-bold text-[#3A2B22]/60 font-display">
+                                    Best: {prog.bestScorePercent}%
+                                  </span>
+                                )}
+                              </div>
+                              <h3 className="font-bold text-base text-[#3A2B22] font-display truncate">
+                                {t.name}
+                              </h3>
+                              <p className="text-xs text-[#3A2B22]/70 line-clamp-2 mt-1 font-medium">
+                                {t.summary}
+                              </p>
+                            </div>
+
+                            {isLastActive && (
+                              <div className="shrink-0 flex items-center gap-1 bg-[#F2E8D5] px-2 py-1 rounded-xl border border-[#6B7C4F]/30 shadow-xs">
+                                <span className="text-sm">🦝</span>
+                                <span className="text-[10px] font-bold text-[#6B7C4F]">Qui</span>
+                              </div>
+                            )}
+
+                            <span className="text-[#E8802F] font-bold text-xl group-hover:translate-x-1 transition-transform shrink-0">
+                              →
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              );
+            })()
+          )}
         </div>
       )}
 

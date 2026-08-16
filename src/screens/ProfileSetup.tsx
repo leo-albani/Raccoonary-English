@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Mascot } from '../mascot/Mascot';
 import { NATIVE_LANGUAGES, TARGET_LANGUAGES } from '../data/languages';
+import { INTEREST_OPTIONS, INTEREST_ICONS } from '../data/interests';
 import { createUserAccountAndProfile, checkUserHasLegacyData } from '../services/firebase';
 import { Gender } from '../types';
 
@@ -14,6 +15,7 @@ export const ProfileSetup: React.FC<ProfileSetupProps> = ({ userId, onComplete }
   const [lastName, setLastName] = useState('');
   const [username, setUsername] = useState('');
   const [gender, setGender] = useState<Gender>('undisclosed');
+  const [interessi, setInteressi] = useState<string[]>([]);
   const [nativeLanguage, setNativeLanguage] = useState('it');
   const [targetLanguage, setTargetLanguage] = useState('en');
   
@@ -37,6 +39,12 @@ export const ProfileSetup: React.FC<ProfileSetupProps> = ({ userId, onComplete }
     }
     checkLegacy();
   }, [userId]);
+
+  const toggleInterest = (interest: string) => {
+    setInteressi((prev) =>
+      prev.includes(interest) ? prev.filter((i) => i !== interest) : [...prev, interest]
+    );
+  };
 
   const filteredNativeLanguages = NATIVE_LANGUAGES.filter((lang) =>
     lang.name.toLowerCase().includes(nativeSearch.toLowerCase()) ||
@@ -67,6 +75,7 @@ export const ProfileSetup: React.FC<ProfileSetupProps> = ({ userId, onComplete }
         nativeLanguage,
         targetLanguage,
         gender,
+        interessi,
       });
       onComplete();
     } catch (err: any) {
@@ -189,6 +198,42 @@ export const ProfileSetup: React.FC<ProfileSetupProps> = ({ userId, onComplete }
               >
                 Preferisco non dirlo
               </button>
+            </div>
+          </div>
+
+          {/* I tuoi interessi (Interests Selector - Multiple) */}
+          <div className="space-y-2 pt-2 border-t border-[#3A2B22]/10">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-bold text-[#3A2B22] font-display uppercase tracking-wider">
+                I tuoi interessi
+              </label>
+              <span className="text-[11px] text-[#3A2B22]/60 font-medium">
+                {interessi.length > 0 ? `${interessi.length} selezionat${interessi.length === 1 ? 'o' : 'i'}` : 'Opzionale'}
+              </span>
+            </div>
+            <p className="text-[12px] text-[#3A2B22]/70 leading-tight">
+              Scegli i temi che ami per suggerimenti di lettura su misura per te.
+            </p>
+            <div className="flex flex-wrap gap-2 pt-1">
+              {INTEREST_OPTIONS.map((interest) => {
+                const isSelected = interessi.includes(interest);
+                return (
+                  <button
+                    key={interest}
+                    type="button"
+                    onClick={() => toggleInterest(interest)}
+                    className={`py-2 px-3 rounded-xl border-2 font-display text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                      isSelected
+                        ? 'border-[#6B7C4F] bg-[#6B7C4F] text-white shadow-xs'
+                        : 'border-[#3A2B22]/15 bg-[#F2E8D5]/40 hover:border-[#6B7C4F]/50 text-[#3A2B22]'
+                    }`}
+                  >
+                    <span>{INTEREST_ICONS[interest] || '✨'}</span>
+                    <span>{interest}</span>
+                    {isSelected && <span className="text-[11px] font-black ml-0.5">✓</span>}
+                  </button>
+                );
+              })}
             </div>
           </div>
 

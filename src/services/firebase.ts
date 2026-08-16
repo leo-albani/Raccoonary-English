@@ -18,7 +18,7 @@ import {
   deleteDoc,
   getDocFromServer,
 } from 'firebase/firestore';
-import { UserProfile, UserAccount, VocabItem, GrammarTopicProgress, SharedLanguagePairContent, UITranslationSet, Gender } from '../types';
+import { UserProfile, UserAccount, VocabItem, GrammarTopicProgress, SharedLanguagePairContent, UITranslationSet, Gender, CEFRLevel } from '../types';
 import { SEED_IT_EN_CONTENT } from '../data/sharedContentSeed';
 import { NATIVE_LANGUAGES, TARGET_LANGUAGES } from '../data/languages';
 import { IT_TRANSLATIONS } from '../i18n/translations';
@@ -263,6 +263,7 @@ export async function getUserAccount(userId: string): Promise<UserAccount | null
             activeProfileId: data.activeProfileId,
             createdAt: data.createdAt || Date.now(),
             gender: data.gender || 'undisclosed',
+            interessi: data.interessi || [],
           };
         }
       }
@@ -374,6 +375,7 @@ export async function createUserAccountAndProfile(
     nativeLanguage: string;
     targetLanguage: string;
     gender?: Gender;
+    interessi?: string[];
   }
 ): Promise<void> {
   const accountDoc = {
@@ -386,12 +388,14 @@ export async function createUserAccountAndProfile(
     createdAt: Date.now(),
     legacyMigrated: true,
     gender: data.gender || 'undisclosed',
+    interessi: data.interessi || [],
   };
 
   const profileDoc = {
     targetLanguage: data.targetLanguage,
     createdAt: Date.now(),
     currentLevel: null,
+    livelloStudioAttivo: null,
     streakCount: 0,
     totalAcorns: 0,
     lastActiveDate: new Date().toISOString().split('T')[0],
@@ -400,6 +404,7 @@ export async function createUserAccountAndProfile(
     unlockedOutfits: ['base'],
     activeOutfit: 'base',
     streakFreezes: 0,
+    interessi: data.interessi || [],
   };
 
   if (db && !userId.startsWith('local_user_')) {
@@ -429,6 +434,7 @@ export async function createUserAccountAndProfile(
     nativeLanguage: data.nativeLanguage,
     activeProfileId: data.targetLanguage,
     gender: data.gender || 'undisclosed',
+    interessi: data.interessi || [],
   });
 }
 
@@ -462,6 +468,7 @@ export async function createNewLanguageProfile(
     targetLanguage,
     createdAt: Date.now(),
     currentLevel: null,
+    livelloStudioAttivo: null,
     streakCount: 0,
     totalAcorns: 0,
     lastActiveDate: new Date().toISOString().split('T')[0],
@@ -527,11 +534,13 @@ export function getLocalUserProfile(): UserProfile {
     reminderEnabled: false,
     reminderTime: '20:00',
     onboardingCompleted: false,
+    livelloStudioAttivo: null,
     unlockedOutfits: ['base'],
     activeOutfit: 'base',
     streakFreezes: 0,
     tutorialCompleted: false,
     gender: 'undisclosed',
+    interessi: [],
   };
 }
 
@@ -567,6 +576,7 @@ export async function fetchUserProfile(userId: string): Promise<UserProfile> {
           reminderTime: profileData.reminderTime || accountData.reminderTime || '20:00',
           onboardingCompleted: profileData.onboardingCompleted ?? accountData.onboardingCompleted ?? false,
           currentLevel: profileSnap.exists() ? (profileData.currentLevel || null) : (accountData.currentLevel || null),
+          livelloStudioAttivo: profileSnap.exists() ? (profileData.livelloStudioAttivo || null) : (accountData.livelloStudioAttivo || null),
           lastTestDate: profileSnap.exists() ? (profileData.lastTestDate || null) : (accountData.lastTestDate || null),
           unlockedOutfits: profileData.unlockedOutfits || accountData.unlockedOutfits || ['base'],
           activeOutfit: profileData.activeOutfit || accountData.activeOutfit || 'base',
@@ -578,6 +588,7 @@ export async function fetchUserProfile(userId: string): Promise<UserProfile> {
           username: accountData.username,
           nativeLanguage: accountData.nativeLanguage,
           gender: accountData.gender || 'undisclosed',
+          interessi: accountData.interessi || profileData.interessi || [],
         };
 
         saveLocalUserProfile(unifiedProfile);
@@ -605,6 +616,7 @@ export async function updateUserProfile(profile: UserProfile): Promise<void> {
           streakCount: profile.streakCount ?? 0,
           totalAcorns: profile.totalAcorns ?? 0,
           currentLevel: profile.currentLevel || null,
+          livelloStudioAttivo: profile.livelloStudioAttivo || null,
           lastActiveDate: profile.lastActiveDate || new Date().toISOString().split('T')[0],
           reminderEnabled: profile.reminderEnabled ?? false,
           reminderTime: profile.reminderTime || '20:00',
@@ -614,11 +626,12 @@ export async function updateUserProfile(profile: UserProfile): Promise<void> {
           activeOutfit: profile.activeOutfit || 'base',
           streakFreezes: profile.streakFreezes ?? 0,
           tutorialCompleted: profile.tutorialCompleted ?? false,
+          interessi: profile.interessi || [],
         },
         { merge: true }
       );
 
-      // Also ensure root account doc has updated activeProfileId if set
+      // Also ensure root account doc has updated activeProfileId and account fields if set
       const userRef = doc(db, 'users', profile.userId);
       const rootUpdates: Record<string, any> = { activeProfileId };
       if (profile.firstName) rootUpdates.firstName = profile.firstName;
@@ -627,6 +640,7 @@ export async function updateUserProfile(profile: UserProfile): Promise<void> {
       if (profile.nativeLanguage) rootUpdates.nativeLanguage = profile.nativeLanguage;
       if (profile.tutorialCompleted !== undefined) rootUpdates.tutorialCompleted = profile.tutorialCompleted;
       if (profile.gender) rootUpdates.gender = profile.gender;
+      if (profile.interessi !== undefined) rootUpdates.interessi = profile.interessi;
       await setDoc(userRef, rootUpdates, { merge: true });
     } catch (e) {
       handleFirestoreError(e, OperationType.WRITE, path);
@@ -783,6 +797,73 @@ export async function saveGrammarProgressTopic(
       handleFirestoreError(e, OperationType.WRITE, path);
     }
   }
+}
+
+// ------------------- READING PROGRESS -------------------
+export async function fetchReadingProgress(userId: string, profileId?: string): Promise<Record<string, { textsCompleted: number; lastReadAt?: number }>> {
+  const targetProfileId = profileId || getLocalUserProfile().activeProfileId || 'en';
+  let progressMap: Record<string, { textsCompleted: number; lastReadAt?: number }> = {};
+  const localKey = `raccoonary_reading_progress_${targetProfileId}`;
+  
+  try {
+    const saved = localStorage.getItem(localKey);
+    if (saved) progressMap = JSON.parse(saved);
+  } catch (e) {}
+
+  if (db && !userId.startsWith('local_user_')) {
+    const path = `users/${userId}/profiles/${targetProfileId}/readingProgress`;
+    try {
+      const colRef = collection(db, 'users', userId, 'profiles', targetProfileId, 'readingProgress');
+      const snap = await getDocs(colRef);
+      progressMap = {};
+      snap.forEach((docSnap) => {
+        progressMap[docSnap.id] = docSnap.data() as { textsCompleted: number; lastReadAt?: number };
+      });
+      localStorage.setItem(localKey, JSON.stringify(progressMap));
+    } catch (e) {
+      handleFirestoreError(e, OperationType.LIST, path);
+    }
+  }
+
+  return progressMap;
+}
+
+export async function incrementReadingProgress(
+  userId: string,
+  level: CEFRLevel,
+  profileId?: string
+): Promise<Record<string, { textsCompleted: number; lastReadAt?: number }>> {
+  const targetProfileId = profileId || getLocalUserProfile().activeProfileId || 'en';
+  const localKey = `raccoonary_reading_progress_${targetProfileId}`;
+  
+  let current: Record<string, { textsCompleted: number; lastReadAt?: number }> = {};
+  try {
+    const saved = localStorage.getItem(localKey);
+    if (saved) current = JSON.parse(saved);
+  } catch (e) {}
+
+  const prevCount = current[level]?.textsCompleted || 0;
+  const updatedEntry = {
+    textsCompleted: prevCount + 1,
+    lastReadAt: Date.now(),
+  };
+  current[level] = updatedEntry;
+
+  try {
+    localStorage.setItem(localKey, JSON.stringify(current));
+  } catch (e) {}
+
+  if (db && !userId.startsWith('local_user_')) {
+    const path = `users/${userId}/profiles/${targetProfileId}/readingProgress/${level}`;
+    try {
+      const docRef = doc(db, 'users', userId, 'profiles', targetProfileId, 'readingProgress', level);
+      await setDoc(docRef, updatedEntry, { merge: true });
+    } catch (e) {
+      handleFirestoreError(e, OperationType.WRITE, path);
+    }
+  }
+
+  return current;
 }
 
 // ------------------- LEVEL TESTS -------------------

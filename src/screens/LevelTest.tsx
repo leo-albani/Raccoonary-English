@@ -21,11 +21,18 @@ export const LevelTest: React.FC<LevelTestProps> = ({
   onUpdateProfile,
   onSaveErrorVocab,
   onBack,
-  t,
 }) => {
-  const [questions, setQuestions] = useState<LevelTestQuestion[]>([]);
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [userAnswers, setUserAnswers] = useState<Record<number, string>>({});
+  const [questionsByLevel, setQuestionsByLevel] = useState<Record<CEFRLevel, LevelTestQuestion[]>>({
+    A1: [],
+    A2: [],
+    B1: [],
+    B2: [],
+    C1: [],
+    C2: [],
+  });
+  const [currentLevelIndex, setCurrentLevelIndex] = useState(0);
+  const [currentQuestionInLevel, setCurrentQuestionInLevel] = useState(0);
+  const [userAnswers, setUserAnswers] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
@@ -52,14 +59,32 @@ export const LevelTest: React.FC<LevelTestProps> = ({
     setErrorMsg(null);
     setTestResult(null);
     setUserAnswers({});
-    setCurrentIndex(0);
+    setCurrentLevelIndex(0);
+    setCurrentQuestionInLevel(0);
 
     try {
       const generated = await generateLevelTest(targetLang, nativeLang, targetName, nativeName);
       if (!generated || generated.length === 0) {
         throw new Error('Nessuna domanda ricevuta');
       }
-      setQuestions(generated);
+
+      const grouped: Record<CEFRLevel, LevelTestQuestion[]> = {
+        A1: [],
+        A2: [],
+        B1: [],
+        B2: [],
+        C1: [],
+        C2: [],
+      };
+
+      generated.forEach((q) => {
+        const lvl = (q.level || 'A1') as CEFRLevel;
+        if (grouped[lvl]) {
+          grouped[lvl].push(q);
+        }
+      });
+
+      setQuestionsByLevel(grouped);
     } catch (err: any) {
       console.error('Error starting level test:', err);
       setErrorMsg('Impossibile caricare le domande del test al momento. Riprova più tardi.');
@@ -79,16 +104,7 @@ export const LevelTest: React.FC<LevelTestProps> = ({
     }
   }, [userProfile.userId, userProfile.activeProfileId]);
 
-  const handleNextQuestion = () => {
-    if (currentIndex < questions.length - 1) {
-      setCurrentIndex((prev) => prev + 1);
-    } else {
-      finishTest();
-    }
-  };
-
-  const finishTest = () => {
-    let totalCorrect = 0;
+  const finishTest = (lastLevelIndex: number, lastLevelPassed: boolean, latestAnswers: Record<string, string>) => {
     const breakdown: Record<CEFRLevel, { correct: number; total: number; percent: number; passed: boolean }> = {
       A1: { correct: 0, total: 0, percent: 0, passed: false },
       A2: { correct: 0, total: 0, percent: 0, passed: false },
@@ -98,67 +114,65 @@ export const LevelTest: React.FC<LevelTestProps> = ({
       C2: { correct: 0, total: 0, percent: 0, passed: false },
     };
 
-    questions.forEach((q, idx) => {
-      const userAns = (userAnswers[idx] || '').trim().toLowerCase();
-      const correctAns = (q.rispostaCorretta || '').trim().toLowerCase();
-      const isCorrect = userAns === correctAns;
+    let totalCorrect = 0;
+    let totalAdministered = 0;
 
-      const lvl = q.level as CEFRLevel;
-      if (breakdown[lvl]) {
-        breakdown[lvl].total += 1;
+    // Process each administered level up to lastLevelIndex
+    for (let i = 0; i <= lastLevelIndex; i++) {
+      const lvl = CEFR_LEVELS[i];
+      const lvlQuestions = questionsByLevel[lvl] || [];
+      let lvlCorrect = 0;
+
+      lvlQuestions.forEach((q, idx) => {
+        const userAns = (latestAnswers[q.id] || '').trim().toLowerCase();
+        const correctAns = (q.rispostaCorretta || '').trim().toLowerCase();
+        const isCorrect = userAns === correctAns;
+
+        totalAdministered += 1;
         if (isCorrect) {
-          breakdown[lvl].correct += 1;
+          lvlCorrect += 1;
           totalCorrect += 1;
+        } else {
+          // Automatically add wrong test answers to vocabulary tana
+          const errorVocab: VocabItem = {
+            id: `level_test_${Date.now()}_${lvl}_${idx}_${Math.random().toString(36).substring(2, 6)}`,
+            term: q.domanda,
+            translation: q.rispostaCorretta,
+            sourceLang: targetLang,
+            targetLang: nativeLang,
+            synonyms: [],
+            exampleSource: q.testo_contesto || q.domanda,
+            exampleTranslation: `Risposta corretta del test: ${q.rispostaCorretta}`,
+            origin: 'level_test_error',
+            originDetail: `Livello ${q.level}`,
+            createdAt: Date.now(),
+            lastReviewedAt: null,
+            box: 1,
+            nextReviewAt: Date.now(),
+            correctStreak: 0,
+            wrongCount: 1,
+          };
+          onSaveErrorVocab(errorVocab);
         }
-      }
+      });
 
-      // Automatically add wrong test answers to vocabulary tana
-      if (!isCorrect) {
-        const errorVocab: VocabItem = {
-          id: `level_test_${Date.now()}_${idx}_${Math.random().toString(36).substring(2, 6)}`,
-          term: q.domanda,
-          translation: q.rispostaCorretta,
-          sourceLang: targetLang,
-          targetLang: nativeLang,
-          synonyms: [],
-          exampleSource: q.testo_contesto || q.domanda,
-          exampleTranslation: `Risposta corretta del test: ${q.rispostaCorretta}`,
-          origin: 'level_test_error',
-          originDetail: `Livello ${q.level}`,
-          createdAt: Date.now(),
-          lastReviewedAt: null,
-          box: 1,
-          nextReviewAt: Date.now(),
-          correctStreak: 0,
-          wrongCount: 1,
-        };
-        onSaveErrorVocab(errorVocab);
-      }
-    });
+      const isPassed = i < lastLevelIndex ? true : lastLevelPassed;
+      breakdown[lvl] = {
+        correct: lvlCorrect,
+        total: lvlQuestions.length,
+        percent: lvlQuestions.length > 0 ? Math.round((lvlCorrect / lvlQuestions.length) * 100) : 0,
+        passed: isPassed,
+      };
+    }
 
-    // Compute percentages & passed per level
-    CEFR_LEVELS.forEach((lvl) => {
-      const b = breakdown[lvl];
-      b.percent = b.total > 0 ? Math.round((b.correct / b.total) * 100) : 0;
-      b.passed = b.percent >= 60;
-    });
-
-    // Determinist Algorithm for final level:
-    // Start from A1: if >=60%, level reached, pass to next. Stop at first level < 60%.
+    // Determine final level: highest sequential level passed
     let estimatedLevel: CEFRLevel | 'Sotto A1' = 'Sotto A1';
-    let passedAll = true;
-
     for (const lvl of CEFR_LEVELS) {
       if (breakdown[lvl].passed) {
         estimatedLevel = lvl;
       } else {
-        passedAll = false;
         break;
       }
-    }
-
-    if (passedAll) {
-      estimatedLevel = 'C2';
     }
 
     const newResult: LevelTestResult = {
@@ -166,7 +180,7 @@ export const LevelTest: React.FC<LevelTestProps> = ({
       takenAt: Date.now(),
       resultLevel: estimatedLevel,
       totalCorrect,
-      totalQuestions: questions.length,
+      totalQuestions: totalAdministered,
       levelBreakdown: breakdown,
     };
 
@@ -180,7 +194,7 @@ export const LevelTest: React.FC<LevelTestProps> = ({
       saveLevelTestResult(userProfile.userId, newResult, userProfile.activeProfileId);
     } else {
       try {
-        localStorage.setItem('raccoonary_level_test_history', JSON.stringify(updatedHistory));
+        localStorage.setItem(`raccoonary_level_test_history_${targetLang}`, JSON.stringify(updatedHistory));
       } catch (e) {
         console.error(e);
       }
@@ -193,8 +207,41 @@ export const LevelTest: React.FC<LevelTestProps> = ({
     });
   };
 
-  const currentQ = questions[currentIndex];
-  const currentAnswer = userAnswers[currentIndex] || '';
+  const handleNextQuestion = () => {
+    const currentLevel = CEFR_LEVELS[currentLevelIndex];
+    const currentLevelQuestions = questionsByLevel[currentLevel] || [];
+
+    if (currentQuestionInLevel < currentLevelQuestions.length - 1) {
+      setCurrentQuestionInLevel((prev) => prev + 1);
+    } else {
+      // 6th question of the level reached: evaluate current block
+      let blockCorrect = 0;
+      currentLevelQuestions.forEach((q) => {
+        const userAns = (userAnswers[q.id] || '').trim().toLowerCase();
+        const correctAns = (q.rispostaCorretta || '').trim().toLowerCase();
+        if (userAns === correctAns) {
+          blockCorrect += 1;
+        }
+      });
+
+      const passed = blockCorrect >= 3; // At least 3 out of 6 (50%)
+
+      if (passed && currentLevelIndex < CEFR_LEVELS.length - 1) {
+        // Proceed to next level block
+        playSound('correct');
+        setCurrentLevelIndex((prev) => prev + 1);
+        setCurrentQuestionInLevel(0);
+      } else {
+        // Stop here: either failed block (<3/6) or finished C2
+        finishTest(currentLevelIndex, passed, userAnswers);
+      }
+    }
+  };
+
+  const currentLevel = CEFR_LEVELS[currentLevelIndex];
+  const currentLevelQuestions = questionsByLevel[currentLevel] || [];
+  const currentQ = currentLevelQuestions[currentQuestionInLevel];
+  const currentAnswer = currentQ ? (userAnswers[currentQ.id] || '') : '';
 
   return (
     <div className="p-4 sm:p-6 max-w-3xl mx-auto space-y-6 pb-28">
@@ -206,14 +253,14 @@ export const LevelTest: React.FC<LevelTestProps> = ({
         >
           ← Chiudi Test
         </button>
-        <span className="badge-leaf">Test di Livello CEFR</span>
+        <span className="badge-leaf">Test di Livello Adattivo</span>
       </div>
 
       {isLoading ? (
         <div className="bento-card text-center py-12 space-y-4">
           <Mascot pose="thinking" size={130} speechBubble="Sto preparando il tuo test di livello..." />
           <p className="text-xs font-medium text-[#3A2B22]/70">
-            Generazione di 35 domande a difficoltà crescente (A1 - C2)...
+            Generazione delle domande a difficoltà progressiva (A1 - C2)...
           </p>
         </div>
       ) : errorMsg ? (
@@ -246,7 +293,7 @@ export const LevelTest: React.FC<LevelTestProps> = ({
                 Livello CEFR: <span className="text-[#E8802F]">{testResult.resultLevel}</span>
               </h1>
               <p className="text-xs font-semibold text-[#3A2B22]/70 mt-1">
-                Risposte corrette: {testResult.totalCorrect} su {testResult.totalQuestions} ({Math.round((testResult.totalCorrect / testResult.totalQuestions) * 100)}%)
+                Risposte corrette: {testResult.totalCorrect} su {testResult.totalQuestions} ({testResult.totalQuestions > 0 ? Math.round((testResult.totalCorrect / testResult.totalQuestions) * 100) : 0}%)
               </p>
             </div>
 
@@ -254,37 +301,65 @@ export const LevelTest: React.FC<LevelTestProps> = ({
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-2 text-left">
               {CEFR_LEVELS.map((lvl) => {
                 const b = testResult.levelBreakdown[lvl];
+                const wasAdministered = b && b.total > 0;
                 return (
                   <div
                     key={lvl}
-                    className={`p-3 rounded-2xl border-2 space-y-1 ${
-                      b?.passed
+                    className={`p-3 rounded-2xl border-2 space-y-1 transition-all ${
+                      !wasAdministered
+                        ? 'bg-white/50 border-dashed border-[#6B7C4F]/20 opacity-60'
+                        : b.passed
                         ? 'bg-[#6B7C4F]/10 border-[#6B7C4F]'
-                        : 'bg-white border-[#6B7C4F]/15'
+                        : 'bg-amber-50/70 border-amber-300'
                     }`}
                   >
                     <div className="flex justify-between items-center">
                       <span className="font-extrabold font-display text-sm text-[#3A2B22]">
                         {lvl}
                       </span>
-                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${b?.passed ? 'bg-[#6B7C4F] text-white' : 'bg-gray-200 text-gray-700'}`}>
-                        {b?.passed ? '✓ Raggiunto' : 'Non raggiunto'}
+                      <span
+                        className={`text-[10px] font-bold px-2 py-0.5 rounded ${
+                          !wasAdministered
+                            ? 'bg-gray-100 text-gray-500'
+                            : b.passed
+                            ? 'bg-[#6B7C4F] text-white'
+                            : 'bg-amber-200 text-amber-900'
+                        }`}
+                      >
+                        {!wasAdministered ? 'Non affrontato' : b.passed ? '✓ Raggiunto' : 'Non superato'}
                       </span>
                     </div>
                     <p className="text-xs font-medium text-[#3A2B22]/80">
-                      {b?.correct || 0} / {b?.total || 0} corrette ({b?.percent || 0}%)
+                      {!wasAdministered
+                        ? 'Interrotto prima'
+                        : `${b.correct} / ${b.total} corrette (${b.percent}%)`}
                     </p>
                   </div>
                 );
               })}
             </div>
 
-            <div className="pt-2 flex flex-col sm:flex-row gap-3">
-              <button onClick={loadNewTest} className="btn-zucca flex-1 py-3.5 text-sm">
-                Rifai il Test con nuove domande 🔄
+            <div className="pt-3 flex flex-col sm:flex-row gap-3">
+              <button
+                onClick={() => {
+                  const chosenLevel: CEFRLevel =
+                    testResult.resultLevel === 'Sotto A1' ? 'A1' : (testResult.resultLevel as CEFRLevel);
+                  onUpdateProfile({
+                    livelloStudioAttivo: chosenLevel,
+                    currentLevel: testResult.resultLevel,
+                    lastTestDate: testResult.takenAt,
+                  });
+                  onBack();
+                }}
+                className="btn-zucca flex-1 py-3.5 text-sm cursor-pointer shadow-md font-bold"
+              >
+                Imposta il tuo piano di studi su {testResult.resultLevel === 'Sotto A1' ? 'A1' : testResult.resultLevel} 🎯
               </button>
-              <button onClick={onBack} className="btn-zucca-outline flex-1 py-3.5 text-sm">
-                Torna alla Home 🏠
+              <button
+                onClick={loadNewTest}
+                className="btn-zucca-outline flex-1 py-3.5 text-sm cursor-pointer font-bold"
+              >
+                Rifai il test con altre domande 🔄
               </button>
             </div>
           </div>
@@ -319,22 +394,28 @@ export const LevelTest: React.FC<LevelTestProps> = ({
       ) : currentQ ? (
         /* Active Question Flow */
         <div className="space-y-6">
-          {/* Progress bar */}
+          {/* Progress bar within current level block */}
           <div className="space-y-2">
             <div className="flex justify-between items-center text-xs font-bold font-display text-[#3A2B22]/70">
               <div className="flex items-center gap-2">
                 <span className="text-[10px] font-extrabold px-2.5 py-0.5 rounded bg-[#C99A3D] text-white">
-                  Livello {currentQ.level}
+                  Livello {currentLevel}
                 </span>
-                <span>Domanda {currentIndex + 1} di {questions.length}</span>
+                <span>
+                  Domanda {currentQuestionInLevel + 1} di {currentLevelQuestions.length || 6}
+                </span>
               </div>
-              <span>{Math.round(((currentIndex + 1) / questions.length) * 100)}%</span>
+              <span>
+                {Math.round(((currentQuestionInLevel + 1) / (currentLevelQuestions.length || 6)) * 100)}%
+              </span>
             </div>
 
             <div className="w-full bg-[#6B7C4F]/15 h-2.5 rounded-full overflow-hidden">
               <div
                 className="bg-[#6B7C4F] h-full transition-all duration-300"
-                style={{ width: `${((currentIndex + 1) / questions.length) * 100}%` }}
+                style={{
+                  width: `${((currentQuestionInLevel + 1) / (currentLevelQuestions.length || 6)) * 100}%`,
+                }}
               />
             </div>
           </div>
@@ -363,7 +444,7 @@ export const LevelTest: React.FC<LevelTestProps> = ({
                 {(currentQ.opzioni || []).map((opt, oIdx) => (
                   <button
                     key={oIdx}
-                    onClick={() => setUserAnswers((prev) => ({ ...prev, [currentIndex]: opt }))}
+                    onClick={() => setUserAnswers((prev) => ({ ...prev, [currentQ.id]: opt }))}
                     className={`p-4 rounded-2xl text-left text-xs sm:text-sm font-bold font-display border-2 transition-all cursor-pointer ${
                       currentAnswer === opt
                         ? 'bg-[#6B7C4F]/10 border-[#6B7C4F] text-[#3A2B22]'
@@ -379,7 +460,7 @@ export const LevelTest: React.FC<LevelTestProps> = ({
                 <input
                   type="text"
                   value={currentAnswer}
-                  onChange={(e) => setUserAnswers((prev) => ({ ...prev, [currentIndex]: e.target.value }))}
+                  onChange={(e) => setUserAnswers((prev) => ({ ...prev, [currentQ.id]: e.target.value }))}
                   placeholder="Scrivi la tua risposta qui..."
                   className="w-full p-4 rounded-2xl bg-[#F2E8D5]/40 border-2 border-[#6B7C4F]/30 focus:border-[#6B7C4F] focus:outline-none text-base text-[#3A2B22] font-medium"
                 />
@@ -390,9 +471,13 @@ export const LevelTest: React.FC<LevelTestProps> = ({
               <button
                 onClick={handleNextQuestion}
                 disabled={!currentAnswer.trim()}
-                className="btn-zucca w-full py-4 text-base disabled:opacity-50"
+                className="btn-zucca w-full py-4 text-base disabled:opacity-50 cursor-pointer"
               >
-                {currentIndex < questions.length - 1 ? 'Prossima Domanda →' : 'Concludi Test e Calcola Livello 🎯'}
+                {currentQuestionInLevel < currentLevelQuestions.length - 1
+                  ? 'Prossima Domanda →'
+                  : currentLevelIndex < CEFR_LEVELS.length - 1
+                  ? 'Verifica Livello e Continua →'
+                  : 'Concludi Test e Calcola Livello 🎯'}
               </button>
             </div>
           </div>

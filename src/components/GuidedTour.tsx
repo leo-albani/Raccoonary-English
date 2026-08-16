@@ -20,34 +20,22 @@ export const TOUR_STEPS: TourStep[] = [
     pose: 'greeting',
   },
   {
-    id: 'translator',
-    targetId: 'tour-target-translator',
-    textKey: 'tour.step.translator',
-    pose: 'thinking',
-  },
-  {
     id: 'review',
-    targetId: 'tour-target-review-btn',
+    targetId: 'tour-target-word-burrow',
     textKey: 'tour.step.review',
     pose: 'happy',
   },
   {
-    id: 'grammar',
-    targetId: 'tour-target-nav-grammar',
+    id: 'translator',
+    targetId: 'tour-target-nav-translator',
+    textKey: 'tour.step.translator',
+    pose: 'thinking',
+  },
+  {
+    id: 'trail',
+    targetId: 'tour-target-nav-trail',
     textKey: 'tour.step.grammar',
     pose: 'reading',
-  },
-  {
-    id: 'reading',
-    targetId: 'tour-target-nav-reading',
-    textKey: 'tour.step.reading',
-    pose: 'reading',
-  },
-  {
-    id: 'import',
-    targetId: 'tour-target-nav-import',
-    textKey: 'tour.step.import',
-    pose: 'digging',
   },
   {
     id: 'settings',

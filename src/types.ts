@@ -24,12 +24,14 @@ export interface UserAccount {
   createdAt: number;
   tutorialCompleted?: boolean;
   gender?: Gender;
+  interessi?: string[];
 }
 
 export interface UserLanguageProfile {
   targetLanguage: string;
   createdAt: number;
   currentLevel?: CEFRLevel | 'Sotto A1';
+  livelloStudioAttivo?: CEFRLevel | null;
   streakCount: number;
   totalAcorns: number;
   lastActiveDate: string | null;
@@ -38,6 +40,7 @@ export interface UserLanguageProfile {
   unlockedOutfits?: string[];
   activeOutfit?: string;
   streakFreezes?: number;
+  interessi?: string[];
 }
 
 export interface UserProfile {
@@ -50,6 +53,7 @@ export interface UserProfile {
   reminderTime: string; // HH:mm
   onboardingCompleted: boolean;
   currentLevel?: CEFRLevel | 'Sotto A1';
+  livelloStudioAttivo?: CEFRLevel | null;
   lastTestDate?: number;
   firstName?: string;
   lastName?: string;
@@ -61,6 +65,7 @@ export interface UserProfile {
   streakFreezes?: number;
   tutorialCompleted?: boolean;
   gender?: Gender;
+  interessi?: string[];
 }
 
 export type VocabOrigin = 'import' | 'grammar_error' | 'reading_error' | 'exercise_error' | 'translator_search' | 'translator_lookup' | 'level_test_error' | 'special_section';
@@ -168,6 +173,7 @@ export interface ReadingText {
   id: string;
   level: CEFRLevel;
   title: string;
+  genre?: string;
   testo: string;
   estimatedMinutes: number;
   domande: ReadingQuestion[];
