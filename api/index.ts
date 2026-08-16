@@ -1,5 +1,5 @@
 import "dotenv/config";
-import { app } from "../server";
+import app from "./app.ts";
 
 export default function handler(req: any, res: any) {
   return app(req, res);
