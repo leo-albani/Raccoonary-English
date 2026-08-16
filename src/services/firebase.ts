@@ -187,18 +187,41 @@ export async function loginWithGoogle(): Promise<{ user: User; isLinked: boolean
   }
 }
 
+export class FirebaseAuthError extends Error {
+  code: string;
+  domain?: string;
+  constructor(message: string, code: string, domain?: string) {
+    super(message);
+    this.name = 'FirebaseAuthError';
+    this.code = code;
+    this.domain = domain;
+  }
+}
+
 function translateAuthError(error: any): Error {
   const code = error?.code || '';
+  const message = error?.message || '';
   if (code === 'auth/popup-closed-by-user' || code === 'auth/cancelled-popup-request') {
-    return new Error('Accesso annullato. Nessun problema, puoi riprovare quando vuoi! 🦝');
+    return new FirebaseAuthError('Accesso annullato. Nessun problema, puoi riprovare quando vuoi! 🦝', code);
   }
   if (code === 'auth/popup-blocked') {
-    return new Error('Il browser ha bloccato la finestra di accesso. Abilita i popup per proseguire. 🦝');
+    return new FirebaseAuthError('Il browser ha bloccato la finestra di accesso. Abilita i popup per proseguire. 🦝', code);
   }
   if (code === 'auth/network-request-failed') {
-    return new Error('Sembra che ci sia un problema di connessione. Controlla la rete e riprova! 🦝');
+    return new FirebaseAuthError('Sembra che ci sia un problema di connessione. Controlla la rete e riprova! 🦝', code);
   }
-  return new Error(error?.message || 'Impossibile completare l\'accesso con Google in questo momento. Riprova più tardi.');
+  if (code === 'auth/unauthorized-domain' || message.includes('auth/unauthorized-domain') || message.includes('unauthorized-domain')) {
+    const hostname = typeof window !== 'undefined' ? window.location.hostname : '';
+    return new FirebaseAuthError(
+      `Il dominio attuale (${hostname || 'anteprima'}) non è presente nei domini autorizzati di Firebase Authentication.`,
+      'auth/unauthorized-domain',
+      hostname
+    );
+  }
+  return new FirebaseAuthError(
+    error?.message || 'Impossibile completare l\'accesso con Google in questo momento. Riprova più tardi.',
+    code
+  );
 }
 
 export async function logoutUser(): Promise<void> {

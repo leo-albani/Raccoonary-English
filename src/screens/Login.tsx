@@ -1,25 +1,31 @@
 import React, { useState } from 'react';
 import { Mascot } from '../mascot/Mascot';
-import { loginWithGoogle } from '../services/firebase';
+import { loginWithGoogle, FirebaseAuthError } from '../services/firebase';
 import { getTranslation } from '../i18n/translations';
 
 interface LoginProps {
   onLoginSuccess?: (warningMsg?: string) => void;
+  onGuestLogin?: () => void;
   t?: (key: string, params?: Record<string, string | number>) => string;
 }
 
-export const Login: React.FC<LoginProps> = ({ onLoginSuccess, t }) => {
+export const Login: React.FC<LoginProps> = ({ onLoginSuccess, onGuestLogin, t }) => {
   const tr = (key: string, params?: Record<string, string | number>) =>
     t ? t(key, params) : getTranslation(key, null, params);
 
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [warningMessage, setWarningMessage] = useState<string | null>(null);
+  const [unauthorizedDomain, setUnauthorizedDomain] = useState<string | null>(null);
+  const [copiedDomain, setCopiedDomain] = useState(false);
+
+  const currentHost = typeof window !== 'undefined' ? window.location.hostname : '';
 
   const handleGoogleLogin = async () => {
     setIsLoggingIn(true);
     setErrorMessage(null);
     setWarningMessage(null);
+    setUnauthorizedDomain(null);
 
     try {
       const result = await loginWithGoogle();
@@ -31,9 +37,22 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess, t }) => {
       }
     } catch (err: any) {
       console.error('Google Login Error:', err);
+      if (err instanceof FirebaseAuthError && err.code === 'auth/unauthorized-domain') {
+        setUnauthorizedDomain(err.domain || currentHost);
+      } else if (err?.message?.includes('unauthorized-domain') || err?.code === 'auth/unauthorized-domain') {
+        setUnauthorizedDomain(currentHost);
+      }
       setErrorMessage(err.message || tr('login.loginError'));
     } finally {
       setIsLoggingIn(false);
+    }
+  };
+
+  const copyToClipboard = (text: string) => {
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(text);
+      setCopiedDomain(true);
+      setTimeout(() => setCopiedDomain(false), 3000);
     }
   };
 
@@ -42,11 +61,13 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess, t }) => {
       <div className="w-full max-w-md space-y-6 text-center animate-fade-in">
         {/* Mascot Greeting */}
         <Mascot
-          pose="greeting"
+          pose={unauthorizedDomain ? 'thinking' : 'greeting'}
           size={140}
           speechBubble={
             warningMessage
               ? warningMessage
+              : unauthorizedDomain
+              ? 'Manca solo un passaggio su Firebase Console per abilitare questo dominio!'
               : errorMessage
               ? errorMessage
               : tr('login.mascotGreeting')
@@ -72,11 +93,41 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess, t }) => {
             </div>
           )}
 
-          {errorMessage && (
+          {unauthorizedDomain ? (
+            <div className="p-4 rounded-2xl bg-amber-50/90 border-2 border-amber-300 text-left space-y-3 text-xs text-[#3A2B22]">
+              <div className="flex items-center gap-2 font-bold text-amber-900 text-sm">
+                <span>🔐</span>
+                <span>Dominio da autorizzare su Firebase</span>
+              </div>
+              <p className="leading-relaxed text-amber-950/85">
+                Il nuovo progetto Firebase richiede che questo dominio sia inserito tra i <strong>Domini autorizzati</strong>:
+              </p>
+              
+              {/* Domain Box + Copy Button */}
+              <div className="flex items-center justify-between gap-2 p-2.5 bg-white rounded-xl border border-amber-200 shadow-xs">
+                <code className="font-mono font-semibold text-[11px] text-[#3A2B22] truncate select-all">
+                  {unauthorizedDomain}
+                </code>
+                <button
+                  onClick={() => copyToClipboard(unauthorizedDomain)}
+                  className="px-2.5 py-1 text-[11px] font-bold rounded-lg bg-[#6B7C4F] text-white hover:bg-[#586740] cursor-pointer shrink-0 transition-colors"
+                >
+                  {copiedDomain ? '✓ Copiato!' : 'Copia'}
+                </button>
+              </div>
+
+              {/* Quick instructions */}
+              <ol className="list-decimal list-inside space-y-1 text-[11px] text-amber-950/80 leading-relaxed font-medium">
+                <li>Apri <strong>Firebase Console</strong> → <strong>Authentication</strong></li>
+                <li>Vai nella scheda <strong>Impostazioni (Settings)</strong> → <strong>Domini autorizzati</strong></li>
+                <li>Clicca <strong>Aggiungi dominio</strong> e incolla il dominio sopra</li>
+              </ol>
+            </div>
+          ) : errorMessage ? (
             <div className="p-3.5 rounded-2xl bg-red-50 border border-red-200 text-left text-xs text-red-700 font-medium leading-relaxed">
               <span className="font-bold">Oops!</span> {errorMessage}
             </div>
-          )}
+          ) : null}
 
           <button
             onClick={handleGoogleLogin}
@@ -113,6 +164,16 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess, t }) => {
               </>
             )}
           </button>
+
+          {onGuestLogin && (
+            <button
+              onClick={onGuestLogin}
+              type="button"
+              className="w-full py-2.5 px-4 rounded-xl text-xs font-bold text-[#6B7C4F] hover:bg-[#6B7C4F]/10 cursor-pointer transition-colors border border-dashed border-[#6B7C4F]/40"
+            >
+              🐾 Continua come ospite (Modalità locale)
+            </button>
+          )}
         </div>
 
         {/* Subtle footer */}

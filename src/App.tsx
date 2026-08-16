@@ -445,7 +445,28 @@ export function App() {
 
   // Show Login screen if user is not authenticated with Google
   if (!isAuthenticated) {
-    return <Login />;
+    return (
+      <Login
+        onGuestLogin={async () => {
+          setIsLoading(true);
+          let localId = localStorage.getItem('raccoonary_uid');
+          if (!localId) {
+            localId = 'local_user_' + Math.random().toString(36).substring(2, 9);
+            localStorage.setItem('raccoonary_uid', localId);
+          }
+          setUserId(localId);
+          const profile = await fetchUserProfile(localId);
+          const items = await fetchVocabItems(localId, profile.activeProfileId);
+          const grammarMap = await fetchGrammarProgress(localId, profile.activeProfileId);
+          setUser(profile);
+          setVocabItems(items);
+          setGrammarProgress(grammarMap);
+          setIsAuthenticated(true);
+          setIsLoading(false);
+        }}
+        t={t}
+      />
+    );
   }
 
   // Show Profile Setup screen if user hasn't completed their user profile fields
