@@ -1,12 +1,24 @@
+import "dotenv/config";
 import express from "express";
 import path from "path";
-import { createServer as createViteServer } from "vite";
 import { GoogleGenAI, Type } from "@google/genai";
 
 const app = express();
+const router = express.Router();
 const PORT = 3000;
 
 app.use(express.json({ limit: "10mb" }));
+
+// Enable CORS for all API requests
+app.use((req, res, next) => {
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  if (req.method === "OPTIONS") {
+    return res.status(200).end();
+  }
+  next();
+});
 
 // Initialize Gemini Client lazily or safely
 function getGeminiClient() {
@@ -36,12 +48,12 @@ function cleanJsonOutput(text: string): string {
 }
 
 // API Health
-app.get("/api/health", (req, res) => {
+router.get("/health", (req, res) => {
   res.json({ status: "ok", app: "Raccoonary" });
 });
 
 // API 0: Generate Shared Content for Language Pair
-app.post("/api/generate-shared-content", async (req, res) => {
+router.post("/generate-shared-content", async (req, res) => {
   try {
     const { nativeLang = "it", targetLang = "en", nativeName = "Italiano", targetName = "Inglese" } = req.body;
 
@@ -152,7 +164,7 @@ Rispondi SOLO in JSON con la seguente struttura esatta:
 });
 
 // API 0.5: Generate UI Translations for Native Language
-app.post("/api/generate-ui-translations", async (req, res) => {
+router.post("/generate-ui-translations", async (req, res) => {
   try {
     const { nativeLang = "en", nativeName = "English", masterTranslations } = req.body;
     const ai = getGeminiClient();
@@ -190,7 +202,7 @@ Rispondi SOLO in JSON con la stessa struttura di chiavi, valori tradotti e adatt
 });
 
 // API 1: Evaluate Answer (Non-rigid Spaced Repetition)
-app.post("/api/evaluate-answer", async (req, res) => {
+router.post("/evaluate-answer", async (req, res) => {
   try {
     const { term, translation, userAnswer, synonyms = [] } = req.body;
 
@@ -234,7 +246,7 @@ Rispondi SOLO in JSON, nessun altro testo:
 });
 
 // API 2: Generate Grammar Exercises
-app.post("/api/generate-grammar", async (req, res) => {
+router.post("/generate-grammar", async (req, res) => {
   try {
     const { topicName, level = "A1", targetLang = "en", nativeLang = "it", targetName = "Inglese", nativeName = "Italiano" } = req.body;
     if (!topicName) {
@@ -273,7 +285,7 @@ Rispondi SOLO in JSON, un array di 8 oggetti con struttura esatta:
 });
 
 // API 3: Generate Reading Text & Questions
-app.post("/api/generate-reading", async (req, res) => {
+router.post("/generate-reading", async (req, res) => {
   try {
     const { level = "A1", targetLang = "en", nativeLang = "it", targetName = "Inglese", nativeName = "Italiano" } = req.body;
     
@@ -326,7 +338,7 @@ Rispondi SOLO in JSON con la struttura esatta:
 });
 
 // API 4: Explain highlighted word or phrase in reading
-app.post("/api/explain-word", async (req, res) => {
+router.post("/explain-word", async (req, res) => {
   try {
     const { word, contextSentence, nativeName = "Italiano", targetName = "Inglese" } = req.body;
     if (!word) {
@@ -361,7 +373,7 @@ Rispondi SOLO in JSON:
 });
 
 // API 5: Parse unstructured file (PDF or raw text) for vocabulary import
-app.post("/api/parse-import", async (req, res) => {
+router.post("/parse-import", async (req, res) => {
   try {
     const { content, targetLang = "en", nativeLang = "it", targetName = "Inglese", nativeName = "Italiano" } = req.body;
     if (!content) {
@@ -406,7 +418,7 @@ Rispondi SOLO in JSON con un array di oggetti:
 });
 
 // API 6: Translate sentence or word (Native <-> Target)
-app.post("/api/translate", async (req, res) => {
+router.post("/translate", async (req, res) => {
   try {
     const { text, nativeName = "Italiano", targetName = "Inglese", nativeLang = "it", targetLang = "en" } = req.body;
     if (!text || !text.trim()) {
@@ -436,7 +448,7 @@ Rispondi SOLO in JSON:
 });
 
 // API 7: Word Deep Dive for individual word in context
-app.post("/api/deep-dive", async (req, res) => {
+router.post("/deep-dive", async (req, res) => {
   try {
     const { word, contextSentence = "", nativeName = "Italiano", targetName = "Inglese", nativeLang = "it", targetLang = "en" } = req.body;
     if (!word || !word.trim()) {
@@ -473,7 +485,7 @@ Rispondi SOLO in JSON:
 });
 
 // API 9: Generate Level Placement Test (35 questions across A1-C2 generated in 6 parallel requests)
-app.post("/api/generate-level-test", async (req, res) => {
+router.post("/generate-level-test", async (req, res) => {
   try {
     const { targetLang = "en", nativeLang = "it", targetName = "Inglese", nativeName = "Italiano" } = req.body;
     const ai = getGeminiClient();
@@ -727,7 +739,7 @@ function getFallbackLevelTestQuestions() {
     }
   ];
 }
-app.post("/api/deep-dive-phrase", async (req, res) => {
+router.post("/deep-dive-phrase", async (req, res) => {
   try {
     const { phrase, nativeName = "Italiano", targetName = "Inglese", nativeLang = "it", targetLang = "en" } = req.body;
     if (!phrase || !phrase.trim()) {
@@ -764,9 +776,14 @@ Rispondi SOLO in JSON:
   }
 });
 
-async function startServer() {
+// Mount router on both /api (standard) and root / (in case serverless rewrites strip the prefix)
+app.use("/api", router);
+app.use("/", router);
+
+export async function startServer() {
   // Vite middleware setup
   if (process.env.NODE_ENV !== "production") {
+    const { createServer: createViteServer } = await import("vite");
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: "spa",
@@ -785,4 +802,10 @@ async function startServer() {
   });
 }
 
-startServer();
+// Only auto-start in container/dev server mode. On Vercel, app is invoked via Serverless function in /api/index.ts
+if (!process.env.VERCEL) {
+  startServer();
+}
+
+export { app };
+export default app;
