@@ -1,7 +1,7 @@
 import "dotenv/config";
 import path from "path";
 import express from "express";
-import { app } from "./api/app.ts";
+import { app } from "./api/index.ts";
 
 const PORT = 3000;
 
