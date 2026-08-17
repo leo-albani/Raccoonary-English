@@ -3,7 +3,8 @@ import { Mascot } from '../mascot/Mascot';
 import { NATIVE_LANGUAGES, TARGET_LANGUAGES } from '../data/languages';
 import { INTEREST_OPTIONS, INTEREST_ICONS } from '../data/interests';
 import { createUserAccountAndProfile, checkUserHasLegacyData } from '../services/firebase';
-import { Gender } from '../types';
+import { Gender, RaccoonPose } from '../types';
+import { AmbientForestBackground } from '../components/AmbientForestBackground';
 
 interface ProfileSetupProps {
   userId: string;
@@ -11,6 +12,10 @@ interface ProfileSetupProps {
 }
 
 export const ProfileSetup: React.FC<ProfileSetupProps> = ({ userId, onComplete }) => {
+  const [currentStep, setCurrentStep] = useState(0);
+  const totalSteps = 6;
+
+  // Form State
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [username, setUsername] = useState('');
@@ -22,7 +27,6 @@ export const ProfileSetup: React.FC<ProfileSetupProps> = ({ userId, onComplete }
   const [hasLegacyData, setHasLegacyData] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [nativeSearch, setNativeSearch] = useState('');
-  const [isNativeOpen, setIsNativeOpen] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
@@ -51,18 +55,43 @@ export const ProfileSetup: React.FC<ProfileSetupProps> = ({ userId, onComplete }
     lang.code.toLowerCase().includes(nativeSearch.toLowerCase())
   );
 
-  const selectedNativeObj = NATIVE_LANGUAGES.find((l) => l.code === nativeLanguage) || NATIVE_LANGUAGES[0];
+  // Validation per step
+  const isStepValid = () => {
+    switch (currentStep) {
+      case 0: // Name & Surname
+        return firstName.trim().length > 0 && lastName.trim().length > 0;
+      case 1: // Username
+        return username.trim().length > 0;
+      case 2: // Gender
+        return true;
+      case 3: // Interests (optional, always valid)
+        return true;
+      case 4: // Native Language
+        return nativeLanguage.trim().length > 0;
+      case 5: // Target Language
+        return targetLanguage.trim().length > 0;
+      default:
+        return true;
+    }
+  };
 
-  const isValid =
-    firstName.trim().length > 0 &&
-    lastName.trim().length > 0 &&
-    username.trim().length > 0 &&
-    nativeLanguage !== '' &&
-    targetLanguage !== '';
+  const handleNextStep = () => {
+    if (!isStepValid()) return;
+    if (currentStep < totalSteps - 1) {
+      setCurrentStep((prev) => prev + 1);
+    } else {
+      handleSubmit();
+    }
+  };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!isValid || isSubmitting) return;
+  const handlePrevStep = () => {
+    if (currentStep > 0) {
+      setCurrentStep((prev) => prev - 1);
+    }
+  };
+
+  const handleSubmit = async () => {
+    if (isSubmitting) return;
 
     setIsSubmitting(true);
     setErrorMessage(null);
@@ -81,286 +110,344 @@ export const ProfileSetup: React.FC<ProfileSetupProps> = ({ userId, onComplete }
     } catch (err: any) {
       console.error('Error saving profile:', err);
       setErrorMessage('Impossibile salvare il profilo in questo momento. Riprova più tardi.');
-    } finally {
       setIsSubmitting(false);
     }
   };
 
+  // Step Mascot & Speech details
+  const stepConfigs: { pose: RaccoonPose; speech: string; title: string; subtitle: string }[] = [
+    {
+      pose: 'happy',
+      speech: 'Piacere di conoscerti! Come posso chiamarti in tana?',
+      title: 'Come ti chiami?',
+      subtitle: 'Il tuo nome reale serve per personalizzare i tuoi attestati e le comunicazioni.',
+    },
+    {
+      pose: 'greeting',
+      speech: 'Scegli un soprannome o username unico per farti riconoscere!',
+      title: 'Scegli il tuo nome utente',
+      subtitle: 'Sarà il tuo identificativo pubblico tra gli esploratori della tana.',
+    },
+    {
+      pose: 'thinking',
+      speech: 'Serve per adattare la grammatica e gli accordi nei testi!',
+      title: 'Come preferisci identificarti?',
+      subtitle: 'Questo ci aiuta ad accordare correttamente aggettivi e forme verbali.',
+    },
+    {
+      pose: 'reading',
+      speech: 'Cosa ti appassiona? Ti proporrò letture ed esempi a tema!',
+      title: 'I tuoi interessi',
+      subtitle: 'Seleziona uno o più temi per ricevere suggerimenti su misura.',
+    },
+    {
+      pose: 'greeting',
+      speech: 'Qual è la lingua con cui pensi ogni giorno?',
+      title: 'Che lingua parli?',
+      subtitle: 'Sarà la tua lingua di riferimento per spiegazioni e traduzioni.',
+    },
+    {
+      pose: 'happy',
+      speech: 'Tutto pronto! Quale lingua vuoi iniziare a esplorare per prima?',
+      title: 'Cosa vuoi imparare?',
+      subtitle: 'Potrai sempre aggiungere altre lingue in seguito dal menu della tana.',
+    },
+  ];
+
+  const currentConfig = stepConfigs[currentStep];
+
   return (
-    <div className="min-h-screen bg-[#F2E8D5] flex items-center justify-center p-4 sm:p-6">
-      <div className="w-full max-w-lg space-y-6 animate-fade-in my-8">
-        {/* Mascot & Greeting */}
-        <div className="text-center space-y-3">
-          <Mascot
-            pose="happy"
-            size={120}
-            speechBubble="Piacere di conoscerti! Raccontami qualcosa di te prima di entrare in tana. 🦝"
+    <div className="min-h-screen bg-[#1A1512] text-[#F2E8D5] flex flex-col justify-between p-4 sm:p-6 select-none max-w-xl mx-auto relative overflow-hidden">
+      <AmbientForestBackground />
+
+      {/* Top Header: Step Counter & Progress Bar */}
+      <header className="pt-2 space-y-3 relative z-10">
+        <div className="flex items-center justify-between">
+          {currentStep > 0 ? (
+            <button
+              type="button"
+              onClick={handlePrevStep}
+              className="text-xs sm:text-sm font-bold text-[#859966] hover:text-[#E8802F] font-display flex items-center gap-1 cursor-pointer transition-colors"
+            >
+              ← Indietro
+            </button>
+          ) : (
+            <span className="text-xs font-bold text-[#859966] font-display">
+              Benvenuto in Raccoonary 🦝
+            </span>
+          )}
+
+          <span className="text-xs font-extrabold text-[#F2E8D5]/70 font-display">
+            Passo {currentStep + 1} di {totalSteps}
+          </span>
+        </div>
+
+        {/* Thick Progress Track */}
+        <div className="progress-track h-3 bg-[#2B2622] border border-[#6B7C4F]/30">
+          <div
+            className="progress-fill progress-fill-zucca"
+            style={{ width: `${((currentStep + 1) / totalSteps) * 100}%` }}
           />
-          <span className="badge-leaf">Configurazione Profilo</span>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-[#3A2B22] font-display">
-            Crea il tuo profilo
+        </div>
+      </header>
+
+      {/* Main Immersive Question Canvas */}
+      <main className="flex-1 flex flex-col items-center justify-center my-6 space-y-6 animate-fade-in text-center w-full relative z-10">
+        {/* Mascot Center Stage */}
+        <div className="relative">
+          <Mascot
+            pose={currentConfig.pose}
+            size={135}
+            speechBubble={currentConfig.speech}
+          />
+        </div>
+
+        {/* Question Titles */}
+        <div className="space-y-1.5 px-2">
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-[#F2E8D5] font-display">
+            {currentConfig.title}
           </h1>
-          <p className="text-xs sm:text-sm text-[#3A2B22]/75 font-medium max-w-md mx-auto">
-            Personalizza la tua esperienza per imparare al tuo ritmo.
+          <p className="text-xs sm:text-sm text-[#F2E8D5]/75 font-medium max-w-md mx-auto leading-relaxed">
+            {currentConfig.subtitle}
           </p>
         </div>
 
-        {/* Profile Form Card */}
-        <form onSubmit={handleSubmit} className="bento-card p-6 sm:p-8 space-y-5 bg-white/90 border-2 border-[#6B7C4F]/30 backdrop-blur-xs">
-          {errorMessage && (
-            <div className="p-3.5 rounded-2xl bg-red-50 border border-red-200 text-xs text-red-700 font-medium leading-relaxed">
-              ⚠️ {errorMessage}
+        {errorMessage && (
+          <div className="w-full p-3.5 rounded-2xl bg-red-950/40 border border-red-800/60 text-xs text-red-200 font-medium text-left">
+            ⚠️ {errorMessage}
+          </div>
+        )}
+
+        {/* Step-specific Input Content */}
+        <div className="w-full">
+          {/* STEP 0: First Name & Last Name */}
+          {currentStep === 0 && (
+            <div className="bento-card p-6 sm:p-7 space-y-4 text-left border-2 border-[#6B7C4F]/30 bg-[#2B2622] text-[#F2E8D5]">
+              <div className="space-y-1.5">
+                <label className="text-xs font-extrabold text-[#F2E8D5] font-display uppercase tracking-wider">
+                  Nome *
+                </label>
+                <input
+                  type="text"
+                  value={firstName}
+                  onChange={(e) => setFirstName(e.target.value)}
+                  placeholder="Es. Leonardo"
+                  autoFocus
+                  onKeyDown={(e) => e.key === 'Enter' && isStepValid() && handleNextStep()}
+                  className="w-full p-4 rounded-2xl bg-[#1A1512] border-2 border-[#6B7C4F]/30 focus:border-[#E8802F] focus:outline-none font-bold text-base text-[#F2E8D5] transition-all placeholder-[#F2E8D5]/30"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-extrabold text-[#F2E8D5] font-display uppercase tracking-wider">
+                  Cognome *
+                </label>
+                <input
+                  type="text"
+                  value={lastName}
+                  onChange={(e) => setLastName(e.target.value)}
+                  placeholder="Es. Rossi"
+                  onKeyDown={(e) => e.key === 'Enter' && isStepValid() && handleNextStep()}
+                  className="w-full p-4 rounded-2xl bg-[#1A1512] border-2 border-[#6B7C4F]/30 focus:border-[#E8802F] focus:outline-none font-bold text-base text-[#F2E8D5] transition-all placeholder-[#F2E8D5]/30"
+                />
+              </div>
             </div>
           )}
 
-          {/* First Name & Last Name */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold text-[#3A2B22] font-display uppercase tracking-wider">
-                Nome *
-              </label>
-              <input
-                type="text"
-                value={firstName}
-                onChange={(e) => setFirstName(e.target.value)}
-                placeholder="Es. Leonardo"
-                required
-                className="w-full p-3.5 rounded-2xl bg-[#F2E8D5]/40 border-2 border-[#3A2B22]/15 focus:border-[#6B7C4F] focus:bg-white focus:outline-none font-medium text-sm text-[#3A2B22] transition-all"
-              />
+          {/* STEP 1: Username */}
+          {currentStep === 1 && (
+            <div className="bento-card p-6 sm:p-7 space-y-4 text-left border-2 border-[#6B7C4F]/30 bg-[#2B2622] text-[#F2E8D5]">
+              <div className="space-y-1.5">
+                <label className="text-xs font-extrabold text-[#F2E8D5] font-display uppercase tracking-wider">
+                  Nome utente (@username) *
+                </label>
+                <div className="relative">
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-base font-bold text-[#E8802F]">
+                    @
+                  </span>
+                  <input
+                    type="text"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/\s+/g, ''))}
+                    placeholder="leoraccoon"
+                    autoFocus
+                    onKeyDown={(e) => e.key === 'Enter' && isStepValid() && handleNextStep()}
+                    className="w-full p-4 pl-9 rounded-2xl bg-[#1A1512] border-2 border-[#6B7C4F]/30 focus:border-[#E8802F] focus:outline-none font-bold text-base text-[#F2E8D5] transition-all placeholder-[#F2E8D5]/30"
+                  />
+                </div>
+                <p className="text-[11px] text-[#F2E8D5]/60 font-medium">
+                  Lettere minuscole, numeri e trattini.
+                </p>
+              </div>
             </div>
+          )}
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold text-[#3A2B22] font-display uppercase tracking-wider">
-                Cognome *
-              </label>
-              <input
-                type="text"
-                value={lastName}
-                onChange={(e) => setLastName(e.target.value)}
-                placeholder="Es. Rossi"
-                required
-                className="w-full p-3.5 rounded-2xl bg-[#F2E8D5]/40 border-2 border-[#3A2B22]/15 focus:border-[#6B7C4F] focus:bg-white focus:outline-none font-medium text-sm text-[#3A2B22] transition-all"
-              />
-            </div>
-          </div>
-
-          {/* Username */}
-          <div className="space-y-1.5">
-            <label className="text-xs font-bold text-[#3A2B22] font-display uppercase tracking-wider">
-              Nome utente *
-            </label>
-            <input
-              type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              placeholder="Es. leoraccoon"
-              required
-              className="w-full p-3.5 rounded-2xl bg-[#F2E8D5]/40 border-2 border-[#3A2B22]/15 focus:border-[#6B7C4F] focus:bg-white focus:outline-none font-medium text-sm text-[#3A2B22] transition-all"
-            />
-          </div>
-
-          {/* Sesso (Gender Selector) */}
-          <div className="space-y-1.5">
-            <label className="text-xs font-bold text-[#3A2B22] font-display uppercase tracking-wider">
-              Sesso
-            </label>
-            <div className="grid grid-cols-3 gap-2">
-              <button
-                type="button"
-                onClick={() => setGender('M')}
-                className={`py-3 px-2 rounded-2xl border-2 font-display text-xs font-bold transition-all cursor-pointer text-center ${
-                  gender === 'M'
-                    ? 'border-[#6B7C4F] bg-[#6B7C4F] text-white shadow-xs'
-                    : 'border-[#3A2B22]/15 bg-[#F2E8D5]/40 hover:border-[#6B7C4F]/50 text-[#3A2B22]'
-                }`}
-              >
-                M
-              </button>
-              <button
-                type="button"
-                onClick={() => setGender('F')}
-                className={`py-3 px-2 rounded-2xl border-2 font-display text-xs font-bold transition-all cursor-pointer text-center ${
-                  gender === 'F'
-                    ? 'border-[#6B7C4F] bg-[#6B7C4F] text-white shadow-xs'
-                    : 'border-[#3A2B22]/15 bg-[#F2E8D5]/40 hover:border-[#6B7C4F]/50 text-[#3A2B22]'
-                }`}
-              >
-                F
-              </button>
-              <button
-                type="button"
-                onClick={() => setGender('undisclosed')}
-                className={`py-3 px-2 rounded-2xl border-2 font-display text-xs font-bold transition-all cursor-pointer text-center ${
-                  gender === 'undisclosed'
-                    ? 'border-[#6B7C4F] bg-[#6B7C4F] text-white shadow-xs'
-                    : 'border-[#3A2B22]/15 bg-[#F2E8D5]/40 hover:border-[#6B7C4F]/50 text-[#3A2B22]'
-                }`}
-              >
-                Preferisco non dirlo
-              </button>
-            </div>
-          </div>
-
-          {/* I tuoi interessi (Interests Selector - Multiple) */}
-          <div className="space-y-2 pt-2 border-t border-[#3A2B22]/10">
-            <div className="flex items-center justify-between">
-              <label className="text-xs font-bold text-[#3A2B22] font-display uppercase tracking-wider">
-                I tuoi interessi
-              </label>
-              <span className="text-[11px] text-[#3A2B22]/60 font-medium">
-                {interessi.length > 0 ? `${interessi.length} selezionat${interessi.length === 1 ? 'o' : 'i'}` : 'Opzionale'}
-              </span>
-            </div>
-            <p className="text-[12px] text-[#3A2B22]/70 leading-tight">
-              Scegli i temi che ami per suggerimenti di lettura su misura per te.
-            </p>
-            <div className="flex flex-wrap gap-2 pt-1">
-              {INTEREST_OPTIONS.map((interest) => {
-                const isSelected = interessi.includes(interest);
+          {/* STEP 2: Gender */}
+          {currentStep === 2 && (
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {[
+                { id: 'M' as Gender, label: 'Uomo (Maschile)', icon: '🧔‍♂️', sub: 'Accordi maschili' },
+                { id: 'F' as Gender, label: 'Donna (Femminile)', icon: '👩', sub: 'Accordi femminili' },
+                { id: 'undisclosed' as Gender, label: 'Preferisco non dirlo', icon: '✨', sub: 'Accordi standard' },
+              ].map((item) => {
+                const isSelected = gender === item.id;
                 return (
                   <button
-                    key={interest}
+                    key={item.id}
                     type="button"
-                    onClick={() => toggleInterest(interest)}
-                    className={`py-2 px-3 rounded-xl border-2 font-display text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                    onClick={() => setGender(item.id)}
+                    className={`bento-card p-5 text-center flex flex-col items-center justify-center gap-2 border-2 transition-all cursor-pointer ${
                       isSelected
-                        ? 'border-[#6B7C4F] bg-[#6B7C4F] text-white shadow-xs'
-                        : 'border-[#3A2B22]/15 bg-[#F2E8D5]/40 hover:border-[#6B7C4F]/50 text-[#3A2B22]'
+                        ? 'border-[#E8802F] bg-[#352D26] ring-4 ring-[#E8802F]/25 shadow-md scale-102'
+                        : 'border-[#6B7C4F]/30 hover:border-[#6B7C4F]/70 bg-[#2B2622] text-[#F2E8D5]'
                     }`}
                   >
-                    <span>{INTEREST_ICONS[interest] || '✨'}</span>
-                    <span>{interest}</span>
-                    {isSelected && <span className="text-[11px] font-black ml-0.5">✓</span>}
+                    <span className="text-3xl">{item.icon}</span>
+                    <span className="font-extrabold font-display text-sm text-[#F2E8D5]">
+                      {item.label}
+                    </span>
+                    <span className="text-[11px] text-[#F2E8D5]/65 font-medium">
+                      {item.sub}
+                    </span>
                   </button>
                 );
               })}
             </div>
-          </div>
+          )}
 
-          {/* Native Language (Searchable dropdown) */}
-          <div className="space-y-1.5 relative">
-            <label className="text-xs font-bold text-[#3A2B22] font-display uppercase tracking-wider">
-              Lingua parlata *
-            </label>
-            
-            <button
-              type="button"
-              onClick={() => setIsNativeOpen(!isNativeOpen)}
-              className="w-full p-3.5 rounded-2xl bg-[#F2E8D5]/40 border-2 border-[#3A2B22]/15 focus:border-[#6B7C4F] font-medium text-sm text-[#3A2B22] transition-all flex items-center justify-between cursor-pointer text-left"
-            >
-              <span className="flex items-center gap-2">
-                <span>{selectedNativeObj.flag}</span>
-                <span>{selectedNativeObj.name} ({selectedNativeObj.code.toUpperCase()})</span>
-              </span>
-              <span className="text-xs text-[#3A2B22]/50">▼</span>
-            </button>
+          {/* STEP 3: Interests */}
+          {currentStep === 3 && (
+            <div className="bento-card p-5 sm:p-6 space-y-3 text-left border-2 border-[#6B7C4F]/30 bg-[#2B2622] max-h-72 overflow-y-auto">
+              <div className="flex flex-wrap gap-2.5">
+                {INTEREST_OPTIONS.map((interest) => {
+                  const isSelected = interessi.includes(interest);
+                  return (
+                    <button
+                      key={interest}
+                      type="button"
+                      onClick={() => toggleInterest(interest)}
+                      className={`py-2.5 px-4 rounded-2xl border-2 font-display text-xs sm:text-sm font-bold transition-all cursor-pointer flex items-center gap-2 ${
+                        isSelected
+                          ? 'border-[#E8802F] bg-[#E8802F] text-[#1A1512] shadow-sm scale-102 font-black'
+                          : 'border-[#6B7C4F]/30 bg-[#1A1512] hover:border-[#6B7C4F] text-[#F2E8D5]'
+                      }`}
+                    >
+                      <span className="text-base">{INTEREST_ICONS[interest] || '✨'}</span>
+                      <span>{interest}</span>
+                      {isSelected && <span className="font-black text-xs ml-0.5">✓</span>}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
-            {isNativeOpen && (
-              <div className="absolute left-0 right-0 top-full mt-2 bg-white rounded-2xl border-2 border-[#6B7C4F] shadow-xl z-30 p-3 space-y-2 max-h-60 overflow-y-auto">
-                <input
-                  type="text"
-                  value={nativeSearch}
-                  onChange={(e) => setNativeSearch(e.target.value)}
-                  placeholder="Cerca lingua madre..."
-                  className="w-full p-2.5 rounded-xl bg-[#F2E8D5]/30 border border-[#3A2B22]/15 focus:outline-none text-xs font-medium text-[#3A2B22]"
-                  autoFocus
-                />
-                <div className="space-y-1">
-                  {filteredNativeLanguages.map((lang) => (
+          {/* STEP 4: Native Language */}
+          {currentStep === 4 && (
+            <div className="bento-card p-5 sm:p-6 space-y-3 text-left border-2 border-[#6B7C4F]/30 bg-[#2B2622]">
+              <input
+                type="text"
+                value={nativeSearch}
+                onChange={(e) => setNativeSearch(e.target.value)}
+                placeholder="🔍 Cerca lingua madre..."
+                className="w-full p-3.5 rounded-2xl bg-[#1A1512] border-2 border-[#6B7C4F]/30 focus:border-[#E8802F] focus:outline-none text-xs sm:text-sm font-bold text-[#F2E8D5] placeholder-[#F2E8D5]/35"
+              />
+
+              <div className="space-y-1.5 max-h-60 overflow-y-auto pr-1">
+                {filteredNativeLanguages.map((lang) => {
+                  const isSelected = nativeLanguage === lang.code;
+                  return (
                     <button
                       key={lang.code}
                       type="button"
-                      onClick={() => {
-                        setNativeLanguage(lang.code);
-                        setIsNativeOpen(false);
-                        setNativeSearch('');
-                      }}
-                      className={`w-full p-2.5 rounded-xl text-left text-xs font-bold font-display flex items-center justify-between transition-all cursor-pointer ${
-                        nativeLanguage === lang.code
-                          ? 'bg-[#6B7C4F] text-white'
-                          : 'hover:bg-[#F2E8D5]/50 text-[#3A2B22]'
+                      onClick={() => setNativeLanguage(lang.code)}
+                      className={`w-full p-3 rounded-2xl text-left text-xs sm:text-sm font-bold font-display flex items-center justify-between border-2 transition-all cursor-pointer ${
+                        isSelected
+                          ? 'border-[#E8802F] bg-[#E8802F] text-[#1A1512] shadow-sm'
+                          : 'border-transparent bg-[#1A1512] hover:bg-[#342D28] text-[#F2E8D5]'
                       }`}
                     >
-                      <span className="flex items-center gap-2">
-                        <span>{lang.flag}</span>
+                      <span className="flex items-center gap-2.5">
+                        <span className="text-xl">{lang.flag}</span>
                         <span>{lang.name}</span>
                       </span>
-                      <span className="opacity-60 text-[10px] uppercase font-mono">{lang.code}</span>
+                      <span className="text-[10px] uppercase font-mono opacity-70">{lang.code}</span>
                     </button>
-                  ))}
-                  {filteredNativeLanguages.length === 0 && (
-                    <div className="p-3 text-center text-xs text-[#3A2B22]/50 font-medium">
-                      Nessuna lingua trovata
-                    </div>
-                  )}
-                </div>
+                  );
+                })}
               </div>
-            )}
-          </div>
-
-          {/* Target Language Selection */}
-          <div className="space-y-2 pt-2 border-t border-[#3A2B22]/10">
-            <label className="text-xs font-bold text-[#3A2B22] font-display uppercase tracking-wider flex items-center justify-between">
-              <span>Prima lingua da imparare *</span>
-              {hasLegacyData && (
-                <span className="text-[10px] text-[#C99A3D] font-extrabold uppercase">
-                  🔒 Bloccato (Dati Esistenti)
-                </span>
-              )}
-            </label>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-              {TARGET_LANGUAGES.map((lang) => {
-                const isSelected = targetLanguage === lang.code;
-                const isDisabled = hasLegacyData && lang.code !== 'en';
-
-                return (
-                  <button
-                    key={lang.code}
-                    type="button"
-                    disabled={isDisabled}
-                    onClick={() => setTargetLanguage(lang.code)}
-                    className={`p-3 rounded-2xl border-2 font-display text-xs sm:text-sm font-bold flex items-center gap-3 transition-all text-left ${
-                      isDisabled
-                        ? 'opacity-40 border-gray-200 bg-gray-50 cursor-not-allowed'
-                        : isSelected
-                        ? 'border-[#6B7C4F] bg-[#6B7C4F]/10 text-[#3A2B22] shadow-xs'
-                        : 'border-[#3A2B22]/15 bg-white hover:border-[#6B7C4F]/50 text-[#3A2B22] cursor-pointer'
-                    }`}
-                  >
-                    <span className="text-xl">{lang.flag}</span>
-                    <span className="flex-1 font-bold">{lang.name}</span>
-                    {isSelected && <span className="text-[#6B7C4F] font-black text-sm">✓</span>}
-                  </button>
-                );
-              })}
             </div>
+          )}
 
-            {hasLegacyData && (
-              <p className="text-xs text-[#C99A3D] font-bold bg-[#C99A3D]/10 p-3 rounded-2xl border border-[#C99A3D]/30 flex items-center gap-2 mt-2">
-                <span>🦝</span>
-                <span>Hai già progressi salvati per la lingua selezionata, li ritroverai qui.</span>
-              </p>
-            )}
-          </div>
+          {/* STEP 5: Target Language */}
+          {currentStep === 5 && (
+            <div className="space-y-3 text-left">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {TARGET_LANGUAGES.map((lang) => {
+                  const isSelected = targetLanguage === lang.code;
+                  const isDisabled = hasLegacyData && lang.code !== 'en';
 
-          {/* Submit Button */}
-          <button
-            type="submit"
-            disabled={!isValid || isSubmitting}
-            className="w-full py-4 px-6 rounded-2xl bg-[#E8802F] text-white font-extrabold font-display text-base shadow-md hover:bg-[#d97223] transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 mt-4"
-          >
-            {isSubmitting ? (
-              <div className="flex items-center gap-2">
-                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                <span>Salvataggio...</span>
+                  return (
+                    <button
+                      key={lang.code}
+                      type="button"
+                      disabled={isDisabled}
+                      onClick={() => setTargetLanguage(lang.code)}
+                      className={`bento-card p-4 sm:p-5 border-2 flex items-center gap-3.5 transition-all text-left ${
+                        isDisabled
+                          ? 'opacity-40 border-[#3A2B22]/30 bg-[#1A1512] cursor-not-allowed'
+                          : isSelected
+                          ? 'border-[#E8802F] bg-[#352D26] ring-4 ring-[#E8802F]/25 shadow-md scale-102 cursor-pointer'
+                          : 'border-[#6B7C4F]/30 bg-[#2B2622] hover:border-[#6B7C4F] text-[#F2E8D5] cursor-pointer'
+                      }`}
+                    >
+                      <span className="text-3xl">{lang.flag}</span>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-bold font-display text-sm sm:text-base text-[#F2E8D5] truncate">
+                          {lang.name}
+                        </p>
+                        <p className="text-[11px] text-[#F2E8D5]/60 font-medium">
+                          {lang.code.toUpperCase()} • Tana e sentiero dedicati
+                        </p>
+                      </div>
+                      {isSelected && <span className="text-[#E8802F] font-black text-lg">✓</span>}
+                    </button>
+                  );
+                })}
               </div>
-            ) : (
-              <span>Continua →</span>
-            )}
-          </button>
-        </form>
-      </div>
+
+              {hasLegacyData && (
+                <div className="p-3.5 rounded-2xl bg-[#C99A3D]/20 border border-[#C99A3D]/40 text-xs text-[#F2E8D5] font-bold flex items-center gap-2">
+                  <span>🦝</span>
+                  <span>I tuoi progressi salvati per la lingua selezionata verranno recuperati automaticamente.</span>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </main>
+
+      {/* Footer Navigation Button */}
+      <footer className="pb-4 pt-2 relative z-10">
+        <button
+          type="button"
+          onClick={handleNextStep}
+          disabled={!isStepValid() || isSubmitting}
+          className="btn-zucca w-full py-4 text-base sm:text-lg cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50 shadow-lg"
+        >
+          {isSubmitting ? (
+            <div className="flex items-center gap-2">
+              <div className="w-5 h-5 border-2 border-[#1A1512] border-t-transparent rounded-full animate-spin" />
+              <span>Creazione tana in corso...</span>
+            </div>
+          ) : currentStep === totalSteps - 1 ? (
+            <span>Entra in tana 🦝</span>
+          ) : (
+            <span>Continua →</span>
+          )}
+        </button>
+      </footer>
     </div>
   );
 };
+export default ProfileSetup;

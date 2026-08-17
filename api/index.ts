@@ -593,7 +593,7 @@ Rispondi SOLO in JSON:
 {"tipo": "idiomatico|letterale", "quando_si_usa": "...", "esempi": [{"en": "...", "it": "..."}]}`;
 
     const response = await ai.models.generateContent({
-      model: "gemini-3.6-flash",
+      model: "gemini-3.7-flash",
       contents: prompt,
       config: {
         responseMimeType: "application/json",
@@ -614,6 +614,115 @@ Rispondi SOLO in JSON:
     });
   }
 });
+
+// API 8.5: Generate Scenario Mini-Gym
+router.post("/generate-scenario", async (req, res) => {
+  try {
+    const {
+      scenarioContext = "Viaggio e vacanze",
+      scenarioId = "travel",
+      level = "A2",
+      nativeLang = "it",
+      targetLang = "en",
+      nativeName = "Italiano",
+      targetName = "Inglese",
+    } = req.body;
+
+    const ai = getGeminiClient();
+
+    const prompt = `Sei un tutor esperto di ${targetName} per studenti di madrelingua ${nativeName}.
+Crea una palestra a tema pratico (Scenario) ambientata nel contesto reale: "${scenarioContext}".
+Livello CEFR di riferimento dello studente: ${level}.
+
+Requisiti:
+1. "scenarioTitle": un titolo breve, chiaro e pulito in ${nativeName} per questo scenario (es. "Al Ristorante", "All'Aeroporto", "Intervista di Lavoro"). Se l'utente ha scritto una frase lunga o colloquiale (es. "vorrei comprare un vestito per una festa a Londra"), genera un titolo sintetico elegante (es. "Shopping di Vestiti a Londra").
+2. "vocabulary": esattamente 10-15 parole o espressioni chiave in ${targetName} tipiche per il contesto "${scenarioContext}", livello CEFR ${level}, con traduzione in ${nativeName} ed esempio d'uso breve e naturale per ciascuna.
+3. "exercises": esattamente 8 esercizi pratici che usano PROPRIO quelle parole del vocabolario in frasi realistiche ambientate nel contesto (non esercizi generici o fuori tema).
+   Tipi ammessi per gli esercizi:
+   - "multiple_choice" (con 4 opzioni plausibili)
+   - "fill_in_blank" (con la parola mancante)
+   - "sentence_transformation" (es. riformula la frase usando una specifica espressione)
+   - "translation" (traduci una frase realistica del contesto)
+   Ogni esercizio deve avere:
+   - "id": string univoco es. "ex_1"..."ex_8"
+   - "tipo": uno dei tipi sopra
+   - "domanda": testo dell'esercizio con consegna chiara
+   - "opzioni": array di 4 opzioni per multiple_choice, oppure array vuoto per altri
+   - "rispostaCorretta": testo della risposta esatta
+   - "spiegazione": breve e incoraggiante spiegazione d'uso in ${nativeName}
+4. "dialogue": una mini-situazione / breve dialogo realistico (o testo ambientato) ambientato nello scenario che usa naturalmente il vocabolario appena visto.
+   Includi:
+   - "title": titolo della situazione (es. "Al bancone dell'accoglienza", "Alla cassa del negozio")
+   - "context": brevissima frase descrittiva del contesto
+   - "text": il dialogo o testo completo con gli interlocutori (es. "Receptionist: ...\\nGuest: ...")
+   - "speakers": array dei nomi dei personaggi che parlano
+   - "questions": 2-3 domande di comprensione a scelta multipla leggere e pertinenti:
+     - "id": string univoco es. "q_1"
+     - "domanda": testo della domanda in ${nativeName}
+     - "opzioni": array di 3-4 opzioni
+     - "rispostaCorretta": l'opzione corretta
+     - "spiegazione": spiegazione
+
+Rispondi RIGOROSAMENTE SOLO in JSON con questa struttura:
+{
+  "scenarioTitle": "...",
+  "vocabulary": [
+    { "termine": "...", "traduzione": "...", "esempio": "..." }
+  ],
+  "exercises": [
+    {
+      "id": "ex_1",
+      "tipo": "multiple_choice",
+      "domanda": "...",
+      "opzioni": ["...", "...", "...", "..."],
+      "rispostaCorretta": "...",
+      "spiegazione": "..."
+    }
+  ],
+  "dialogue": {
+    "title": "...",
+    "context": "...",
+    "text": "...",
+    "speakers": ["...", "..."],
+    "questions": [
+      {
+        "id": "q_1",
+        "domanda": "...",
+        "opzioni": ["...", "...", "..."],
+        "rispostaCorretta": "...",
+        "spiegazione": "..."
+      }
+    ]
+  }
+}`;
+
+    const response = await ai.models.generateContent({
+      model: "gemini-3.7-flash",
+      contents: prompt,
+      config: {
+        responseMimeType: "application/json",
+      },
+    });
+
+    const parsed = JSON.parse(cleanJsonOutput(response.text || "{}"));
+    res.json({
+      scenarioId,
+      scenarioTitle: parsed.scenarioTitle || scenarioContext,
+      vocabulary: parsed.vocabulary || [],
+      exercises: parsed.exercises || [],
+      dialogue: parsed.dialogue || {
+        title: parsed.scenarioTitle || scenarioContext,
+        context: scenarioContext,
+        text: "",
+        questions: [],
+      },
+    });
+  } catch (err: any) {
+    console.error("Error generating scenario:", err);
+    res.status(500).json({ error: err.message || "Failed to generate scenario" });
+  }
+});
+
 
 // API 9: Generate Level Placement Test
 router.post("/generate-level-test", async (req, res) => {
@@ -864,6 +973,220 @@ function getFallbackLevelTestQuestions() {
     }
   ];
 }
+
+// Cron Endpoint: Daily Push Notification Reminders
+// Invoked hourly by GitHub Actions or scheduled crons
+router.all("/cron/send-reminders", async (req, res) => {
+  try {
+    // 1. Authenticate with CRON_SECRET if defined
+    const authHeader = req.headers.authorization || "";
+    const token = authHeader.startsWith("Bearer ")
+      ? authHeader.substring(7).trim()
+      : ((req.query.secret as string) || "").trim();
+
+    const expectedSecret = (process.env.CRON_SECRET || "").trim();
+    if (expectedSecret && token !== expectedSecret) {
+      return res.status(401).json({
+        error: "Unauthorized",
+        message: "Authorization: Bearer CRON_SECRET required",
+      });
+    }
+
+    // 2. Determine current time (using Europe/Rome timezone as base)
+    const now = new Date();
+    const formatter = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "Europe/Rome",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    });
+    const parts = formatter.formatToParts(now);
+    const partMap: Record<string, string> = {};
+    parts.forEach((p) => {
+      partMap[p.type] = p.value;
+    });
+
+    const todayStr = `${partMap.year}-${partMap.month}-${partMap.day}`;
+    const currentHour = parseInt(partMap.hour || "0", 10);
+
+    const projectId = process.env.FIREBASE_PROJECT_ID || "gen-lang-client-0939401223";
+    const apiKey = process.env.FIREBASE_API_KEY || "AIzaSyAFxfsquFnviXy77UJrqnghISyN_gxvUUc";
+
+    let processedProfiles = 0;
+    let notificationsSent = 0;
+    const notifiedUsers: Array<{ userId: string; profileId: string; time: string }> = [];
+
+    // 3. Query users from Firestore REST API
+    const firestoreUrl = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/users?pageSize=300&key=${apiKey}`;
+    const usersResp = await fetch(firestoreUrl);
+
+    if (usersResp.ok) {
+      const usersData: any = await usersResp.json();
+      const documents: any[] = usersData.documents || [];
+
+      for (const doc of documents) {
+        const docName: string = doc.name || "";
+        const userId = docName.split("/").pop() || "";
+        if (!userId || userId.startsWith("local_user_")) continue;
+
+        const fields = doc.fields || {};
+        const rootActiveProfileId = fields.activeProfileId?.stringValue || "en";
+
+        // Query profiles subcollection for this user
+        const profilesUrl = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/users/${userId}/profiles?key=${apiKey}`;
+        let profileDocs: any[] = [];
+        try {
+          const profResp = await fetch(profilesUrl);
+          if (profResp.ok) {
+            const profData: any = await profResp.json();
+            profileDocs = profData.documents || [];
+          }
+        } catch (profErr) {
+          console.warn(`Could not fetch profiles for ${userId}:`, profErr);
+        }
+
+        // If no profiles subcollection found, use root doc fields
+        if (profileDocs.length === 0) {
+          profileDocs = [
+            {
+              name: `${docName}/profiles/${rootActiveProfileId}`,
+              fields: {
+                reminderEnabled: fields.reminderEnabled,
+                reminderTime: fields.reminderTime,
+                lastActiveDate: fields.lastActiveDate,
+                lastReminderSentDate: fields.lastReminderSentDate,
+                fcmToken: fields.fcmToken,
+                fcmTokens: fields.fcmTokens,
+              },
+            },
+          ];
+        }
+
+        for (const pDoc of profileDocs) {
+          processedProfiles++;
+          const pFields = pDoc.fields || {};
+          const profileId = (pDoc.name || "").split("/").pop() || rootActiveProfileId;
+
+          const reminderEnabled = Boolean(
+            pFields.reminderEnabled?.booleanValue ?? fields.reminderEnabled?.booleanValue ?? false
+          );
+          if (!reminderEnabled) continue;
+
+          const reminderTime =
+            pFields.reminderTime?.stringValue || fields.reminderTime?.stringValue || "20:00";
+          const lastActiveDate =
+            pFields.lastActiveDate?.stringValue || fields.lastActiveDate?.stringValue || null;
+          const lastReminderSentDate =
+            pFields.lastReminderSentDate?.stringValue || fields.lastReminderSentDate?.stringValue || null;
+
+          // Parse reminder hour
+          const [hourStr] = reminderTime.split(":");
+          const reminderHour = parseInt(hourStr || "20", 10);
+
+          // Check hour match with 1 hour tolerance
+          const hourDiff = Math.abs(currentHour - reminderHour);
+          const isTimeMatch = hourDiff <= 1 || hourDiff >= 23;
+
+          // Check if user has NOT studied today
+          const hasNotStudiedToday = lastActiveDate !== todayStr;
+
+          // Check if notification has NOT already been sent today (max 1 per day)
+          const notYetNotifiedToday = lastReminderSentDate !== todayStr;
+
+          if (isTimeMatch && hasNotStudiedToday && notYetNotifiedToday) {
+            // Collect target tokens
+            const tokens: string[] = [];
+            if (pFields.fcmToken?.stringValue) tokens.push(pFields.fcmToken.stringValue);
+            if (fields.fcmToken?.stringValue) tokens.push(fields.fcmToken.stringValue);
+            if (pFields.fcmTokens?.arrayValue?.values) {
+              pFields.fcmTokens.arrayValue.values.forEach((v: any) => {
+                if (v.stringValue) tokens.push(v.stringValue);
+              });
+            }
+            if (fields.fcmTokens?.arrayValue?.values) {
+              fields.fcmTokens.arrayValue.values.forEach((v: any) => {
+                if (v.stringValue) tokens.push(v.stringValue);
+              });
+            }
+            const uniqueTokens = Array.from(new Set(tokens.filter(Boolean)));
+
+            // Rocky's friendly reminder text
+            const title = "🦝 Raccoonary";
+            const body = "Le tue parole ti aspettano in tana";
+
+            // Dispatch push notification to tokens if available
+            for (const t of uniqueTokens) {
+              try {
+                if (t.startsWith("http")) {
+                  await fetch(t, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ title, body, icon: "/icon.png" }),
+                  });
+                } else if (!t.startsWith("web_push_")) {
+                  await fetch("https://fcm.googleapis.com/fcm/send", {
+                    method: "POST",
+                    headers: {
+                      "Content-Type": "application/json",
+                      Authorization: `key=${process.env.FCM_SERVER_KEY || apiKey}`,
+                    },
+                    body: JSON.stringify({
+                      to: t,
+                      notification: { title, body, icon: "/icon.png" },
+                      data: { title, body, url: "/" },
+                    }),
+                  });
+                }
+              } catch (pushErr) {
+                console.warn(`Push dispatch error for token:`, pushErr);
+              }
+            }
+
+            // Update lastReminderSentDate on profile document
+            try {
+              const patchUrl = `https://firestore.googleapis.com/v1/${pDoc.name}?updateMask.fieldPaths=lastReminderSentDate&key=${apiKey}`;
+              await fetch(patchUrl, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  fields: {
+                    ...pFields,
+                    lastReminderSentDate: { stringValue: todayStr },
+                  },
+                }),
+              });
+            } catch (patchErr) {
+              console.warn(`Could not update lastReminderSentDate for ${pDoc.name}:`, patchErr);
+            }
+
+            notificationsSent++;
+            notifiedUsers.push({ userId, profileId, time: reminderTime });
+          }
+        }
+      }
+    }
+
+    return res.status(200).json({
+      success: true,
+      status: "completed",
+      currentHour,
+      todayStr,
+      processedProfiles,
+      notificationsSent,
+      notifiedUsers,
+      timestamp: now.toISOString(),
+    });
+  } catch (error: any) {
+    console.error("Cron reminders error:", error);
+    return res.status(500).json({
+      success: false,
+      error: error.message || "Failed to process reminder cron job",
+    });
+  }
+});
 
 // Mount router on both /api (standard) and root / (in case serverless rewrites strip the prefix)
 app.use("/api", router);

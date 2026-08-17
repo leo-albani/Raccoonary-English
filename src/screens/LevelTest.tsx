@@ -117,7 +117,6 @@ export const LevelTest: React.FC<LevelTestProps> = ({
     let totalCorrect = 0;
     let totalAdministered = 0;
 
-    // Process each administered level up to lastLevelIndex
     for (let i = 0; i <= lastLevelIndex; i++) {
       const lvl = CEFR_LEVELS[i];
       const lvlQuestions = questionsByLevel[lvl] || [];
@@ -133,7 +132,6 @@ export const LevelTest: React.FC<LevelTestProps> = ({
           lvlCorrect += 1;
           totalCorrect += 1;
         } else {
-          // Automatically add wrong test answers to vocabulary tana
           const errorVocab: VocabItem = {
             id: `level_test_${Date.now()}_${lvl}_${idx}_${Math.random().toString(36).substring(2, 6)}`,
             term: q.domanda,
@@ -165,7 +163,6 @@ export const LevelTest: React.FC<LevelTestProps> = ({
       };
     }
 
-    // Determine final level: highest sequential level passed
     let estimatedLevel: CEFRLevel | 'Sotto A1' = 'Sotto A1';
     for (const lvl of CEFR_LEVELS) {
       if (breakdown[lvl].passed) {
@@ -187,7 +184,6 @@ export const LevelTest: React.FC<LevelTestProps> = ({
     setTestResult(newResult);
     playSound('levelAchieved');
 
-    // Save to history
     const updatedHistory = [newResult, ...testHistory];
     setTestHistory(updatedHistory);
     if (userProfile.userId) {
@@ -200,7 +196,6 @@ export const LevelTest: React.FC<LevelTestProps> = ({
       }
     }
 
-    // Update user profile
     onUpdateProfile({
       currentLevel: estimatedLevel,
       lastTestDate: Date.now(),
@@ -214,7 +209,6 @@ export const LevelTest: React.FC<LevelTestProps> = ({
     if (currentQuestionInLevel < currentLevelQuestions.length - 1) {
       setCurrentQuestionInLevel((prev) => prev + 1);
     } else {
-      // 6th question of the level reached: evaluate current block
       let blockCorrect = 0;
       currentLevelQuestions.forEach((q) => {
         const userAns = (userAnswers[q.id] || '').trim().toLowerCase();
@@ -224,15 +218,13 @@ export const LevelTest: React.FC<LevelTestProps> = ({
         }
       });
 
-      const passed = blockCorrect >= 3; // At least 3 out of 6 (50%)
+      const passed = blockCorrect >= 3;
 
       if (passed && currentLevelIndex < CEFR_LEVELS.length - 1) {
-        // Proceed to next level block
         playSound('correct');
         setCurrentLevelIndex((prev) => prev + 1);
         setCurrentQuestionInLevel(0);
       } else {
-        // Stop here: either failed block (<3/6) or finished C2
         finishTest(currentLevelIndex, passed, userAnswers);
       }
     }
@@ -244,56 +236,71 @@ export const LevelTest: React.FC<LevelTestProps> = ({
   const currentAnswer = currentQ ? (userAnswers[currentQ.id] || '') : '';
 
   return (
-    <div className="p-4 sm:p-6 max-w-3xl mx-auto space-y-6 pb-28">
+    <div className="p-4 sm:p-6 max-w-3xl mx-auto space-y-8 pb-28 select-none">
       {/* Top Header */}
-      <div className="flex items-center justify-between">
+      <header className="flex items-center justify-between">
         <button
+          type="button"
           onClick={onBack}
-          className="text-xs font-bold text-[#6B7C4F] font-display hover:underline cursor-pointer flex items-center gap-1"
+          className="text-xs sm:text-sm font-extrabold text-[#6B7C4F] font-display hover:underline cursor-pointer flex items-center gap-1.5"
         >
           ← Chiudi Test
         </button>
         <span className="badge-leaf">Test di Livello Adattivo</span>
-      </div>
+      </header>
 
       {isLoading ? (
-        <div className="bento-card text-center py-12 space-y-4">
-          <Mascot pose="thinking" size={130} speechBubble="Sto preparando il tuo test di livello..." />
-          <p className="text-xs font-medium text-[#3A2B22]/70">
-            Generazione delle domande a difficoltà progressiva (A1 - C2)...
-          </p>
+        <div className="bento-card text-center py-16 space-y-6">
+          <Mascot pose="thinking" size={150} speechBubble="Sto preparando il tuo test di livello personalizzato..." />
+          <div className="space-y-2">
+            <h3 className="text-xl font-extrabold text-[#3A2B22] font-display">
+              Generazione domande in corso
+            </h3>
+            <p className="text-xs sm:text-sm font-medium text-[#3A2B22]/70 max-w-sm mx-auto">
+              Difficoltà progressiva da A1 a C2 per individuare esattamente dove ti trovi.
+            </p>
+          </div>
         </div>
       ) : errorMsg ? (
-        <div className="bento-card text-center py-8 space-y-4">
-          <Mascot pose="digging" size={100} speechBubble="Oops! Qualcosa non è andato." />
-          <p className="text-sm font-bold text-red-600 font-display">{errorMsg}</p>
-          <button onClick={loadNewTest} className="btn-zucca py-3 px-6 text-sm">
+        <div className="bento-card text-center py-12 space-y-6">
+          <Mascot pose="digging" size={130} speechBubble="Oops! Qualcosa non è andato." />
+          <div className="space-y-2">
+            <p className="text-base font-extrabold text-red-600 font-display">{errorMsg}</p>
+          </div>
+          <button type="button" onClick={loadNewTest} className="btn-zucca py-3 px-8 text-sm">
             Riprova 🔄
           </button>
         </div>
       ) : testResult ? (
-        /* Test Results Screen */
-        <div className="space-y-6 animate-fade-in">
-          <div className="bento-card text-center space-y-4 border-2 border-[#6B7C4F]/40 bg-[#F2E8D5]/30">
-            <Mascot
-              pose={testResult.resultLevel === 'Sotto A1' ? 'greeting' : 'happy'}
-              size={130}
-              speechBubble={
-                testResult.resultLevel === 'Sotto A1'
-                  ? 'Ottimo primo passo! Lavorando insieme nella tana salirai in un baleno! 🦝'
-                  : `Fantastico! Il tuo livello stimato è ${testResult.resultLevel}! 🎉`
-              }
-            />
+        /* IMMERSIVE CELEBRATIVE RESULTS SCREEN */
+        <div className="space-y-8 animate-fade-in text-center">
+          {/* Main Hero Card with Rocky protagonist */}
+          <div className="bento-card p-6 sm:p-8 space-y-6 border-2 border-[#6B7C4F]/30 bg-white/95">
+            <div className="relative">
+              <Mascot
+                pose={testResult.resultLevel === 'Sotto A1' ? 'greeting' : 'happy'}
+                size={160}
+                speechBubble={
+                  testResult.resultLevel === 'Sotto A1'
+                    ? 'Ottimo inizio! Con il nostro percorso saliremo di livello in un lampo! 🦝'
+                    : `Fantastico traguardo! Il tuo livello stimato è ${testResult.resultLevel}! 🎉`
+                }
+              />
+            </div>
 
-            <div>
-              <span className="text-xs font-bold uppercase tracking-wider text-[#6B7C4F] font-display">
-                Esito Test di Livello
+            <div className="space-y-2">
+              <span className="text-xs font-extrabold uppercase tracking-wider text-[#6B7C4F] font-display">
+                Esito Test di Livello Adattivo
               </span>
-              <h1 className="text-3xl font-extrabold text-[#3A2B22] font-display mt-1">
-                Livello CEFR: <span className="text-[#E8802F]">{testResult.resultLevel}</span>
-              </h1>
-              <p className="text-xs font-semibold text-[#3A2B22]/70 mt-1">
-                Risposte corrette: {testResult.totalCorrect} su {testResult.totalQuestions} ({testResult.totalQuestions > 0 ? Math.round((testResult.totalCorrect / testResult.totalQuestions) * 100) : 0}%)
+              
+              <div className="flex items-center justify-center gap-3">
+                <span className="text-4xl sm:text-5xl font-black text-[#E8802F] font-display">
+                  {testResult.resultLevel}
+                </span>
+              </div>
+
+              <p className="text-sm font-bold text-[#3A2B22]/80 font-display">
+                {testResult.totalCorrect} risposte corrette su {testResult.totalQuestions} ({testResult.totalQuestions > 0 ? Math.round((testResult.totalCorrect / testResult.totalQuestions) * 100) : 0}%)
               </p>
             </div>
 
@@ -305,20 +312,20 @@ export const LevelTest: React.FC<LevelTestProps> = ({
                 return (
                   <div
                     key={lvl}
-                    className={`p-3 rounded-2xl border-2 space-y-1 transition-all ${
+                    className={`p-4 rounded-2xl border-2 space-y-2 transition-all ${
                       !wasAdministered
-                        ? 'bg-white/50 border-dashed border-[#6B7C4F]/20 opacity-60'
+                        ? 'bg-white/40 border-dashed border-[#6B7C4F]/20 opacity-60'
                         : b.passed
-                        ? 'bg-[#6B7C4F]/10 border-[#6B7C4F]'
-                        : 'bg-amber-50/70 border-amber-300'
+                        ? 'bg-[#6B7C4F]/10 border-[#6B7C4F] shadow-2xs'
+                        : 'bg-amber-50/80 border-amber-300'
                     }`}
                   >
                     <div className="flex justify-between items-center">
-                      <span className="font-extrabold font-display text-sm text-[#3A2B22]">
+                      <span className="font-extrabold font-display text-base text-[#3A2B22]">
                         {lvl}
                       </span>
                       <span
-                        className={`text-[10px] font-bold px-2 py-0.5 rounded ${
+                        className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full ${
                           !wasAdministered
                             ? 'bg-gray-100 text-gray-500'
                             : b.passed
@@ -326,21 +333,34 @@ export const LevelTest: React.FC<LevelTestProps> = ({
                             : 'bg-amber-200 text-amber-900'
                         }`}
                       >
-                        {!wasAdministered ? 'Non affrontato' : b.passed ? '✓ Raggiunto' : 'Non superato'}
+                        {!wasAdministered ? 'Non affrontato' : b.passed ? '✓ Superato' : 'Da rivedere'}
                       </span>
                     </div>
-                    <p className="text-xs font-medium text-[#3A2B22]/80">
+
+                    {/* Progress track */}
+                    {wasAdministered && (
+                      <div className="progress-track h-2.5">
+                        <div
+                          className={`progress-fill ${b.passed ? 'progress-fill-muschio' : 'progress-fill-ocra'}`}
+                          style={{ width: `${b.percent}%` }}
+                        />
+                      </div>
+                    )}
+
+                    <p className="text-[11px] font-bold text-[#3A2B22]/75">
                       {!wasAdministered
                         ? 'Interrotto prima'
-                        : `${b.correct} / ${b.total} corrette (${b.percent}%)`}
+                        : `${b.correct}/${b.total} corrette (${b.percent}%)`}
                     </p>
                   </div>
                 );
               })}
             </div>
 
-            <div className="pt-3 flex flex-col sm:flex-row gap-3">
+            {/* Action Buttons */}
+            <div className="pt-4 flex flex-col sm:flex-row gap-3">
               <button
+                type="button"
                 onClick={() => {
                   const chosenLevel: CEFRLevel =
                     testResult.resultLevel === 'Sotto A1' ? 'A1' : (testResult.resultLevel as CEFRLevel);
@@ -351,38 +371,39 @@ export const LevelTest: React.FC<LevelTestProps> = ({
                   });
                   onBack();
                 }}
-                className="btn-zucca flex-1 py-3.5 text-sm cursor-pointer shadow-md font-bold"
+                className="btn-zucca flex-1 py-4 text-base cursor-pointer shadow-md"
               >
-                Imposta il tuo piano di studi su {testResult.resultLevel === 'Sotto A1' ? 'A1' : testResult.resultLevel} 🎯
+                Imposta piano di studi su {testResult.resultLevel === 'Sotto A1' ? 'A1' : testResult.resultLevel} 🎯
               </button>
               <button
+                type="button"
                 onClick={loadNewTest}
-                className="btn-zucca-outline flex-1 py-3.5 text-sm cursor-pointer font-bold"
+                className="btn-secondary flex-1 py-3.5 text-sm cursor-pointer"
               >
-                Rifai il test con altre domande 🔄
+                Rifai il test con nuove domande 🔄
               </button>
             </div>
           </div>
 
-          {/* Test History */}
+          {/* Test History List */}
           {testHistory.length > 1 && (
-            <div className="bento-card space-y-3">
-              <h3 className="font-bold font-display text-base text-[#3A2B22]">Storico dei tuoi test</h3>
+            <div className="bento-card space-y-3 text-left">
+              <h3 className="font-extrabold font-display text-base text-[#3A2B22]">Storico dei tuoi test</h3>
               <div className="space-y-2">
                 {testHistory.slice(1).map((item, idx) => (
                   <div
                     key={item.id || idx}
-                    className="p-3 bg-[#F2E8D5]/40 rounded-xl border border-[#6B7C4F]/20 flex justify-between items-center text-xs"
+                    className="p-3.5 bg-[#F2E8D5]/40 rounded-2xl border border-[#6B7C4F]/20 flex justify-between items-center text-xs"
                   >
                     <div>
-                      <span className="font-bold text-[#3A2B22] font-display">
-                        Livello: {item.resultLevel}
+                      <span className="font-bold text-[#3A2B22] font-display text-sm">
+                        Livello {item.resultLevel}
                       </span>
-                      <span className="text-[#3A2B22]/60 ml-2 font-medium">
+                      <span className="text-[#3A2B22]/65 ml-2 font-semibold">
                         ({item.totalCorrect}/{item.totalQuestions} corrette)
                       </span>
                     </div>
-                    <span className="text-[#3A2B22]/50 font-medium">
+                    <span className="text-[#3A2B22]/60 font-bold">
                       {new Date(item.takenAt).toLocaleDateString('it-IT')}
                     </span>
                   </div>
@@ -392,13 +413,13 @@ export const LevelTest: React.FC<LevelTestProps> = ({
           )}
         </div>
       ) : currentQ ? (
-        /* Active Question Flow */
+        /* ACTIVE QUESTION FLOW */
         <div className="space-y-6">
-          {/* Progress bar within current level block */}
-          <div className="space-y-2">
-            <div className="flex justify-between items-center text-xs font-bold font-display text-[#3A2B22]/70">
+          {/* Header Level & Progress Bar */}
+          <div className="space-y-2.5">
+            <div className="flex justify-between items-center text-xs font-extrabold font-display text-[#3A2B22]">
               <div className="flex items-center gap-2">
-                <span className="text-[10px] font-extrabold px-2.5 py-0.5 rounded bg-[#C99A3D] text-white">
+                <span className="text-[11px] font-black px-3 py-0.5 rounded-full bg-[#C99A3D] text-white">
                   Livello {currentLevel}
                 </span>
                 <span>
@@ -410,9 +431,10 @@ export const LevelTest: React.FC<LevelTestProps> = ({
               </span>
             </div>
 
-            <div className="w-full bg-[#6B7C4F]/15 h-2.5 rounded-full overflow-hidden">
+            {/* Thick Progress Track */}
+            <div className="progress-track h-3.5">
               <div
-                className="bg-[#6B7C4F] h-full transition-all duration-300"
+                className="progress-fill progress-fill-muschio"
                 style={{
                   width: `${((currentQuestionInLevel + 1) / (currentLevelQuestions.length || 6)) * 100}%`,
                 }}
@@ -420,10 +442,10 @@ export const LevelTest: React.FC<LevelTestProps> = ({
             </div>
           </div>
 
-          {/* Reading text if applicable */}
+          {/* Reading Context if applicable */}
           {currentQ.testo_contesto && (
-            <div className="bento-card bg-[#F2E8D5]/50 space-y-2 border-l-4 border-[#6B7C4F]">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-[#6B7C4F] font-display">
+            <div className="bento-card bg-[#F2E8D5]/50 space-y-2 border-l-6 border-[#6B7C4F]">
+              <span className="text-xs font-extrabold uppercase tracking-wider text-[#6B7C4F] font-display">
                 📖 Leggi il brano seguente:
               </span>
               <p className="text-xs sm:text-sm text-[#3A2B22] leading-relaxed font-medium italic">
@@ -433,8 +455,8 @@ export const LevelTest: React.FC<LevelTestProps> = ({
           )}
 
           {/* Question Card */}
-          <div className="bento-card space-y-4">
-            <h2 className="text-lg font-bold font-display text-[#3A2B22]">
+          <div className="bento-card p-6 sm:p-7 space-y-6">
+            <h2 className="text-xl sm:text-2xl font-extrabold font-display text-[#3A2B22] leading-tight">
               {currentQ.domanda}
             </h2>
 
@@ -444,11 +466,12 @@ export const LevelTest: React.FC<LevelTestProps> = ({
                 {(currentQ.opzioni || []).map((opt, oIdx) => (
                   <button
                     key={oIdx}
+                    type="button"
                     onClick={() => setUserAnswers((prev) => ({ ...prev, [currentQ.id]: opt }))}
-                    className={`p-4 rounded-2xl text-left text-xs sm:text-sm font-bold font-display border-2 transition-all cursor-pointer ${
+                    className={`p-4 sm:p-5 rounded-2xl text-left text-xs sm:text-sm font-extrabold font-display border-2 transition-all cursor-pointer ${
                       currentAnswer === opt
-                        ? 'bg-[#6B7C4F]/10 border-[#6B7C4F] text-[#3A2B22]'
-                        : 'bg-white border-[#6B7C4F]/20 hover:border-[#6B7C4F] text-[#3A2B22]'
+                        ? 'bg-[#6B7C4F]/15 border-[#6B7C4F] ring-4 ring-[#6B7C4F]/25 text-[#3A2B22] shadow-sm'
+                        : 'bg-white border-[#3A2B22]/15 hover:border-[#6B7C4F] text-[#3A2B22]'
                     }`}
                   >
                     {opt}
@@ -462,13 +485,14 @@ export const LevelTest: React.FC<LevelTestProps> = ({
                   value={currentAnswer}
                   onChange={(e) => setUserAnswers((prev) => ({ ...prev, [currentQ.id]: e.target.value }))}
                   placeholder="Scrivi la tua risposta qui..."
-                  className="w-full p-4 rounded-2xl bg-[#F2E8D5]/40 border-2 border-[#6B7C4F]/30 focus:border-[#6B7C4F] focus:outline-none text-base text-[#3A2B22] font-medium"
+                  className="w-full p-4 rounded-2xl bg-[#F2E8D5]/40 border-2 border-[#6B7C4F]/30 focus:border-[#6B7C4F] focus:bg-white focus:outline-none text-base text-[#3A2B22] font-bold"
                 />
               </div>
             )}
 
             <div className="pt-2">
               <button
+                type="button"
                 onClick={handleNextQuestion}
                 disabled={!currentAnswer.trim()}
                 className="btn-zucca w-full py-4 text-base disabled:opacity-50 cursor-pointer"

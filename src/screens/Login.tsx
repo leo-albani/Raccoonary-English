@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Mascot } from '../mascot/Mascot';
 import { loginWithGoogle, FirebaseAuthError } from '../services/firebase';
 import { getTranslation } from '../i18n/translations';
+import { AmbientForestBackground } from '../components/AmbientForestBackground';
 
 interface LoginProps {
   onLoginSuccess?: (warningMsg?: string) => void;
@@ -57,91 +58,100 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess, onGuestLogin, t })
   };
 
   return (
-    <div className="min-h-screen bg-[#F2E8D5] flex items-center justify-center p-4 sm:p-6">
-      <div className="w-full max-w-md space-y-6 text-center animate-fade-in">
-        {/* Mascot Greeting */}
-        <Mascot
-          pose={unauthorizedDomain ? 'thinking' : 'greeting'}
-          size={140}
-          speechBubble={
-            warningMessage
-              ? warningMessage
-              : unauthorizedDomain
-              ? 'Manca solo un passaggio su Firebase Console per abilitare questo dominio!'
-              : errorMessage
-              ? errorMessage
-              : tr('login.mascotGreeting')
-          }
-        />
+    <div className="min-h-screen bg-[#1A1512] text-[#F2E8D5] flex flex-col justify-between p-6 sm:p-8 select-none max-w-lg mx-auto relative overflow-hidden">
+      {/* Decorative Forest Background Silhouettes */}
+      <AmbientForestBackground />
 
-        {/* Title & Subtitle */}
-        <div className="space-y-2">
-          <span className="badge-leaf">{tr('login.welcomeBadge')}</span>
-          <h1 className="text-3xl font-extrabold text-[#3A2B22] font-display">
+      {/* Top Header Badge */}
+      <header className="text-center pt-2 relative z-10">
+        <span className="badge-leaf">{tr('login.welcomeBadge')}</span>
+      </header>
+
+      {/* Main Immersive Hero Section */}
+      <main className="flex-1 flex flex-col items-center justify-center text-center my-6 space-y-6 animate-fade-in w-full relative z-10">
+        <div className="relative">
+          <Mascot
+            pose={unauthorizedDomain ? 'thinking' : 'greeting'}
+            size={160}
+            speechBubble={
+              warningMessage
+                ? warningMessage
+                : unauthorizedDomain
+                ? 'Manca solo un passaggio per autorizzare questo dominio su Firebase!'
+                : errorMessage
+                ? errorMessage
+                : tr('login.mascotGreeting')
+            }
+          />
+        </div>
+
+        {/* Confident, Bold Typography */}
+        <div className="space-y-2 px-2">
+          <h1 className="text-3xl sm:text-4xl font-extrabold text-[#F2E8D5] font-display leading-tight">
             {tr('login.title')}
           </h1>
-          <p className="text-xs sm:text-sm font-medium text-[#3A2B22]/75 max-w-sm mx-auto leading-relaxed">
+          <p className="text-xs sm:text-sm font-medium text-[#F2E8D5]/75 max-w-sm mx-auto leading-relaxed">
             {tr('login.subtitle')}
           </p>
         </div>
 
-        {/* Login Button Container */}
-        <div className="bento-card p-6 space-y-4 border-2 border-[#6B7C4F]/30 bg-white/80 backdrop-blur-xs">
+        {/* Login Action Card with Depth */}
+        <div className="bento-card w-full p-6 sm:p-7 space-y-4 border-2 border-[#6B7C4F]/35 bg-[#2B2622] text-[#F2E8D5]">
           {warningMessage && (
-            <div className="p-3.5 rounded-2xl bg-[#C99A3D]/15 border border-[#C99A3D]/40 text-left text-xs text-[#3A2B22] font-medium leading-relaxed">
-              <span className="font-bold text-[#C99A3D]">⚠️ {tr('login.warningPrefix')}</span> {warningMessage}
+            <div className="p-3.5 rounded-2xl bg-[#C99A3D]/20 border border-[#C99A3D]/50 text-left text-xs text-[#F2E8D5] font-medium leading-relaxed">
+              <span className="font-bold text-[#E8802F]">⚠️ {tr('login.warningPrefix')}</span> {warningMessage}
             </div>
           )}
 
           {unauthorizedDomain ? (
-            <div className="p-4 rounded-2xl bg-amber-50/90 border-2 border-amber-300 text-left space-y-3 text-xs text-[#3A2B22]">
-              <div className="flex items-center gap-2 font-bold text-amber-900 text-sm">
+            <div className="p-4 rounded-2xl bg-[#1A1512] border-2 border-[#C99A3D]/60 text-left space-y-3 text-xs text-[#F2E8D5]">
+              <div className="flex items-center gap-2 font-bold text-[#E8802F] text-sm font-display">
                 <span>🔐</span>
                 <span>Dominio da autorizzare su Firebase</span>
               </div>
-              <p className="leading-relaxed text-amber-950/85">
-                Il nuovo progetto Firebase richiede che questo dominio sia inserito tra i <strong>Domini autorizzati</strong>:
+              <p className="leading-relaxed text-[#F2E8D5]/80">
+                Il tuo progetto Firebase richiede l'aggiunta di questo dominio tra i <strong>Domini autorizzati</strong>:
               </p>
               
-              {/* Domain Box + Copy Button */}
-              <div className="flex items-center justify-between gap-2 p-2.5 bg-white rounded-xl border border-amber-200 shadow-xs">
-                <code className="font-mono font-semibold text-[11px] text-[#3A2B22] truncate select-all">
+              <div className="flex items-center justify-between gap-2 p-2.5 bg-[#2B2622] rounded-xl border border-[#6B7C4F]/40 shadow-xs">
+                <code className="font-mono font-bold text-[11px] text-[#E8802F] truncate select-all">
                   {unauthorizedDomain}
                 </code>
                 <button
+                  type="button"
                   onClick={() => copyToClipboard(unauthorizedDomain)}
-                  className="px-2.5 py-1 text-[11px] font-bold rounded-lg bg-[#6B7C4F] text-white hover:bg-[#586740] cursor-pointer shrink-0 transition-colors"
+                  className="px-3 py-1.5 text-[11px] font-bold rounded-lg bg-[#6B7C4F] text-[#F2E8D5] hover:bg-[#586740] cursor-pointer shrink-0 transition-colors"
                 >
                   {copiedDomain ? '✓ Copiato!' : 'Copia'}
                 </button>
               </div>
 
-              {/* Quick instructions */}
-              <ol className="list-decimal list-inside space-y-1 text-[11px] text-amber-950/80 leading-relaxed font-medium">
+              <ol className="list-decimal list-inside space-y-1 text-[11px] text-[#F2E8D5]/75 leading-relaxed font-medium">
                 <li>Apri <strong>Firebase Console</strong> → <strong>Authentication</strong></li>
-                <li>Vai nella scheda <strong>Impostazioni (Settings)</strong> → <strong>Domini autorizzati</strong></li>
+                <li>Vai nella scheda <strong>Impostazioni</strong> → <strong>Domini autorizzati</strong></li>
                 <li>Clicca <strong>Aggiungi dominio</strong> e incolla il dominio sopra</li>
               </ol>
             </div>
           ) : errorMessage ? (
-            <div className="p-3.5 rounded-2xl bg-red-50 border border-red-200 text-left text-xs text-red-700 font-medium leading-relaxed">
+            <div className="p-3.5 rounded-2xl bg-red-950/40 border border-red-800/60 text-left text-xs text-red-200 font-medium leading-relaxed">
               <span className="font-bold">Oops!</span> {errorMessage}
             </div>
           ) : null}
 
+          {/* Primary Login Button */}
           <button
+            type="button"
             onClick={handleGoogleLogin}
             disabled={isLoggingIn}
-            className="w-full py-4 px-6 rounded-2xl bg-white text-[#3A2B22] font-extrabold font-display text-base border-2 border-[#3A2B22]/15 shadow-md hover:bg-gray-50 hover:border-[#6B7C4F] cursor-pointer transition-all flex items-center justify-center gap-3 disabled:opacity-60 disabled:cursor-not-allowed"
+            className="w-full py-4 px-6 rounded-2xl bg-[#1A1512] text-[#F2E8D5] font-extrabold font-display text-base border-2 border-[#6B7C4F]/40 shadow-md hover:border-[#E8802F] hover:bg-[#201B17] cursor-pointer transition-all flex items-center justify-center gap-3 disabled:opacity-60 disabled:cursor-not-allowed"
           >
             {isLoggingIn ? (
               <div className="flex items-center gap-2">
-                <div className="w-5 h-5 border-2 border-[#6B7C4F] border-t-transparent rounded-full animate-spin" />
+                <div className="w-5 h-5 border-2 border-[#E8802F] border-t-transparent rounded-full animate-spin" />
                 <span>{tr('login.loggingIn')}</span>
               </div>
             ) : (
               <>
-                {/* Google logo SVG */}
                 <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24">
                   <path
                     fill="#4285F4"
@@ -165,22 +175,26 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess, onGuestLogin, t })
             )}
           </button>
 
+          {/* Secondary Guest Button */}
           {onGuestLogin && (
             <button
               onClick={onGuestLogin}
               type="button"
-              className="w-full py-2.5 px-4 rounded-xl text-xs font-bold text-[#6B7C4F] hover:bg-[#6B7C4F]/10 cursor-pointer transition-colors border border-dashed border-[#6B7C4F]/40"
+              className="btn-secondary w-full py-3 text-xs sm:text-sm"
             >
               🐾 Continua come ospite (Modalità locale)
             </button>
           )}
         </div>
+      </main>
 
-        {/* Subtle footer */}
-        <p className="text-[11px] text-[#3A2B22]/50 font-medium">
+      {/* Subtle Footer */}
+      <footer className="text-center pb-2 relative z-10">
+        <p className="text-[11px] text-[#F2E8D5]/50 font-medium">
           {tr('login.footer')}
         </p>
-      </div>
+      </footer>
     </div>
   );
 };
+export default Login;

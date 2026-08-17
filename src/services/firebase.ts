@@ -18,7 +18,7 @@ import {
   deleteDoc,
   getDocFromServer,
 } from 'firebase/firestore';
-import { UserProfile, UserAccount, VocabItem, GrammarTopicProgress, SharedLanguagePairContent, UITranslationSet, Gender, CEFRLevel } from '../types';
+import { UserProfile, UserAccount, VocabItem, GrammarTopicProgress, SharedLanguagePairContent, UITranslationSet, Gender, CEFRLevel, ScenarioRecord } from '../types';
 import { SEED_IT_EN_CONTENT } from '../data/sharedContentSeed';
 import { NATIVE_LANGUAGES, TARGET_LANGUAGES } from '../data/languages';
 import { IT_TRANSLATIONS } from '../i18n/translations';
@@ -329,8 +329,8 @@ export async function migrateLegacyDataIfNeeded(userId: string, activeProfileId:
       return false;
     }
 
-    // Migration step 1 & 2: Copy subcollections (vocabItems, grammarProgress, readingProgress, levelTests)
-    const subcollections = ['vocabItems', 'grammarProgress', 'readingProgress', 'levelTests'];
+    // Migration step 1 & 2: Copy subcollections (vocabItems, grammarProgress, readingProgress, levelTests, scenarios)
+    const subcollections = ['vocabItems', 'grammarProgress', 'readingProgress', 'levelTests', 'scenarios'];
     for (const sub of subcollections) {
       const oldColRef = collection(db, 'users', userId, sub);
       const oldSnap = await getDocs(oldColRef);
@@ -401,9 +401,6 @@ export async function createUserAccountAndProfile(
     lastActiveDate: new Date().toISOString().split('T')[0],
     reminderEnabled: false,
     reminderTime: '20:00',
-    unlockedOutfits: ['base'],
-    activeOutfit: 'base',
-    streakFreezes: 0,
     interessi: data.interessi || [],
   };
 
@@ -475,9 +472,6 @@ export async function createNewLanguageProfile(
     reminderEnabled: false,
     reminderTime: '20:00',
     onboardingCompleted: false,
-    unlockedOutfits: ['base'],
-    activeOutfit: 'base',
-    streakFreezes: 0,
   };
 
   if (db && !userId.startsWith('local_user_')) {
@@ -535,9 +529,6 @@ export function getLocalUserProfile(): UserProfile {
     reminderTime: '20:00',
     onboardingCompleted: false,
     livelloStudioAttivo: null,
-    unlockedOutfits: ['base'],
-    activeOutfit: 'base',
-    streakFreezes: 0,
     tutorialCompleted: false,
     gender: 'undisclosed',
     interessi: [],
@@ -578,9 +569,6 @@ export async function fetchUserProfile(userId: string): Promise<UserProfile> {
           currentLevel: profileSnap.exists() ? (profileData.currentLevel || null) : (accountData.currentLevel || null),
           livelloStudioAttivo: profileSnap.exists() ? (profileData.livelloStudioAttivo || null) : (accountData.livelloStudioAttivo || null),
           lastTestDate: profileSnap.exists() ? (profileData.lastTestDate || null) : (accountData.lastTestDate || null),
-          unlockedOutfits: profileData.unlockedOutfits || accountData.unlockedOutfits || ['base'],
-          activeOutfit: profileData.activeOutfit || accountData.activeOutfit || 'base',
-          streakFreezes: profileData.streakFreezes ?? accountData.streakFreezes ?? 0,
           tutorialCompleted: profileData.tutorialCompleted ?? accountData.tutorialCompleted ?? false,
           activeProfileId,
           firstName: accountData.firstName,
@@ -622,9 +610,6 @@ export async function updateUserProfile(profile: UserProfile): Promise<void> {
           reminderTime: profile.reminderTime || '20:00',
           onboardingCompleted: profile.onboardingCompleted ?? false,
           lastTestDate: profile.lastTestDate || null,
-          unlockedOutfits: profile.unlockedOutfits || ['base'],
-          activeOutfit: profile.activeOutfit || 'base',
-          streakFreezes: profile.streakFreezes ?? 0,
           tutorialCompleted: profile.tutorialCompleted ?? false,
           interessi: profile.interessi || [],
         },
@@ -645,6 +630,29 @@ export async function updateUserProfile(profile: UserProfile): Promise<void> {
     } catch (e) {
       handleFirestoreError(e, OperationType.WRITE, path);
     }
+  }
+}
+
+export async function savePushTokenToFirestore(userId: string, token: string, profileId?: string): Promise<void> {
+  if (!token || !userId || userId.startsWith('local_user_') || !db) return;
+  const targetProfileId = profileId || getLocalUserProfile().activeProfileId || 'en';
+
+  try {
+    // Save to user root document
+    const userRef = doc(db, 'users', userId);
+    const userSnap = await getDoc(userRef);
+    const existingTokens: string[] = userSnap.exists() && Array.isArray(userSnap.data().fcmTokens)
+      ? userSnap.data().fcmTokens
+      : [];
+
+    const updatedTokens = Array.from(new Set([...existingTokens, token]));
+    await setDoc(userRef, { fcmToken: token, fcmTokens: updatedTokens }, { merge: true });
+
+    // Also update current active profile
+    const profileRef = doc(db, 'users', userId, 'profiles', targetProfileId);
+    await setDoc(profileRef, { fcmToken: token, fcmTokens: updatedTokens }, { merge: true });
+  } catch (e) {
+    console.warn('Error saving push token to Firestore:', e);
   }
 }
 
@@ -918,6 +926,81 @@ export async function saveLevelTestResult(
       handleFirestoreError(e, OperationType.WRITE, path);
     }
   }
+}
+
+// ------------------- SCENARIOS -------------------
+export async function fetchScenarios(userId: string, profileId?: string): Promise<Record<string, ScenarioRecord>> {
+  const targetProfileId = profileId || getLocalUserProfile().activeProfileId || 'en';
+  let scenarioMap: Record<string, ScenarioRecord> = {};
+  const localKey = `raccoonary_scenarios_${targetProfileId}`;
+
+  try {
+    const saved = localStorage.getItem(localKey);
+    if (saved) scenarioMap = JSON.parse(saved);
+  } catch (e) {}
+
+  if (db && !userId.startsWith('local_user_')) {
+    const path = `users/${userId}/profiles/${targetProfileId}/scenarios`;
+    try {
+      const colRef = collection(db, 'users', userId, 'profiles', targetProfileId, 'scenarios');
+      const snap = await getDocs(colRef);
+      scenarioMap = {};
+      snap.forEach((docSnap) => {
+        scenarioMap[docSnap.id] = {
+          scenarioId: docSnap.id,
+          ...(docSnap.data() as Omit<ScenarioRecord, 'scenarioId'>),
+        };
+      });
+      localStorage.setItem(localKey, JSON.stringify(scenarioMap));
+    } catch (e) {
+      handleFirestoreError(e, OperationType.LIST, path);
+    }
+  }
+
+  return scenarioMap;
+}
+
+export async function saveScenarioRecord(
+  userId: string,
+  scenarioId: string,
+  record: Partial<ScenarioRecord> & { nome: string; status: 'in_corso' | 'completato' },
+  profileId?: string
+): Promise<Record<string, ScenarioRecord>> {
+  const targetProfileId = profileId || getLocalUserProfile().activeProfileId || 'en';
+  const localKey = `raccoonary_scenarios_${targetProfileId}`;
+
+  let current: Record<string, ScenarioRecord> = {};
+  try {
+    const saved = localStorage.getItem(localKey);
+    if (saved) current = JSON.parse(saved);
+  } catch (e) {}
+
+  const existing = current[scenarioId];
+  const updatedEntry: ScenarioRecord = {
+    scenarioId,
+    nome: record.nome || existing?.nome || scenarioId,
+    status: record.status,
+    volteCompletato: record.volteCompletato ?? (existing ? existing.volteCompletato + (record.status === 'completato' ? 1 : 0) : (record.status === 'completato' ? 1 : 0)),
+    ultimaPraticaIl: record.ultimaPraticaIl ?? Date.now(),
+  };
+
+  current[scenarioId] = updatedEntry;
+
+  try {
+    localStorage.setItem(localKey, JSON.stringify(current));
+  } catch (e) {}
+
+  if (db && !userId.startsWith('local_user_')) {
+    const path = `users/${userId}/profiles/${targetProfileId}/scenarios/${scenarioId}`;
+    try {
+      const docRef = doc(db, 'users', userId, 'profiles', targetProfileId, 'scenarios', scenarioId);
+      await setDoc(docRef, updatedEntry, { merge: true });
+    } catch (e) {
+      handleFirestoreError(e, OperationType.WRITE, path);
+    }
+  }
+
+  return current;
 }
 
 // ------------------- RESET UTILS -------------------

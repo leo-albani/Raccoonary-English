@@ -38,15 +38,15 @@ import { Home } from './screens/Home';
 import { Memorization } from './screens/Memorization';
 import { Grammar } from './screens/Grammar';
 import { Reading } from './screens/Reading';
+import { Scenarios } from './screens/Scenarios';
 import { Import } from './screens/Import';
 import { Settings } from './screens/Settings';
 import { LevelTest } from './screens/LevelTest';
 import { Pronunciation } from './screens/Pronunciation';
-import { Wardrobe } from './screens/Wardrobe';
 import { TranslatorScreen } from './screens/TranslatorScreen';
-import { Trail } from './screens/Trail';
 import { Navigation, NavTab } from './components/Navigation';
 import { GuidedTour } from './components/GuidedTour';
+import { AmbientForestBackground } from './components/AmbientForestBackground';
 import { setupDailyReminderTimer } from './services/notifications';
 
 export function App() {
@@ -54,7 +54,6 @@ export function App() {
   const [user, setUser] = useState<UserProfile>(getLocalUserProfile());
   const [vocabItems, setVocabItems] = useState<VocabItem[]>(getLocalVocabItems());
   const [currentTab, setCurrentTab] = useState<NavTab>('home');
-  const [streakFreezeActivated, setStreakFreezeActivated] = useState<boolean>(false);
   const [selectedGrammarTopicId, setSelectedGrammarTopicId] = useState<string | null>(null);
   const [showLevelTest, setShowLevelTest] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -195,7 +194,7 @@ export function App() {
           const grammarMap = await fetchGrammarProgress(authUser.uid, profile.activeProfileId);
           const readingMap = await fetchReadingProgress(authUser.uid, profile.activeProfileId);
 
-          // Update streak logic and streak freeze protection
+          // Update streak logic
           const todayStr = new Date().toISOString().split('T')[0];
           let updatedProfile = { ...profile, userId: authUser.uid };
 
@@ -208,21 +207,8 @@ export function App() {
               // Active yesterday -> increment streak by 1
               updatedProfile.streakCount = Math.max(1, profile.streakCount + 1);
               updatedProfile.lastActiveDate = todayStr;
-            } else if (diffDays === 2) {
-              // Skipped exactly 1 day! (e.g. active Monday, skipped Tuesday, opened Wednesday)
-              if (profile.streakFreezes && profile.streakFreezes > 0) {
-                // CONSUME 1 STREAK FREEZE! Preserve current streak!
-                updatedProfile.streakFreezes = profile.streakFreezes - 1;
-                // Keep streakCount as is, update lastActiveDate
-                updatedProfile.lastActiveDate = todayStr;
-                setStreakFreezeActivated(true);
-              } else {
-                // No freeze -> reset streak to 1
-                updatedProfile.streakCount = 1;
-                updatedProfile.lastActiveDate = todayStr;
-              }
-            } else if (diffDays > 2) {
-              // Skipped 2 or more days -> reset streak to 1
+            } else if (diffDays > 1) {
+              // Skipped 1 or more days -> reset streak to 1
               updatedProfile.streakCount = 1;
               updatedProfile.lastActiveDate = todayStr;
             }
@@ -527,7 +513,8 @@ export function App() {
   // Mascot loading screen when generating dynamic UI translations for spoken language
   if (isGeneratingUITranslations && user.nativeLanguage && user.nativeLanguage !== 'it') {
     return (
-      <div className="min-h-screen bg-[#F2E8D5] flex flex-col items-center justify-center p-6 text-center text-[#3A2B22] space-y-4 animate-fade-in">
+      <div className="min-h-screen bg-[#1A1512] flex flex-col items-center justify-center p-6 text-center text-[#F2E8D5] space-y-4 animate-fade-in relative">
+        <AmbientForestBackground />
         <Mascot pose="thinking" size={140} speechBubble={t('common.preparingAppInLanguage')} />
         <p className="font-bold font-display text-sm text-[#6B7C4F]">Un attimo di pazienza per la tana...</p>
       </div>
@@ -537,7 +524,8 @@ export function App() {
   // Mascot loading screen when generating dynamic shared content for language pair
   if (isGeneratingContent && !sharedContent) {
     return (
-      <div className="min-h-screen bg-[#F2E8D5] flex flex-col items-center justify-center p-6 text-center text-[#3A2B22] space-y-4 animate-fade-in">
+      <div className="min-h-screen bg-[#1A1512] flex flex-col items-center justify-center p-6 text-center text-[#F2E8D5] space-y-4 animate-fade-in relative">
+        <AmbientForestBackground />
         <Mascot pose="thinking" size={140} speechBubble="Sto preparando i contenuti per questa lingua, un attimo..." />
         <p className="font-bold font-display text-sm text-[#6B7C4F]">Un attimo di pazienza per la tana...</p>
       </div>
@@ -547,9 +535,24 @@ export function App() {
   const dueItems = vocabItems.filter((i) => i.nextReviewAt <= Date.now());
 
   return (
-    <div className="min-h-screen bg-[#F2E8D5] text-[#3A2B22] font-sans antialiased">
+    <div className="min-h-screen bg-[#1A1512] text-[#F2E8D5] font-sans antialiased relative selection:bg-[#E8802F]/30 selection:text-[#F2E8D5]">
+      {/* Subtle Ambient Forest Silhouettes */}
+      <AmbientForestBackground />
+
+      {/* Global Slide-In Navigation & Top Hamburger Trigger */}
+      <Navigation
+        currentTab={currentTab}
+        onSelectTab={(tab) => {
+          setSelectedGrammarTopicId(null);
+          setCurrentTab(tab);
+        }}
+        dueCount={dueItems.length}
+        user={user}
+        t={t}
+      />
+
       {/* Active Tab Screen */}
-      <main className="min-h-screen">
+      <main className="min-h-screen relative z-10">
         {showLevelTest ? (
           <LevelTest
             userProfile={user}
@@ -571,8 +574,7 @@ export function App() {
                 userProfiles={userProfiles}
                 sharedContent={sharedContent}
                 grammarProgress={grammarProgress}
-                streakFreezeActivated={streakFreezeActivated}
-                onCloseFreezeBanner={() => setStreakFreezeActivated(false)}
+                readingProgress={readingProgress}
                 onSwitchProfile={handleSwitchProfile}
                 onAddNewLanguage={handleAddNewLanguage}
                 onStartReview={() => setCurrentTab('memorize')}
@@ -600,29 +602,6 @@ export function App() {
                 onAddVocabItem={handleSaveItem}
                 onDeleteItem={handleDeleteItem}
                 t={t}
-              />
-            )}
-
-            {currentTab === 'trail' && (
-              <Trail
-                user={user}
-                vocabItems={vocabItems}
-                grammarProgress={grammarProgress}
-                readingProgress={readingProgress}
-                onNavigate={(tab) => setCurrentTab(tab)}
-                onOpenLevelTest={() => setShowLevelTest(true)}
-                t={t}
-              />
-            )}
-
-            {currentTab === 'wardrobe' && (
-              <Wardrobe
-                user={user}
-                onUpdateUser={async (updated) => {
-                  setUser(updated);
-                  await updateUserProfile(updated);
-                }}
-                onBackToHome={() => setCurrentTab('home')}
               />
             )}
 
@@ -670,6 +649,16 @@ export function App() {
               />
             )}
 
+            {currentTab === 'scenarios' && (
+              <Scenarios
+                userProfile={user}
+                vocabItems={vocabItems}
+                onSaveVocabItem={handleSaveItem}
+                onBackToHome={() => setCurrentTab('home')}
+                t={t}
+              />
+            )}
+
             {currentTab === 'import' && (
               <Import
                 existingVocabItems={vocabItems}
@@ -707,22 +696,10 @@ export function App() {
       {currentTab === 'home' && !showLevelTest && (
         <GuidedTour
           isOpen={showGuidedTour}
-          activeOutfit={user.activeOutfit}
           onComplete={handleCompleteTour}
           onSkip={handleCompleteTour}
         />
       )}
-
-      {/* Global Bottom Navigation */}
-      <Navigation
-        currentTab={currentTab}
-        onSelectTab={(tab) => {
-          setSelectedGrammarTopicId(null);
-          setCurrentTab(tab);
-        }}
-        dueCount={dueItems.length}
-        t={t}
-      />
     </div>
   );
 }

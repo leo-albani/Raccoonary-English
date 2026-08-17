@@ -1,5 +1,6 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Mascot } from '../mascot/Mascot';
+import { ProgressiveText } from './ProgressiveText';
 import { RaccoonPose } from '../types';
 import { X, ChevronRight, Sparkles } from 'lucide-react';
 import { getTranslation } from '../i18n/translations';
@@ -26,22 +27,10 @@ export const TOUR_STEPS: TourStep[] = [
     pose: 'happy',
   },
   {
-    id: 'translator',
-    targetId: 'tour-target-nav-translator',
-    textKey: 'tour.step.translator',
+    id: 'menu',
+    targetId: 'tour-target-nav-hamburger',
+    textKey: 'tour.step.menu',
     pose: 'thinking',
-  },
-  {
-    id: 'trail',
-    targetId: 'tour-target-nav-trail',
-    textKey: 'tour.step.grammar',
-    pose: 'reading',
-  },
-  {
-    id: 'settings',
-    targetId: 'tour-target-nav-settings',
-    textKey: 'tour.step.settings',
-    pose: 'greeting',
   },
   {
     id: 'final',
@@ -56,7 +45,6 @@ interface GuidedTourProps {
   isOpen: boolean;
   onComplete: () => void;
   onSkip: () => void;
-  activeOutfit?: string;
   t?: (key: string, params?: Record<string, string | number>) => string;
 }
 
@@ -71,7 +59,6 @@ export const GuidedTour: React.FC<GuidedTourProps> = ({
   isOpen,
   onComplete,
   onSkip,
-  activeOutfit = 'base',
   t,
 }) => {
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
@@ -82,8 +69,12 @@ export const GuidedTour: React.FC<GuidedTourProps> = ({
     isAbove: false,
   });
 
-  const tr = (key: string, params?: Record<string, string | number>) =>
-    t ? t(key, params) : getTranslation(key, null, params);
+  const tr = (key: string, params?: Record<string, string | number>) => {
+    if (key === 'tour.step.menu') {
+      return 'Tocca il menu in alto a sinistra per accedere rapidamente alle 3 sezioni: Tana, Traduttore e Impostazioni!';
+    }
+    return t ? t(key, params) : getTranslation(key, null, params);
+  };
 
   const currentStep = TOUR_STEPS[currentStepIndex];
   const stepText = currentStep ? tr(currentStep.textKey) : '';
@@ -136,7 +127,6 @@ export const GuidedTour: React.FC<GuidedTourProps> = ({
       }
     }
 
-    // Delay slightly to allow scroll animation to settle
     const timer = setTimeout(() => {
       updateTargetRect();
     }, 150);
@@ -184,14 +174,14 @@ export const GuidedTour: React.FC<GuidedTourProps> = ({
         <button
           onClick={handleSkip}
           id="btn-tour-skip"
-          className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-black/60 hover:bg-black/80 text-white text-xs font-bold border border-white/30 backdrop-blur-md shadow-lg transition-all cursor-pointer active:scale-95"
+          className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[#1A1512]/90 hover:bg-[#1A1512] text-[#F2E8D5] text-xs font-bold border border-[#6B7C4F]/40 backdrop-blur-md shadow-lg transition-all cursor-pointer active:scale-95"
         >
           <span>{tr('tour.skip')}</span>
-          <X className="w-3.5 h-3.5 text-white/80" />
+          <X className="w-3.5 h-3.5 text-[#F2E8D5]/80" />
         </button>
       </div>
 
-      {/* STEP 1-7: Spotlight + Speech Balloon */}
+      {/* STEP 1-3: Spotlight + Speech Balloon */}
       {!isFinalStep && spotlight && (
         <>
           {/* Dark Overlay with Spotlight Cutout using box-shadow */}
@@ -202,7 +192,7 @@ export const GuidedTour: React.FC<GuidedTourProps> = ({
               left: `${spotlight.left}px`,
               width: `${spotlight.width}px`,
               height: `${spotlight.height}px`,
-              boxShadow: '0 0 0 9999px rgba(0, 0, 0, 0.75)',
+              boxShadow: '0 0 0 9999px rgba(0, 0, 0, 0.82)',
             }}
           >
             {/* Pulsing ring around highlighted element */}
@@ -213,7 +203,6 @@ export const GuidedTour: React.FC<GuidedTourProps> = ({
           <div
             className="fixed inset-0 z-[105]"
             onClick={(e) => {
-              // Clicking anywhere outside advances step or keeps focus
               e.stopPropagation();
             }}
           />
@@ -228,14 +217,14 @@ export const GuidedTour: React.FC<GuidedTourProps> = ({
                 : { top: `${balloonPos.top}px` }),
             }}
           >
-            <div className="bg-white rounded-3xl p-5 shadow-2xl border-2 border-[#6B7C4F]/30 space-y-4 animate-fade-in relative">
+            <div className="bg-[#2B2622] text-[#F2E8D5] rounded-3xl p-5 shadow-2xl border-2 border-[#6B7C4F]/40 space-y-4 animate-fade-in relative">
               {/* Header Step Counter */}
-              <div className="flex items-center justify-between border-b border-[#6B7C4F]/15 pb-2">
-                <div className="flex items-center gap-1.5 text-xs font-bold text-[#E8802F] uppercase tracking-wider">
+              <div className="flex items-center justify-between border-b border-[#6B7C4F]/25 pb-2">
+                <div className="flex items-center gap-1.5 text-xs font-bold text-[#E8802F] uppercase tracking-wider font-display">
                   <Sparkles className="w-3.5 h-3.5 text-[#E8802F]" />
                   <span>{tr('tour.guideTitle')}</span>
                 </div>
-                <span className="text-[11px] font-bold text-[#3A2B22]/60 px-2 py-0.5 bg-[#F2E8D5] rounded-full">
+                <span className="text-[11px] font-bold text-[#F2E8D5]/70 px-2.5 py-0.5 bg-[#1A1512] rounded-full border border-[#6B7C4F]/30 font-display">
                   {currentStepIndex + 1} / {TOUR_STEPS.length - 1}
                 </span>
               </div>
@@ -243,21 +232,21 @@ export const GuidedTour: React.FC<GuidedTourProps> = ({
               {/* Rocky + Message Body */}
               <div className="flex items-start gap-3.5">
                 <div className="shrink-0 -ml-1 -mt-1">
-                  <Mascot pose={currentStep.pose} activeOutfit={activeOutfit} size={85} />
+                  <Mascot pose={currentStep.pose} size={85} />
                 </div>
                 <div className="flex-1 min-w-0 pt-1">
-                  <p className="text-xs sm:text-sm text-[#3A2B22] font-semibold leading-relaxed">
-                    "{stepText}"
+                  <p className="text-xs sm:text-sm text-[#F2E8D5] font-semibold leading-relaxed">
+                    "<ProgressiveText text={stepText} speedMs={80} />"
                   </p>
                 </div>
               </div>
 
               {/* Action Buttons */}
-              <div className="flex items-center justify-end gap-2 pt-1 border-t border-gray-100">
+              <div className="flex items-center justify-end gap-2 pt-1 border-t border-[#6B7C4F]/20">
                 <button
                   onClick={handleNext}
                   id="btn-tour-next"
-                  className="px-5 py-2.5 rounded-2xl bg-[#6B7C4F] hover:bg-[#54633E] text-white text-xs font-bold shadow-md flex items-center gap-2 transition-all cursor-pointer active:scale-95"
+                  className="px-5 py-2.5 rounded-2xl bg-[#E8802F] hover:bg-[#d87425] text-[#1A1512] text-xs font-extrabold shadow-md flex items-center gap-2 transition-all cursor-pointer active:scale-95 font-display"
                 >
                   <span>{tr('tour.next')}</span>
                   <ChevronRight className="w-4 h-4" />
@@ -268,19 +257,19 @@ export const GuidedTour: React.FC<GuidedTourProps> = ({
         </>
       )}
 
-      {/* Fallback if target element not found on steps 1-7 (e.g. mobile rendering delay) */}
+      {/* Fallback if target element not found */}
       {!isFinalStep && !spotlight && (
-        <div className="fixed inset-0 bg-black/75 z-[105] flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl p-6 max-w-sm w-full shadow-2xl border-2 border-[#6B7C4F]/30 text-center space-y-4">
+        <div className="fixed inset-0 bg-black/80 z-[105] flex items-center justify-center p-4">
+          <div className="bg-[#2B2622] text-[#F2E8D5] rounded-3xl p-6 max-w-sm w-full shadow-2xl border-2 border-[#6B7C4F]/40 text-center space-y-4">
             <div className="flex justify-center">
-              <Mascot pose={currentStep.pose} activeOutfit={activeOutfit} size={100} />
+              <Mascot pose={currentStep.pose} size={100} />
             </div>
-            <p className="text-sm font-semibold text-[#3A2B22]">"{stepText}"</p>
+            <p className="text-sm font-semibold text-[#F2E8D5]">"<ProgressiveText text={stepText} speedMs={80} />"</p>
             <div className="flex justify-center pt-2">
               <button
                 onClick={handleNext}
                 id="btn-tour-next-fallback"
-                className="px-6 py-2.5 rounded-2xl bg-[#6B7C4F] text-white text-xs font-bold shadow-md flex items-center gap-2"
+                className="px-6 py-2.5 rounded-2xl bg-[#E8802F] text-[#1A1512] text-xs font-extrabold shadow-md flex items-center gap-2 font-display cursor-pointer"
               >
                 <span>{tr('tour.next')}</span>
                 <ChevronRight className="w-4 h-4" />
@@ -290,22 +279,22 @@ export const GuidedTour: React.FC<GuidedTourProps> = ({
         </div>
       )}
 
-      {/* STEP 8: Final Step - Centered Modal */}
+      {/* Final Step - Centered Modal */}
       {isFinalStep && (
-        <div className="fixed inset-0 bg-black/80 z-[110] flex items-center justify-center p-4 backdrop-blur-xs animate-fade-in">
-          <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl border-2 border-[#6B7C4F]/40 text-center space-y-5">
+        <div className="fixed inset-0 bg-black/85 z-[110] flex items-center justify-center p-4 backdrop-blur-xs animate-fade-in">
+          <div className="bg-[#2B2622] text-[#F2E8D5] rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl border-2 border-[#6B7C4F]/40 text-center space-y-5">
             <div className="flex justify-center pt-1">
               <div className="relative">
-                <Mascot pose="happy" activeOutfit={activeOutfit} size={130} />
+                <Mascot pose="happy" size={130} />
                 <span className="absolute -top-2 -right-2 text-2xl">✨</span>
               </div>
             </div>
 
             <div className="space-y-2">
-              <h3 className="text-xl sm:text-2xl font-bold font-display text-[#3A2B22]">
+              <h3 className="text-xl sm:text-2xl font-extrabold font-display text-[#F2E8D5]">
                 {tr('tour.finalTitle')}
               </h3>
-              <p className="text-sm sm:text-base text-[#3A2B22]/80 font-medium leading-relaxed px-2">
+              <p className="text-sm sm:text-base text-[#F2E8D5]/80 font-medium leading-relaxed px-2">
                 "{stepText}"
               </p>
             </div>
@@ -314,9 +303,9 @@ export const GuidedTour: React.FC<GuidedTourProps> = ({
               <button
                 onClick={onComplete}
                 id="btn-tour-finish"
-                className="w-full py-3.5 px-6 rounded-2xl bg-[#E8802F] hover:bg-[#D47023] text-white font-bold font-display text-base shadow-lg hover:shadow-xl transition-all cursor-pointer active:scale-95 flex items-center justify-center gap-2"
+                className="btn-zucca w-full py-3.5 px-6 text-base shadow-lg cursor-pointer flex items-center justify-center gap-2"
               >
-                <Sparkles className="w-5 h-5 text-amber-200" />
+                <Sparkles className="w-5 h-5 text-[#1A1512]" />
                 <span>{tr('tour.finish')}</span>
               </button>
             </div>
@@ -326,3 +315,4 @@ export const GuidedTour: React.FC<GuidedTourProps> = ({
     </div>
   );
 };
+export default GuidedTour;

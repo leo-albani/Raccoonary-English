@@ -1,4 +1,5 @@
-import { AnswerEvaluationResult, Exercise, PhraseDeepDiveResult, ReadingText, TranslationResult, WordDeepDiveResult } from '../types';
+import { AnswerEvaluationResult, Exercise, PhraseDeepDiveResult, ReadingText, TranslationResult, WordDeepDiveResult, ScenarioContent } from '../types';
+import { SEED_SCENARIOS } from '../data/scenarioSeeds';
 
 export async function evaluateUserAnswer(
   term: string,
@@ -201,4 +202,49 @@ export async function generateLevelTest(
 
   const data = await res.json();
   return data.questions || [];
+}
+
+export async function generateScenarioContent(
+  scenarioContext: string,
+  scenarioId: string = 'custom',
+  level: string = 'A2',
+  nativeLang: string = 'it',
+  targetLang: string = 'en',
+  nativeName: string = 'Italiano',
+  targetName: string = 'Inglese'
+): Promise<ScenarioContent> {
+  try {
+    const res = await fetch('/api/generate-scenario', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        scenarioContext,
+        scenarioId,
+        level,
+        nativeLang,
+        targetLang,
+        nativeName,
+        targetName,
+      }),
+    });
+
+    if (!res.ok) {
+      throw new Error(`Server returned status ${res.status}`);
+    }
+
+    const data: ScenarioContent = await res.json();
+    if (data && data.vocabulary && data.vocabulary.length > 0) {
+      return data;
+    }
+    throw new Error('Formato scenario non valido');
+  } catch (err: any) {
+    console.warn('API scenario generation failed, checking seed fallback:', err);
+    if (SEED_SCENARIOS[scenarioId]) {
+      return {
+        ...SEED_SCENARIOS[scenarioId],
+        scenarioId,
+      };
+    }
+    throw new Error(err.message || 'Impossibile generare lo scenario al momento.');
+  }
 }

@@ -21,9 +21,9 @@
         "nativeLanguage": { "type": "string", "maxLength": 16 },
         "activeProfileId": { "type": "string", "maxLength": 16 },
         "legacyMigrated": { "type": "boolean" },
-        "unlockedOutfits": { "type": "array" },
-        "activeOutfit": { "type": "string", "maxLength": 64 },
-        "streakFreezes": { "type": "number" },
+        "fcmToken": { "type": "string", "maxLength": 512 },
+        "fcmTokens": { "type": "array" },
+        "lastReminderSentDate": { "type": "string", "maxLength": 32 },
         "tutorialCompleted": { "type": "boolean" }
       },
       "required": ["userId", "createdAt"]
@@ -94,9 +94,9 @@
         "lastActiveDate": { "type": "string", "maxLength": 32 },
         "reminderEnabled": { "type": "boolean" },
         "reminderTime": { "type": "string", "maxLength": 16 },
-        "unlockedOutfits": { "type": "array" },
-        "activeOutfit": { "type": "string", "maxLength": 64 },
-        "streakFreezes": { "type": "number" }
+        "fcmToken": { "type": "string", "maxLength": 512 },
+        "fcmTokens": { "type": "array" },
+        "lastReminderSentDate": { "type": "string", "maxLength": 32 }
       },
       "required": ["targetLanguage", "createdAt", "streakCount", "totalAcorns"]
     },

@@ -37,9 +37,9 @@ export interface UserLanguageProfile {
   lastActiveDate: string | null;
   reminderEnabled: boolean;
   reminderTime: string;
-  unlockedOutfits?: string[];
-  activeOutfit?: string;
-  streakFreezes?: number;
+  fcmToken?: string;
+  fcmTokens?: string[];
+  lastReminderSentDate?: string;
   interessi?: string[];
 }
 
@@ -60,15 +60,15 @@ export interface UserProfile {
   username?: string;
   nativeLanguage?: string;
   activeProfileId?: string;
-  unlockedOutfits?: string[];
-  activeOutfit?: string;
-  streakFreezes?: number;
+  fcmToken?: string;
+  fcmTokens?: string[];
+  lastReminderSentDate?: string;
   tutorialCompleted?: boolean;
   gender?: Gender;
   interessi?: string[];
 }
 
-export type VocabOrigin = 'import' | 'grammar_error' | 'reading_error' | 'exercise_error' | 'translator_search' | 'translator_lookup' | 'level_test_error' | 'special_section';
+export type VocabOrigin = 'import' | 'grammar_error' | 'reading_error' | 'exercise_error' | 'translator_search' | 'translator_lookup' | 'level_test_error' | 'special_section' | 'context_practice';
 
 export interface TranslationResult {
   lingua_origine: 'it' | 'en';
@@ -234,5 +234,45 @@ export interface SharedLanguagePairContent {
   };
   generatedAt: number;
   generatedBy: 'seed' | 'gemini';
+}
+
+export type ScenarioStatus = 'mai_provato' | 'in_corso' | 'completato';
+
+export interface ScenarioRecord {
+  scenarioId: string;
+  nome: string;
+  status: 'in_corso' | 'completato';
+  volteCompletato: number;
+  ultimaPraticaIl: number; // timestamp in ms
+}
+
+export interface ScenarioVocabItem {
+  termine: string;
+  traduzione: string;
+  esempio: string;
+}
+
+export interface ScenarioDialogueQuestion {
+  id: string;
+  domanda: string;
+  opzioni: string[];
+  rispostaCorretta: string;
+  spiegazione?: string;
+}
+
+export interface ScenarioDialogue {
+  title: string;
+  context: string;
+  text: string;
+  speakers?: string[];
+  questions: ScenarioDialogueQuestion[];
+}
+
+export interface ScenarioContent {
+  scenarioId: string;
+  scenarioTitle: string;
+  vocabulary: ScenarioVocabItem[];
+  exercises: Exercise[];
+  dialogue: ScenarioDialogue;
 }
 

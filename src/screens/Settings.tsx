@@ -12,6 +12,7 @@ import {
   requestNotificationPermission,
   sendRaccoonNotification,
   setupDailyReminderTimer,
+  registerPushNotification,
 } from '../services/notifications';
 
 interface SettingsProps {
@@ -86,6 +87,8 @@ export const Settings: React.FC<SettingsProps> = ({
   // Group 3: Active Profile modal state
   const [showTanaManagerModal, setShowTanaManagerModal] = useState(false);
   const [showResetModal, setShowResetModal] = useState(false);
+  const [showIosPwaModal, setShowIosPwaModal] = useState(false);
+  const [isRegisteringReminder, setIsRegisteringReminder] = useState(false);
 
   // Group 4: Admin modal state
   const [showAdminResetModal, setShowAdminResetModal] = useState(false);
@@ -123,12 +126,30 @@ export const Settings: React.FC<SettingsProps> = ({
   };
 
   const handleToggleReminder = async (enabled: boolean) => {
-    if (enabled && 'Notification' in window && Notification.permission !== 'granted') {
-      try {
-        await Notification.requestPermission();
-      } catch (e) {}
+    if (enabled) {
+      const status = getNotificationStatus();
+      if (status.isIOSDevice && !status.isStandalonePWA) {
+        setShowIosPwaModal(true);
+        return;
+      }
+
+      setIsRegisteringReminder(true);
+      const reg = await registerPushNotification(user.userId, user.activeProfileId);
+      setIsRegisteringReminder(false);
+
+      if (reg.success) {
+        onUpdateUser({ ...user, reminderEnabled: true, fcmToken: reg.token || user.fcmToken });
+      } else {
+        if (reg.reason === 'ios_not_standalone') {
+          setShowIosPwaModal(true);
+        } else {
+          // Still allow enabling reminder setting locally
+          onUpdateUser({ ...user, reminderEnabled: true });
+        }
+      }
+    } else {
+      onUpdateUser({ ...user, reminderEnabled: false });
     }
-    onUpdateUser({ ...user, reminderEnabled: enabled });
   };
 
   const handleTimeChange = (time: string) => {
@@ -844,6 +865,34 @@ export const Settings: React.FC<SettingsProps> = ({
             </div>
 
             <TanaManager vocabItems={vocabItems} onDeleteItem={onDeleteItem} />
+          </div>
+        </div>
+      )}
+
+      {/* Modal: iOS PWA Installation Guidance */}
+      {showIosPwaModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fade-in">
+          <div className="bg-white rounded-3xl p-6 max-w-sm w-full space-y-4 text-center border-2 border-[#6B7C4F]/30 shadow-xl">
+            <Mascot pose="reading" size={90} />
+            <h3 className="text-lg font-bold font-display text-[#3A2B22]">
+              Aggiungi alla Schermata Home 📲
+            </h3>
+            <p className="text-xs text-[#3A2B22]/80 leading-relaxed text-left bg-[#F2E8D5]/40 p-3 rounded-2xl border border-[#6B7C4F]/20 space-y-2">
+              <span>Su iPhone e iPad, per ricevere le notifiche push quotidiane di Raccoonary:</span>
+              <br />
+              <strong>1.</strong> Tocca il tasto <strong>Condividi</strong> in basso in Safari (l'icona quadrata con la freccia in su ⬆️).
+              <br />
+              <strong>2.</strong> Scorri verso il basso e seleziona <strong>"Aggiungi a schermata Home"</strong> ➕.
+              <br />
+              <strong>3.</strong> Apri Raccoonary dall'icona sulla Home per attivare i promemoria!
+            </p>
+
+            <button
+              onClick={() => setShowIosPwaModal(false)}
+              className="w-full py-3 rounded-2xl bg-[#6B7C4F] hover:bg-[#586740] text-white font-bold text-xs cursor-pointer shadow-md transition-all"
+            >
+              Ho capito 🦝
+            </button>
           </div>
         </div>
       )}

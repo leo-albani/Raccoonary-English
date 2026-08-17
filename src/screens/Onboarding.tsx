@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Mascot } from '../mascot/Mascot';
 import { RaccoonPose } from '../types';
+import { AmbientForestBackground } from '../components/AmbientForestBackground';
 
 interface OnboardingProps {
   onComplete: (choice: 'import' | 'home' | 'level_test') => void;
@@ -66,88 +67,103 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete, skipSlides =
   const activeSlide = slides[currentSlide];
 
   return (
-    <div className="min-h-screen bg-[#F2E8D5] text-[#3A2B22] flex flex-col justify-between p-6 max-w-lg mx-auto relative select-none">
+    <div className="min-h-screen bg-[#1A1512] text-[#F2E8D5] flex flex-col justify-between p-6 sm:p-8 max-w-xl mx-auto relative select-none overflow-hidden">
+      <AmbientForestBackground />
+
       {/* Top Header */}
-      {!showStartingChoice && (
-        <div className="flex justify-between items-center pt-2">
-          <div className="flex gap-2">
+      {!showStartingChoice ? (
+        <header className="flex justify-between items-center pt-2 relative z-10">
+          <div className="flex gap-2 items-center">
             {slides.map((_, idx) => (
               <div
                 key={idx}
-                className={`h-2 rounded-full transition-all duration-300 ${
-                  idx === currentSlide ? 'w-8 bg-[#6B7C4F]' : 'w-2 bg-[#6B7C4F]/30'
+                className={`h-3 rounded-full transition-all duration-300 ${
+                  idx === currentSlide ? 'w-10 bg-[#E8802F]' : 'w-3 bg-[#6B7C4F]/35'
                 }`}
               />
             ))}
           </div>
           <button
+            type="button"
             onClick={handleSkip}
-            className="text-sm font-semibold text-[#6B7C4F] hover:text-[#3A2B22] transition-colors cursor-pointer"
+            className="text-xs sm:text-sm font-bold text-[#859966] hover:text-[#E8802F] font-display transition-colors cursor-pointer"
           >
-            Salta
+            Salta →
           </button>
+        </header>
+      ) : (
+        <div className="pt-2 text-center relative z-10">
+          <span className="badge-leaf">Pronti a partire</span>
         </div>
       )}
 
       {/* Main Content */}
       {!showStartingChoice ? (
-        <div className="flex-1 flex flex-col items-center justify-center text-center my-8 space-y-4">
-          <div className="mb-2">
-            <Mascot pose={activeSlide.pose} size={160} speechBubble={activeSlide.speech} />
+        <main className="flex-1 flex flex-col items-center justify-center text-center my-8 space-y-6 animate-fade-in relative z-10">
+          <div className="relative">
+            <Mascot pose={activeSlide.pose} size={175} speechBubble={activeSlide.speech} />
           </div>
 
-          <h2 className="text-2xl sm:text-3xl font-bold font-display text-[#3A2B22] px-4">
-            {activeSlide.title}
-          </h2>
+          <div className="space-y-3 px-2">
+            <h2 className="text-3xl sm:text-4xl font-extrabold font-display text-[#F2E8D5] leading-tight">
+              {activeSlide.title}
+            </h2>
 
-          <p className="text-sm sm:text-base text-[#3A2B22]/80 leading-relaxed max-w-md px-4 font-medium">
-            {activeSlide.subtitle}
-          </p>
-        </div>
+            <p className="text-sm sm:text-base text-[#F2E8D5]/80 leading-relaxed max-w-md mx-auto font-medium">
+              {activeSlide.subtitle}
+            </p>
+          </div>
+        </main>
       ) : (
-        <div className="flex-1 flex flex-col items-center justify-center text-center my-8 space-y-4">
-          <div className="mb-2">
-            <Mascot pose="happy" size={150} speechBubble="Da dove iniziamo?" />
+        <main className="flex-1 flex flex-col items-center justify-center text-center my-8 space-y-6 animate-fade-in relative z-10">
+          <div className="relative">
+            <Mascot pose="happy" size={165} speechBubble="Da dove iniziamo la nostra avventura?" />
           </div>
 
-          <h2 className="text-2xl sm:text-3xl font-bold font-display text-[#3A2B22] mb-1">
-            Scegli il tuo punto di partenza
-          </h2>
-          <p className="text-sm text-[#3A2B22]/80 max-w-md px-4 font-medium mb-6">
-            Scegli se scoprire subito il tuo livello o iniziare a esplorare la tana.
-          </p>
+          <div className="space-y-2 px-2">
+            <h2 className="text-3xl sm:text-4xl font-extrabold font-display text-[#F2E8D5] leading-tight">
+              Scegli il tuo punto di partenza
+            </h2>
+            <p className="text-xs sm:text-sm text-[#F2E8D5]/80 max-w-md mx-auto font-medium">
+              Scopri subito il tuo livello esatto con un test adattivo oppure entra direttamente in tana.
+            </p>
+          </div>
 
-          <div className="w-full max-w-md space-y-3 px-2">
+          <div className="w-full max-w-md space-y-4 px-2 pt-2">
             <button
+              type="button"
               onClick={() => handleSelectPath('level_test')}
-              className="btn-zucca w-full py-3.5 text-sm sm:text-base flex items-center justify-center gap-3"
+              className="btn-zucca w-full py-4 text-base sm:text-lg flex items-center justify-center gap-3 cursor-pointer shadow-lg"
             >
-              <span className="text-xl">🎯</span>
+              <span className="text-2xl">🎯</span>
               <span>Scopri il mio livello con un test</span>
             </button>
 
             <button
+              type="button"
               onClick={() => handleSelectPath('home')}
-              className="w-full py-3.5 px-6 rounded-2xl bg-[#6B7C4F] text-white font-bold font-display text-sm sm:text-base shadow-sm hover:bg-[#6B7C4F]/90 cursor-pointer transition-all flex items-center justify-center gap-3"
+              className="btn-secondary w-full py-3.5 text-sm sm:text-base flex items-center justify-center gap-3 cursor-pointer"
             >
               <span className="text-xl">🏠</span>
               <span>Parto da zero / Entra in tana</span>
             </button>
           </div>
-        </div>
+        </main>
       )}
 
       {/* Footer Navigation */}
       {!showStartingChoice && (
-        <div className="pb-4 max-w-md mx-auto w-full">
+        <footer className="pb-4 max-w-md mx-auto w-full relative z-10">
           <button
+            type="button"
             onClick={handleNext}
-            className="btn-zucca w-full py-4 text-lg"
+            className="btn-zucca w-full py-4 text-base sm:text-lg cursor-pointer shadow-lg"
           >
-            {currentSlide === slides.length - 1 ? 'Iniziamo' : 'Continua'}
+            {currentSlide === slides.length - 1 ? 'Iniziamo 🚀' : 'Continua →'}
           </button>
-        </div>
+        </footer>
       )}
     </div>
   );
 };
+export default Onboarding;

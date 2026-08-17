@@ -36,3 +36,66 @@ self.addEventListener("fetch", (event) => {
     })
   );
 });
+
+// Push notification event listener (for Web Push and FCM)
+self.addEventListener("push", (event) => {
+  let title = "🦝 Raccoonary";
+  let body = "Le tue parole ti aspettano in tana 🦝";
+  let url = "/";
+
+  if (event.data) {
+    try {
+      const json = event.data.json();
+      if (json.notification) {
+        title = json.notification.title || title;
+        body = json.notification.body || body;
+      } else {
+        title = json.title || title;
+        body = json.body || body;
+      }
+      if (json.data && json.data.url) {
+        url = json.data.url;
+      }
+    } catch (e) {
+      body = event.data.text() || body;
+    }
+  }
+
+  const options = {
+    body,
+    icon: "/icon.png",
+    badge: "/icon.png",
+    vibrate: [100, 50, 100],
+    data: { url },
+    actions: [
+      { action: "open", title: "Entra in tana 🏠" },
+      { action: "dismiss", title: "Più tardi" }
+    ]
+  };
+
+  event.waitUntil(self.registration.showNotification(title, options));
+});
+
+// Notification click handling
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+
+  if (event.action === "dismiss") {
+    return;
+  }
+
+  const targetUrl = (event.notification.data && event.notification.data.url) || "/";
+
+  event.waitUntil(
+    clients.matchAll({ type: "window", includeUncontrolled: true }).then((clientList) => {
+      for (const client of clientList) {
+        if (client.url && "focus" in client) {
+          return client.focus();
+        }
+      }
+      if (clients.openWindow) {
+        return clients.openWindow(targetUrl);
+      }
+    })
+  );
+});

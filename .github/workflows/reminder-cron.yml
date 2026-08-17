@@ -1,0 +1,13 @@
+name: Reminder Cron
+on:
+  schedule:
+    - cron: '0 * * * *'
+  workflow_dispatch: {}
+jobs:
+  trigger:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call reminder endpoint
+        run: |
+          curl -f -X POST https://raccoonary-english.vercel.app/api/cron/send-reminders \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}"
