@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
 import { Mascot } from '../mascot/Mascot';
-import { GrammarTopic, Exercise, VocabItem, GrammarTopicProgress, SharedLanguagePairContent, SpecialSectionItem, UserProfile } from '../types';
+import { GrammarTopic, Exercise, VocabItem, ExerciseError, GrammarTopicProgress, SharedLanguagePairContent, SpecialSectionItem, UserProfile } from '../types';
 import { GRAMMAR_SYLLABUS, IRREGULAR_VERBS } from '../data/grammarSyllabus';
 import { generateGrammarExercises } from '../services/gemini';
 import { NATIVE_LANGUAGES, TARGET_LANGUAGES } from '../data/languages';
 import { playSound } from '../services/sound';
 
 interface GrammarProps {
-  onSaveErrorVocab: (item: VocabItem) => void;
+  onSaveErrorVocab?: (item: VocabItem) => void;
+  onSaveExerciseError?: (item: ExerciseError) => void;
   selectedTopicId?: string | null;
   grammarProgress?: Record<string, GrammarTopicProgress>;
   onUpdateGrammarProgress?: (progress: GrammarTopicProgress) => void;
@@ -20,6 +21,7 @@ interface GrammarProps {
 
 export const Grammar: React.FC<GrammarProps> = ({
   onSaveErrorVocab,
+  onSaveExerciseError,
   selectedTopicId,
   grammarProgress = {},
   onUpdateGrammarProgress,
@@ -174,26 +176,44 @@ export const Grammar: React.FC<GrammarProps> = ({
     }
 
     if (!isCorrect && selectedTopic) {
-      // Create vocabulary error item to review later in tana
-      const errorVocab: VocabItem = {
-        id: `grammar_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
-        term: ex.domanda,
-        translation: ex.rispostaCorretta,
-        sourceLang: targetLang,
-        targetLang: nativeLang,
-        synonyms: [],
-        exampleSource: ex.domanda,
-        exampleTranslation: ex.spiegazione,
-        origin: 'grammar_error',
-        originDetail: selectedTopic.name,
-        createdAt: Date.now(),
-        lastReviewedAt: null,
-        box: 1,
-        nextReviewAt: Date.now(),
-        correctStreak: 0,
-        wrongCount: 1,
-      };
-      onSaveErrorVocab(errorVocab);
+      if (onSaveExerciseError) {
+        const errorItem: ExerciseError = {
+          id: `grammar_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+          domanda: ex.domanda,
+          rispostaCorretta: ex.rispostaCorretta,
+          tipo: 'grammatica',
+          argomentoRiferimento: selectedTopic.name,
+          createdAt: Date.now(),
+          box: 1,
+          nextReviewAt: Date.now(),
+          wrongCount: 1,
+          lastReviewedAt: null,
+          correctStreak: 0,
+          spiegazione: ex.spiegazione,
+          opzioni: ex.opzioni,
+        };
+        onSaveExerciseError(errorItem);
+      } else if (onSaveErrorVocab) {
+        const errorVocab: VocabItem = {
+          id: `grammar_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+          term: ex.domanda,
+          translation: ex.rispostaCorretta,
+          sourceLang: targetLang,
+          targetLang: nativeLang,
+          synonyms: [],
+          exampleSource: ex.domanda,
+          exampleTranslation: ex.spiegazione,
+          origin: 'grammar_error',
+          originDetail: selectedTopic.name,
+          createdAt: Date.now(),
+          lastReviewedAt: null,
+          box: 1,
+          nextReviewAt: Date.now(),
+          correctStreak: 0,
+          wrongCount: 1,
+        };
+        onSaveErrorVocab(errorVocab);
+      }
     }
   };
 

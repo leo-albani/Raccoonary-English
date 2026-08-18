@@ -248,3 +248,58 @@ export async function generateScenarioContent(
     throw new Error(err.message || 'Impossibile generare lo scenario al momento.');
   }
 }
+
+export async function generateCheckpointQuestions(
+  level: string = 'A1',
+  topicsSummary: string[] = [],
+  targetLang: string = 'en',
+  nativeLang: string = 'it',
+  targetName: string = 'Inglese',
+  nativeName: string = 'Italiano'
+): Promise<any[]> {
+  try {
+    const res = await fetch('/api/generate-checkpoint', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ level, topicsSummary, targetLang, nativeLang, targetName, nativeName }),
+    });
+
+    if (!res.ok) {
+      throw new Error('Impossibile generare il checkpoint al momento.');
+    }
+
+    const data = await res.json();
+    return data.questions || [];
+  } catch (err: any) {
+    console.error('Error in generateCheckpointQuestions:', err);
+    throw err;
+  }
+}
+
+export async function generateMiniTestQuestions(
+  currentLevel: string = 'A1',
+  nextLevel: string = 'A2',
+  targetLang: string = 'en',
+  nativeLang: string = 'it',
+  targetName: string = 'Inglese',
+  nativeName: string = 'Italiano'
+): Promise<any[]> {
+  try {
+    const res = await fetch('/api/generate-mini-test', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ currentLevel, nextLevel, targetLang, nativeLang, targetName, nativeName }),
+    });
+
+    if (!res.ok) {
+      throw new Error('Impossibile generare il mini-test al momento.');
+    }
+
+    const data = await res.json();
+    return data.questions || [];
+  } catch (err: any) {
+    console.error('Error in generateMiniTestQuestions:', err);
+    throw err;
+  }
+}
+

@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import { Mascot } from '../mascot/Mascot';
-import { CEFRLevel, ReadingText, UserProfile, VocabItem } from '../types';
+import { CEFRLevel, ReadingText, UserProfile, VocabItem, ExerciseError } from '../types';
 import { generateReadingText, explainWordInContext } from '../services/gemini';
 import { NATIVE_LANGUAGES, TARGET_LANGUAGES } from '../data/languages';
 import { INTEREST_OPTIONS, INTEREST_ICONS } from '../data/interests';
 
 interface ReadingProps {
   onSaveVocabItem: (item: VocabItem) => void;
+  onSaveExerciseError?: (item: ExerciseError) => void;
   onCompleteReading?: (level: CEFRLevel) => void;
   userProfile?: UserProfile;
   t?: (key: string, params?: Record<string, string | number>) => string;
@@ -21,6 +22,7 @@ const getNextLevel = (lvl: CEFRLevel): CEFRLevel | null => {
 
 export const Reading: React.FC<ReadingProps> = ({
   onSaveVocabItem,
+  onSaveExerciseError,
   onCompleteReading,
   userProfile,
 }) => {
@@ -492,6 +494,22 @@ export const Reading: React.FC<ReadingProps> = ({
                           onClick={() => {
                             const updated = { ...checkedQuestions, [q.id]: true };
                             setCheckedQuestions(updated);
+                            if (!isCorrect && onSaveExerciseError) {
+                              onSaveExerciseError({
+                                id: `reading_err_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+                                domanda: q.domanda,
+                                rispostaCorretta: q.rispostaCorretta,
+                                tipo: 'lettura',
+                                argomentoRiferimento: `Lettura: ${readingText?.title || currentGenre}`,
+                                createdAt: Date.now(),
+                                box: 1,
+                                nextReviewAt: Date.now(),
+                                wrongCount: 1,
+                                lastReviewedAt: null,
+                                correctStreak: 0,
+                                opzioni: q.opzioni,
+                              });
+                            }
                             if (readingText?.domande && readingText.domande.length > 0) {
                               const allChecked = readingText.domande.every(
                                 (question) => updated[question.id]

@@ -34,24 +34,24 @@ export const TranslatorScreen: React.FC<TranslatorScreenProps> = ({
   return (
     <div className="p-4 sm:p-6 max-w-4xl mx-auto space-y-6 pb-28">
       {/* Screen Header */}
-      <div className="flex items-center justify-between gap-4 bg-white/70 backdrop-blur-xs p-4 sm:p-5 rounded-3xl border border-[#6B7C4F]/20 shadow-xs">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2">
+      <div className="flex items-center justify-between gap-4 bg-[#2B2622] p-5 sm:p-6 rounded-3xl border-2 border-[#6B7C4F]/30 shadow-xl text-[#F2E8D5]">
+        <div className="space-y-1.5">
+          <div className="flex items-center gap-2 flex-wrap">
             <span className="badge-leaf">Dizionario & Traduzione</span>
-            <span className="text-xs font-bold text-[#6B7C4F] font-display">
+            <span className="text-xs font-extrabold text-[#859966] font-display">
               {nativeLangObj.flag} ↔ {activeLang.flag} {activeLang.name}
             </span>
           </div>
-          <h1 className="text-2xl sm:text-3xl font-bold font-display text-[#3A2B22]">
-            Traduttore 🔤
+          <h1 className="text-2xl sm:text-3xl font-black font-display text-[#F2E8D5]">
+            La mia tana & Traduttore 📚
           </h1>
-          <p className="text-xs sm:text-sm text-[#3A2B22]/75 font-medium">
-            Traduci parole o frasi, tocca ogni termine per scoprirne le sfumature e salva le parole nella tua tana.
+          <p className="text-xs sm:text-sm text-[#F2E8D5]/75 font-medium leading-relaxed max-w-xl">
+            Cerca e traduci vocaboli o frasi, tocca ogni termine per scoprirne le sfumature e consulta tutte le parole salvate nella tua tana.
           </p>
         </div>
 
         <div className="hidden sm:block shrink-0">
-          <Mascot pose="thinking" size={70} activeOutfit={user.activeOutfit} />
+          <Mascot pose="thinking" size={75} activeOutfit={user.activeOutfit} />
         </div>
       </div>
 

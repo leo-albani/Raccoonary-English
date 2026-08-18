@@ -68,7 +68,25 @@ export interface UserProfile {
   interessi?: string[];
 }
 
-export type VocabOrigin = 'import' | 'grammar_error' | 'reading_error' | 'exercise_error' | 'translator_search' | 'translator_lookup' | 'level_test_error' | 'special_section' | 'context_practice';
+export type VocabOrigin = 'import' | 'grammar_error' | 'reading_error' | 'exercise_error' | 'translator_search' | 'translator_lookup' | 'level_test_error' | 'special_section' | 'context_practice' | 'reading_word';
+
+export type ExerciseErrorType = 'grammatica' | 'test_livello' | 'lettura';
+
+export interface ExerciseError {
+  id: string;
+  domanda: string; // il testo dell'esercizio/domanda originale
+  rispostaCorretta: string;
+  tipo: ExerciseErrorType;
+  argomentoRiferimento: string; // argomento di grammatica o livello, a seconda del tipo
+  createdAt: number;
+  box: number; // Leitner 1-5
+  nextReviewAt: number; // timestamp in ms
+  wrongCount: number;
+  lastReviewedAt?: number | null;
+  correctStreak?: number;
+  opzioni?: string[];
+  spiegazione?: string;
+}
 
 export interface TranslationResult {
   lingua_origine: 'it' | 'en';
@@ -275,4 +293,37 @@ export interface ScenarioContent {
   exercises: Exercise[];
   dialogue: ScenarioDialogue;
 }
+
+export type LessonType = 'vocabolario' | 'grammatica' | 'lettura';
+export type LessonState = 'da_fare' | 'completata';
+
+export interface LessonItem {
+  id: string;
+  tipo: LessonType;
+  argomentoRiferimento: string; // id o nome dell'argomento grammaticale, tema della lettura o focus vocabolario
+  stato: LessonState;
+  ordine: number; // 1 a 8
+  title?: string;
+  subtitle?: string;
+}
+
+export interface LessonPath {
+  id?: string;
+  livelloTarget: string; // e.g. "A1", "A2", "B1", "B2", "C1", "C2"
+  lezioni: LessonItem[];
+  checkpointSuperato: boolean | null;
+  miniTestSuperato: boolean | null;
+  creatoIl: number; // timestamp in ms
+}
+
+export interface CheckpointQuestion {
+  id: string;
+  tipo: 'multiple_choice' | 'fill_in_blank';
+  lezioneTipo: LessonType;
+  domanda: string;
+  opzioni: string[];
+  rispostaCorretta: string;
+  spiegazione: string;
+}
+
 

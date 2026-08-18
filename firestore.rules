@@ -66,6 +66,9 @@ service cloud.firestore {
         match /vocabItems/{itemId} {
           allow read, write: if isOwner(userId);
         }
+        match /exerciseErrors/{errorId} {
+          allow read, write: if isOwner(userId);
+        }
         match /grammarProgress/{topicId} {
           allow read, write: if isOwner(userId);
         }
@@ -73,6 +76,12 @@ service cloud.firestore {
           allow read, write: if isOwner(userId);
         }
         match /levelTests/{testId} {
+          allow read, write: if isOwner(userId);
+        }
+        match /scenarios/{scenarioId} {
+          allow read, write: if isOwner(userId);
+        }
+        match /lessonPath/{pathId} {
           allow read, write: if isOwner(userId);
         }
       }

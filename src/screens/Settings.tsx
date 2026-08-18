@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Mascot } from '../mascot/Mascot';
-import { UserProfile, VocabItem, Gender } from '../types';
+import { UserProfile, VocabItem, ExerciseError, Gender } from '../types';
 import { TanaManager } from '../components/TanaManager';
 import { auth, isUserAdmin } from '../services/firebase';
 import { NATIVE_LANGUAGES, TARGET_LANGUAGES } from '../data/languages';
@@ -19,11 +19,13 @@ interface SettingsProps {
   user: UserProfile;
   userProfiles: string[];
   vocabItems: VocabItem[];
+  exerciseErrors?: ExerciseError[];
   onUpdateUser: (updated: UserProfile) => void;
   onSwitchProfile: (targetLanguage: string) => void;
   onAddNewLanguage: (targetLanguage: string) => void;
   onDeleteLanguageProfile: (targetLanguage: string) => Promise<void>;
   onDeleteItem: (itemId: string) => void;
+  onDeleteExerciseError?: (errorId: string) => void;
   onResetData: () => void;
   onAdminResetData?: () => void;
   onAdminSimulateNewUser?: () => void;
@@ -36,11 +38,13 @@ export const Settings: React.FC<SettingsProps> = ({
   user,
   userProfiles = ['en'],
   vocabItems,
+  exerciseErrors = [],
   onUpdateUser,
   onSwitchProfile,
   onAddNewLanguage,
   onDeleteLanguageProfile,
   onDeleteItem,
+  onDeleteExerciseError,
   onResetData,
   onAdminResetData,
   onAdminSimulateNewUser,
@@ -864,7 +868,12 @@ export const Settings: React.FC<SettingsProps> = ({
               </button>
             </div>
 
-            <TanaManager vocabItems={vocabItems} onDeleteItem={onDeleteItem} />
+            <TanaManager
+              vocabItems={vocabItems}
+              exerciseErrors={exerciseErrors}
+              onDeleteItem={onDeleteItem}
+              onDeleteExerciseError={onDeleteExerciseError}
+            />
           </div>
         </div>
       )}

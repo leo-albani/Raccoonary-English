@@ -1,4 +1,4 @@
-import { VocabItem } from '../types';
+import { VocabItem, ExerciseError } from '../types';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -31,7 +31,7 @@ export function calculateNextReview(currentBox: number, isCorrect: boolean): { b
   }
 }
 
-export function filterDueItems(items: VocabItem[], maxCount: number = 20): VocabItem[] {
+export function filterDueItems<T extends { id: string; box: number; nextReviewAt: number }>(items: T[], maxCount: number = 20): T[] {
   const now = Date.now();
   // First get items where nextReviewAt <= now
   const due = items.filter((item) => item.nextReviewAt <= now);
@@ -51,3 +51,4 @@ export function filterDueItems(items: VocabItem[], maxCount: number = 20): Vocab
   // Shuffle or slice due items up to maxCount
   return due.slice(0, maxCount);
 }
+

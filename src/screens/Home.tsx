@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Mascot } from '../mascot/Mascot';
 import { ProgressiveText } from '../components/ProgressiveText';
-import { UserProfile, VocabItem, SharedLanguagePairContent, CEFRLevel, GrammarTopicProgress } from '../types';
+import { UserProfile, VocabItem, SharedLanguagePairContent, CEFRLevel, GrammarTopicProgress, ExerciseError } from '../types';
 import { TARGET_LANGUAGES } from '../data/languages';
 import { GRAMMAR_SYLLABUS } from '../data/grammarSyllabus';
 import { NavTab } from '../components/Navigation';
@@ -23,6 +23,7 @@ const CEFR_LEVEL_DETAILS: { level: CEFRLevel; title: string; desc: string }[] = 
 interface HomeProps {
   user: UserProfile;
   vocabItems: VocabItem[];
+  exerciseErrors?: ExerciseError[];
   userProfiles?: string[];
   sharedContent?: SharedLanguagePairContent | null;
   grammarProgress?: Record<string, GrammarTopicProgress>;
@@ -33,15 +34,20 @@ interface HomeProps {
   onNavigate: (tab: NavTab) => void;
   onSelectGrammarTopic?: (topicId: string) => void;
   onAddVocabItem?: (item: VocabItem) => void;
+  onSaveExerciseError?: (item: ExerciseError) => void;
   onDeleteItem?: (itemId: string) => void;
+  onDeleteExerciseError?: (errorId: string) => void;
   onOpenLevelTest: () => void;
   onUpdateProfile?: (updated: Partial<UserProfile>) => void;
+  onUpdateGrammarProgress?: (progress: GrammarTopicProgress) => void;
+  onCompleteReading?: (level: CEFRLevel) => void;
   t?: (key: string, params?: Record<string, string | number>) => string;
 }
 
 export const Home: React.FC<HomeProps> = ({
   user,
   vocabItems,
+  exerciseErrors = [],
   userProfiles = ['en'],
   grammarProgress = {},
   readingProgress = {},
@@ -49,8 +55,15 @@ export const Home: React.FC<HomeProps> = ({
   onAddNewLanguage,
   onStartReview,
   onNavigate,
+  onSelectGrammarTopic,
+  onAddVocabItem,
+  onSaveExerciseError,
+  onDeleteItem,
+  onDeleteExerciseError,
   onOpenLevelTest,
   onUpdateProfile,
+  onUpdateGrammarProgress,
+  onCompleteReading,
 }) => {
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -271,6 +284,19 @@ export const Home: React.FC<HomeProps> = ({
                   <span className="text-xs">→</span>
                 </button>
               )}
+
+              {/* Direct and prominent button to "La mia tana" (Saved Words & Translator) */}
+              <button
+                type="button"
+                onClick={() => onNavigate('translator')}
+                id="btn-direct-tana-vocab"
+                className="flex items-center gap-1.5 bg-[#6B7C4F]/25 hover:bg-[#6B7C4F]/45 text-[#F2E8D5] border-2 border-[#6B7C4F] hover:border-[#859966] px-3.5 py-1 rounded-full shadow-sm text-xs font-black font-display cursor-pointer transition-all active:scale-95 group"
+                title="Apri La mia tana per consultare tutte le parole salvate"
+              >
+                <span className="text-sm group-hover:scale-110 transition-transform">📚</span>
+                <span>La mia tana ({totalCount})</span>
+                <span className="text-[#859966] group-hover:text-[#F2E8D5] group-hover:translate-x-0.5 transition-transform font-black">→</span>
+              </button>
             </div>
 
             <h1 className="text-2xl sm:text-3xl font-extrabold font-display text-[#F2E8D5] leading-tight mt-1">
@@ -342,28 +368,26 @@ export const Home: React.FC<HomeProps> = ({
             </div>
           </div>
 
-          {/* Visual track preview with Rocky and Target */}
-          <div className="mt-4 pt-4 border-t border-[#6B7C4F]/20 flex items-center justify-between gap-3 bg-[#1A1512] p-4 rounded-2xl border border-[#6B7C4F]/25">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-[#E8802F] text-[#1A1512] flex items-center justify-center font-black font-display text-xs shadow-md">
+          {/* Visual track preview with Level badge & status */}
+          <div className="mt-4 pt-4 border-t border-[#6B7C4F]/20 flex items-center justify-between gap-3 bg-[#1A1512] p-3.5 sm:p-4 rounded-2xl border border-[#6B7C4F]/25">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-9 h-9 rounded-xl bg-[#E8802F] text-[#1A1512] flex items-center justify-center font-black font-display text-xs shadow-md shrink-0">
                 {currentStudyLevel}
               </div>
-              <div className="flex flex-col">
-                <span className="text-xs font-black font-display text-[#F2E8D5]">
+              <div className="flex flex-col min-w-0">
+                <span className="text-xs font-black font-display text-[#F2E8D5] truncate">
                   {allObjectivesComplete ? 'Checkpoint pronto 🎯' : `${(isObj1Complete ? 1 : 0) + (isObj2Complete ? 1 : 0) + (isObj3Complete ? 1 : 0)}/3 obiettivi completati`}
                 </span>
-                <span className="text-[11px] font-medium text-[#F2E8D5]/65">
-                  {allObjectivesComplete
-                    ? 'Sblocca il test di livello nel percorso'
-                    : '1. Grammatica • 2. Letture • 3. Esplorazione'}
+                <span className="text-[11px] font-medium text-[#F2E8D5]/65 truncate">
+                  8 lezioni sequenziali + checkpoint
                 </span>
               </div>
             </div>
 
-            <div className="flex items-center gap-1.5 text-xs font-extrabold text-[#E8802F] font-display group-hover:translate-x-1 transition-transform shrink-0">
-              <span className="hidden sm:inline">Apri percorso</span>
-              <span className="sm:hidden">Apri</span>
-              <span className="text-sm">→</span>
+            <div className="text-right shrink-0">
+              <span className="text-xs font-black text-[#859966] font-display">
+                {Math.round((obj1Percent + obj2Percent + (isMaxLevel ? 100 : obj3Percent)) / (isMaxLevel ? 2 : 3))}%
+              </span>
             </div>
           </div>
 
@@ -378,231 +402,129 @@ export const Home: React.FC<HomeProps> = ({
               />
             </div>
           </div>
+
+          {/* Prominent Large Zucca Button: "Vai al percorso" */}
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              playSound('review');
+              setShowPathwayScreen(true);
+            }}
+            className="btn-zucca w-full py-3 sm:py-3.5 px-4 font-black text-sm sm:text-base flex items-center justify-center gap-2 shadow-lg hover:shadow-xl transition-all cursor-pointer mt-4"
+          >
+            <span>🧭</span>
+            <span>Vai al percorso</span>
+            <span>→</span>
+          </button>
         </div>
       </section>
 
-      {/* 4. Griglia di attività (Due card per riga) */}
-      <section className="space-y-4">
-        <h2 className="text-lg sm:text-xl font-extrabold font-display text-[#F2E8D5] px-1 flex items-center gap-2">
+      {/* 4. Griglia di attività: Hub di pratica compatto (3 riquadri per riga, stile gioco) */}
+      <section className="space-y-3">
+        <h2 className="text-base sm:text-lg font-extrabold font-display text-[#F2E8D5] px-1 flex items-center gap-2">
           <span>⚡</span>
           <span>Attività di Studio</span>
         </h2>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {/* Card 1: Grammatica */}
-          <div
+        <div className="grid grid-cols-3 gap-2.5 sm:gap-3">
+          {/* Tile 1: Grammatica */}
+          <button
+            type="button"
             onClick={() => onNavigate('grammar')}
-            className="bento-card p-6 border-2 border-[#6B7C4F]/30 hover:border-[#6B7C4F] cursor-pointer flex flex-col justify-between group transition-all relative overflow-hidden bg-[#2B2622] text-[#F2E8D5]"
+            className="p-3 sm:p-4 rounded-2xl bg-[#2B2622] hover:bg-[#342D28] border border-[#6B7C4F]/30 hover:border-[#6B7C4F] text-center flex flex-col items-center justify-center gap-1.5 cursor-pointer transition-all active:scale-95 shadow-sm group"
           >
-            <div className="space-y-3.5">
-              <div className="flex items-center justify-between">
-                <div className="w-12 h-12 rounded-2xl bg-[#6B7C4F]/20 text-[#859966] flex items-center justify-center text-2xl font-bold shadow-xs">
-                  🌲
-                </div>
-                <span className="badge-leaf bg-[#6B7C4F] text-[#F2E8D5] font-display text-xs">
-                  Syllabus A1–C2
-                </span>
-              </div>
+            <span className="text-2xl sm:text-3xl group-hover:scale-110 transition-transform">🌲</span>
+            <span className="text-xs sm:text-sm font-black font-display text-[#F2E8D5] group-hover:text-[#859966] transition-colors leading-tight">
+              Grammatica
+            </span>
+          </button>
 
-              <div>
-                <h3 className="text-xl font-extrabold font-display text-[#F2E8D5] group-hover:text-[#859966] transition-colors">
-                  Grammatica
-                </h3>
-                <p className="text-xs sm:text-sm text-[#F2E8D5]/75 font-medium mt-1 leading-relaxed">
-                  Percorso strutturato di regole, schede teoriche ed esercizi guidati con feedback immediato.
-                </p>
-              </div>
-            </div>
-
-            <div className="mt-6 pt-3.5 border-t border-[#6B7C4F]/20 flex items-center justify-between">
-              <span className="text-xs font-extrabold text-[#859966] font-display">
-                {passedGrammarCount} argomenti superati
-              </span>
-              <span className="text-sm font-extrabold font-display text-[#859966] flex items-center gap-1 group-hover:translate-x-1 transition-transform">
-                Apri grammatica →
-              </span>
-            </div>
-          </div>
-
-          {/* Card 2: Letture */}
-          <div
+          {/* Tile 2: Letture */}
+          <button
+            type="button"
             onClick={() => onNavigate('reading')}
-            className="bento-card p-6 border-2 border-[#6B7C4F]/30 hover:border-[#C99A3D] cursor-pointer flex flex-col justify-between group transition-all relative overflow-hidden bg-[#2B2622] text-[#F2E8D5]"
+            className="p-3 sm:p-4 rounded-2xl bg-[#2B2622] hover:bg-[#342D28] border border-[#6B7C4F]/30 hover:border-[#C99A3D] text-center flex flex-col items-center justify-center gap-1.5 cursor-pointer transition-all active:scale-95 shadow-sm group"
           >
-            <div className="space-y-3.5">
-              <div className="flex items-center justify-between">
-                <div className="w-12 h-12 rounded-2xl bg-[#C99A3D]/20 text-[#C99A3D] flex items-center justify-center text-2xl font-bold shadow-xs">
-                  📚
-                </div>
-                <span className="badge-leaf bg-[#C99A3D] text-[#1A1512] font-black text-xs">
-                  Comprensione
-                </span>
-              </div>
+            <span className="text-2xl sm:text-3xl group-hover:scale-110 transition-transform">📚</span>
+            <span className="text-xs sm:text-sm font-black font-display text-[#F2E8D5] group-hover:text-[#C99A3D] transition-colors leading-tight">
+              Letture
+            </span>
+          </button>
 
-              <div>
-                <h3 className="text-xl font-extrabold font-display text-[#F2E8D5] group-hover:text-[#C99A3D] transition-colors">
-                  Letture & Comprensione
-                </h3>
-                <p className="text-xs sm:text-sm text-[#F2E8D5]/75 font-medium mt-1 leading-relaxed">
-                  Brani interattivi parametrati sul tuo livello. Tocca qualsiasi vocabolo per scoprirne traduzione e grammatica.
-                </p>
-              </div>
-            </div>
-
-            <div className="mt-6 pt-3.5 border-t border-[#6B7C4F]/20 flex items-center justify-between">
-              <span className="text-xs font-extrabold text-[#F2E8D5]/70 font-display">
-                Livello: {currentStudyLevel}
-              </span>
-              <span className="text-sm font-extrabold font-display text-[#C99A3D] flex items-center gap-1 group-hover:translate-x-1 transition-transform">
-                Leggi ora →
-              </span>
-            </div>
-          </div>
-
-          {/* Card 3: Ripasso Vocaboli */}
-          <div
+          {/* Tile 3: Ripasso Vocaboli */}
+          <button
+            type="button"
             onClick={() => {
               if (onStartReview) onStartReview();
               else onNavigate('memorize');
             }}
-            className="bento-card p-6 border-2 border-[#6B7C4F]/30 hover:border-[#E8802F] cursor-pointer flex flex-col justify-between group transition-all relative overflow-hidden bg-[#2B2622] text-[#F2E8D5]"
+            className="p-3 sm:p-4 rounded-2xl bg-[#2B2622] hover:bg-[#342D28] border border-[#6B7C4F]/30 hover:border-[#E8802F] text-center flex flex-col items-center justify-center gap-1.5 cursor-pointer transition-all active:scale-95 shadow-sm relative group"
           >
-            <div className="space-y-3.5">
-              <div className="flex items-center justify-between">
-                <div className="w-12 h-12 rounded-2xl bg-[#E8802F]/20 text-[#E8802F] flex items-center justify-center text-2xl font-bold shadow-xs">
-                  ⚡
-                </div>
-                <span className="badge-leaf bg-[#E8802F] text-[#1A1512] font-black text-xs font-display">
-                  {dueItems.length > 0 ? `${dueItems.length} pronte` : 'In pari ✓'}
-                </span>
-              </div>
+            {dueItems.length > 0 && (
+              <span className="absolute top-2 right-2 w-2.5 h-2.5 rounded-full bg-[#E8802F] animate-pulse" />
+            )}
+            <span className="text-2xl sm:text-3xl group-hover:scale-110 transition-transform">⚡</span>
+            <span className="text-xs sm:text-sm font-black font-display text-[#F2E8D5] group-hover:text-[#E8802F] transition-colors leading-tight">
+              Ripasso
+            </span>
+          </button>
 
-              <div>
-                <h3 className="text-xl font-extrabold font-display text-[#F2E8D5] group-hover:text-[#E8802F] transition-colors">
-                  Ripasso Vocaboli
-                </h3>
-                <p className="text-xs sm:text-sm text-[#F2E8D5]/75 font-medium mt-1 leading-relaxed">
-                  Allena la memoria a lungo termine con il sistema di ripetizione spaziata (Spaced Repetition).
-                </p>
-              </div>
-            </div>
-
-            <div className="mt-6 pt-3.5 border-t border-[#6B7C4F]/20 flex items-center justify-between">
-              <span className="text-xs font-extrabold text-[#859966] font-display">
-                {totalCount} vocaboli in tana
-              </span>
-              <span className="text-sm font-extrabold font-display text-[#E8802F] flex items-center gap-1 group-hover:translate-x-1 transition-transform">
-                Inizia ripasso →
-              </span>
-            </div>
-          </div>
-
-          {/* Card 4: Pronuncia */}
-          <div
+          {/* Tile 4: Pronuncia */}
+          <button
+            type="button"
             onClick={() => onNavigate('pronunciation')}
-            className="bento-card p-6 border-2 border-[#6B7C4F]/30 hover:border-[#E8802F] cursor-pointer flex flex-col justify-between group transition-all relative overflow-hidden bg-[#2B2622] text-[#F2E8D5]"
+            className="p-3 sm:p-4 rounded-2xl bg-[#2B2622] hover:bg-[#342D28] border border-[#6B7C4F]/30 hover:border-[#E8802F] text-center flex flex-col items-center justify-center gap-1.5 cursor-pointer transition-all active:scale-95 shadow-sm group"
           >
-            <div className="space-y-3.5">
-              <div className="flex items-center justify-between">
-                <div className="w-12 h-12 rounded-2xl bg-[#E8802F]/20 text-[#E8802F] flex items-center justify-center text-2xl font-bold shadow-xs">
-                  🎙️
-                </div>
-                <span className="badge-leaf bg-[#6B7C4F] text-[#F2E8D5] text-xs font-display">
-                  Ascolto & Voce
-                </span>
-              </div>
+            <span className="text-2xl sm:text-3xl group-hover:scale-110 transition-transform">🎙️</span>
+            <span className="text-xs sm:text-sm font-black font-display text-[#F2E8D5] group-hover:text-[#E8802F] transition-colors leading-tight">
+              Pronuncia
+            </span>
+          </button>
 
-              <div>
-                <h3 className="text-xl font-extrabold font-display text-[#F2E8D5] group-hover:text-[#E8802F] transition-colors">
-                  Pronuncia & Voce
-                </h3>
-                <p className="text-xs sm:text-sm text-[#F2E8D5]/75 font-medium mt-1 leading-relaxed">
-                  Ascolta la pronuncia madrelingua, registrati e confronta il tuo audio per affinare l'accento.
-                </p>
-              </div>
-            </div>
-
-            <div className="mt-6 pt-3.5 border-t border-[#6B7C4F]/20 flex items-center justify-between">
-              <span className="text-xs font-extrabold text-[#F2E8D5]/70 font-display">
-                Sessioni interattive
-              </span>
-              <span className="text-sm font-extrabold font-display text-[#E8802F] flex items-center gap-1 group-hover:translate-x-1 transition-transform">
-                Allena la voce →
-              </span>
-            </div>
-          </div>
-
-          {/* Card 5: Scenari */}
-          <div
+          {/* Tile 5: Scenari */}
+          <button
+            type="button"
             onClick={() => onNavigate('scenarios')}
-            className="bento-card p-6 border-2 border-[#6B7C4F]/30 hover:border-[#D88A3D] cursor-pointer flex flex-col justify-between group transition-all relative overflow-hidden bg-[#2B2622] text-[#F2E8D5] sm:col-span-2"
+            className="p-3 sm:p-4 rounded-2xl bg-[#2B2622] hover:bg-[#342D28] border border-[#6B7C4F]/30 hover:border-[#D88A3D] text-center flex flex-col items-center justify-center gap-1.5 cursor-pointer transition-all active:scale-95 shadow-sm group"
           >
-            <div className="space-y-3.5">
-              <div className="flex items-center justify-between">
-                <div className="w-12 h-12 rounded-2xl bg-[#D88A3D]/20 text-[#D88A3D] flex items-center justify-center text-2xl font-bold shadow-xs">
-                  🎭
-                </div>
-                <span className="badge-leaf bg-[#D88A3D] text-[#1A1512] font-black text-xs font-display">
-                  Palestra Pratica
-                </span>
-              </div>
+            <span className="text-2xl sm:text-3xl group-hover:scale-110 transition-transform">🎭</span>
+            <span className="text-xs sm:text-sm font-black font-display text-[#F2E8D5] group-hover:text-[#D88A3D] transition-colors leading-tight">
+              Scenari
+            </span>
+          </button>
 
-              <div>
-                <h3 className="text-xl font-extrabold font-display text-[#F2E8D5] group-hover:text-[#D88A3D] transition-colors">
-                  Scenari & Contesti Reali
-                </h3>
-                <p className="text-xs sm:text-sm text-[#F2E8D5]/75 font-medium mt-1 leading-relaxed">
-                  Allenati in situazioni concrete: viaggi, lavoro, ristoranti, emergenze e contesti su misura. Vocabolario chiave, 8 esercizi e mini-dialogo.
-                </p>
-              </div>
-            </div>
-
-            <div className="mt-6 pt-3.5 border-t border-[#6B7C4F]/20 flex items-center justify-between">
-              <span className="text-xs font-extrabold text-[#D88A3D] font-display">
-                8 contesti + contesto libero
-              </span>
-              <span className="text-sm font-extrabold font-display text-[#D88A3D] flex items-center gap-1 group-hover:translate-x-1 transition-transform">
-                Entra nella palestra →
-              </span>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* 5. Link compatto "📚 La mia lista di parole" */}
-      <section className="p-4 sm:p-5 rounded-2xl bg-[#2B2622] border-2 border-[#6B7C4F]/30 text-[#F2E8D5] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-md">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-[#1A1512] border border-[#6B7C4F]/30 flex items-center justify-center text-xl shrink-0">
-            📚
-          </div>
-          <div>
-            <h4 className="font-extrabold font-display text-sm sm:text-base text-[#F2E8D5]">
-              La mia lista di parole
-            </h4>
-            <p className="text-xs text-[#F2E8D5]/70 font-medium">
-              {totalCount} vocaboli collezionati nella tana di {activeLang.name}
-            </p>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-3 w-full sm:w-auto justify-end pt-2 sm:pt-0 border-t sm:border-t-0 border-[#6B7C4F]/20">
+          {/* Tile 6: Traduttore */}
           <button
             type="button"
             onClick={() => onNavigate('translator')}
-            className="text-xs sm:text-sm font-extrabold font-display text-[#E8802F] hover:underline cursor-pointer flex items-center gap-1"
+            className="p-3 sm:p-4 rounded-2xl bg-[#2B2622] hover:bg-[#342D28] border border-[#6B7C4F]/30 hover:border-[#859966] text-center flex flex-col items-center justify-center gap-1.5 cursor-pointer transition-all active:scale-95 shadow-sm group"
           >
-            <span>Apri nel Traduttore</span>
+            <span className="text-2xl sm:text-3xl group-hover:scale-110 transition-transform">📖</span>
+            <span className="text-xs sm:text-sm font-black font-display text-[#F2E8D5] group-hover:text-[#859966] transition-colors leading-tight">
+              Traduttore
+            </span>
+          </button>
+        </div>
+      </section>
+
+      {/* 5. La mia lista di parole: Singola riga compatta con freccia */}
+      <section className="pt-1">
+        <div
+          onClick={() => onNavigate('translator')}
+          className="flex items-center justify-between py-3 px-4 rounded-2xl bg-[#2B2622]/80 hover:bg-[#2B2622] border border-[#6B7C4F]/25 hover:border-[#6B7C4F]/50 text-[#F2E8D5] cursor-pointer transition-all group shadow-sm"
+        >
+          <div className="flex items-center gap-3">
+            <span className="text-lg">📚</span>
+            <span className="text-xs sm:text-sm font-bold font-display text-[#F2E8D5] group-hover:text-[#E8802F] transition-colors">
+              La mia lista di parole ({totalCount} vocaboli in tana)
+            </span>
+          </div>
+
+          <div className="flex items-center gap-1 text-xs font-black text-[#859966] group-hover:text-[#E8802F] transition-colors font-display">
+            <span>Vedi tutte</span>
             <span>→</span>
-          </button>
-          <span className="text-[#6B7C4F]/40">•</span>
-          <button
-            type="button"
-            onClick={() => onNavigate('import')}
-            className="text-xs sm:text-sm font-extrabold font-display text-[#859966] hover:underline cursor-pointer flex items-center gap-1"
-          >
-            <span>Importa</span>
-            <span>📥</span>
-          </button>
+          </div>
         </div>
       </section>
 
@@ -759,6 +681,7 @@ export const Home: React.FC<HomeProps> = ({
       {showPathwayScreen && (
         <PathwayScreen
           user={user}
+          vocabItems={vocabItems}
           grammarProgress={grammarProgress}
           readingProgress={readingProgress}
           onClose={() => setShowPathwayScreen(false)}
@@ -770,6 +693,10 @@ export const Home: React.FC<HomeProps> = ({
             setShowPathwayScreen(false);
             onOpenLevelTest();
           }}
+          onSaveVocabItem={onAddVocabItem}
+          onSaveExerciseError={onSaveExerciseError}
+          onUpdateGrammarProgress={onUpdateGrammarProgress}
+          onCompleteReading={onCompleteReading}
         />
       )}
     </div>

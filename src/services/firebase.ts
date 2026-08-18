@@ -18,7 +18,7 @@ import {
   deleteDoc,
   getDocFromServer,
 } from 'firebase/firestore';
-import { UserProfile, UserAccount, VocabItem, GrammarTopicProgress, SharedLanguagePairContent, UITranslationSet, Gender, CEFRLevel, ScenarioRecord } from '../types';
+import { UserProfile, UserAccount, VocabItem, ExerciseError, ExerciseErrorType, GrammarTopicProgress, SharedLanguagePairContent, UITranslationSet, Gender, CEFRLevel, ScenarioRecord, LessonPath } from '../types';
 import { SEED_IT_EN_CONTENT } from '../data/sharedContentSeed';
 import { NATIVE_LANGUAGES, TARGET_LANGUAGES } from '../data/languages';
 import { IT_TRANSLATIONS } from '../i18n/translations';
@@ -40,6 +40,7 @@ const firebaseConfig = loadedConfig || {
 // Storage keys for local resilience
 const LOCAL_USER_KEY = 'raccoonary_local_user';
 const LOCAL_VOCAB_KEY = 'raccoonary_local_vocab';
+const LOCAL_EXERCISE_ERRORS_KEY = 'raccoonary_local_exercise_errors';
 const LOCAL_GRAMMAR_KEY = 'raccoonary_local_grammar';
 
 // Helper for timing out hanging Firestore operations
@@ -752,6 +753,198 @@ export async function deleteVocabItem(userId: string, itemId: string, profileId?
   }
 }
 
+// ------------------- EXERCISE ERRORS -------------------
+export function getLocalExerciseErrors(): ExerciseError[] {
+  const saved = localStorage.getItem(LOCAL_EXERCISE_ERRORS_KEY);
+  if (saved) {
+    try {
+      return JSON.parse(saved);
+    } catch (e) {}
+  }
+  return [];
+}
+
+export function saveLocalExerciseErrors(items: ExerciseError[]): void {
+  localStorage.setItem(LOCAL_EXERCISE_ERRORS_KEY, JSON.stringify(items));
+}
+
+export async function fetchExerciseErrors(userId: string, profileId?: string): Promise<ExerciseError[]> {
+  const targetProfileId = profileId || getLocalUserProfile().activeProfileId || 'en';
+  if (db && !userId.startsWith('local_user_')) {
+    const path = `users/${userId}/profiles/${targetProfileId}/exerciseErrors`;
+    try {
+      const colRef = collection(db, 'users', userId, 'profiles', targetProfileId, 'exerciseErrors');
+      const snap = await getDocs(colRef);
+      const items: ExerciseError[] = [];
+      snap.forEach((docSnap) => {
+        items.push({ id: docSnap.id, ...(docSnap.data() as Omit<ExerciseError, 'id'>) });
+      });
+      saveLocalExerciseErrors(items);
+      return items;
+    } catch (e) {
+      handleFirestoreError(e, OperationType.LIST, path);
+    }
+  }
+  return getLocalExerciseErrors();
+}
+
+export async function saveExerciseError(userId: string, item: ExerciseError, profileId?: string): Promise<void> {
+  const targetProfileId = profileId || getLocalUserProfile().activeProfileId || 'en';
+  const items = getLocalExerciseErrors();
+  const existingIdx = items.findIndex((i) => i.id === item.id);
+  if (existingIdx >= 0) {
+    items[existingIdx] = item;
+  } else {
+    items.push(item);
+  }
+  saveLocalExerciseErrors(items);
+
+  if (db && !userId.startsWith('local_user_')) {
+    const path = `users/${userId}/profiles/${targetProfileId}/exerciseErrors/${item.id}`;
+    try {
+      const docRef = doc(db, 'users', userId, 'profiles', targetProfileId, 'exerciseErrors', item.id);
+      await setDoc(docRef, item, { merge: true });
+    } catch (e) {
+      handleFirestoreError(e, OperationType.WRITE, path);
+    }
+  }
+}
+
+export async function bulkSaveExerciseErrors(userId: string, newItems: ExerciseError[], profileId?: string): Promise<void> {
+  const targetProfileId = profileId || getLocalUserProfile().activeProfileId || 'en';
+  const items = getLocalExerciseErrors();
+  const itemMap = new Map<string, ExerciseError>();
+  items.forEach((i) => itemMap.set(i.id, i));
+  newItems.forEach((i) => itemMap.set(i.id, i));
+
+  const updatedList = Array.from(itemMap.values());
+  saveLocalExerciseErrors(updatedList);
+
+  if (db && !userId.startsWith('local_user_')) {
+    for (const item of newItems) {
+      const path = `users/${userId}/profiles/${targetProfileId}/exerciseErrors/${item.id}`;
+      try {
+        const docRef = doc(db, 'users', userId, 'profiles', targetProfileId, 'exerciseErrors', item.id);
+        await setDoc(docRef, item, { merge: true });
+      } catch (e) {
+        handleFirestoreError(e, OperationType.WRITE, path);
+      }
+    }
+  }
+}
+
+export async function deleteExerciseError(userId: string, errorId: string, profileId?: string): Promise<void> {
+  const targetProfileId = profileId || getLocalUserProfile().activeProfileId || 'en';
+  const items = getLocalExerciseErrors().filter((i) => i.id !== errorId);
+  saveLocalExerciseErrors(items);
+
+  if (db && !userId.startsWith('local_user_')) {
+    const path = `users/${userId}/profiles/${targetProfileId}/exerciseErrors/${errorId}`;
+    try {
+      const docRef = doc(db, 'users', userId, 'profiles', targetProfileId, 'exerciseErrors', errorId);
+      await deleteDoc(docRef);
+    } catch (e) {
+      handleFirestoreError(e, OperationType.DELETE, path);
+    }
+  }
+}
+
+// Helper to determine if a legacy vocab item is actually an exercise mistake
+export function isMalformedVocabExercise(item: VocabItem): boolean {
+  if (item.origin === 'grammar_error' || item.origin === 'level_test_error' || item.origin === 'exercise_error') {
+    return true;
+  }
+  if (item.origin === 'reading_error') {
+    if (item.term.includes('___') || item.term.includes('?') || item.term.split(/\s+/).length > 7) {
+      return true;
+    }
+  }
+  if (item.term.includes('_____') || item.term.includes('____') || (item.term.includes('...') && item.term.split(/\s+/).length > 6)) {
+    return true;
+  }
+  return false;
+}
+
+export function convertVocabToExerciseError(item: VocabItem): ExerciseError {
+  let tipo: ExerciseErrorType = 'grammatica';
+  if (
+    item.origin === 'level_test_error' ||
+    item.originDetail?.toLowerCase().includes('livello') ||
+    item.originDetail?.toLowerCase().includes('test')
+  ) {
+    tipo = 'test_livello';
+  } else if (
+    item.origin === 'reading_error' ||
+    item.originDetail?.toLowerCase().includes('lettura')
+  ) {
+    tipo = 'lettura';
+  }
+
+  return {
+    id: item.id.startsWith('err_') ? item.id : `err_${item.id}`,
+    domanda: item.term,
+    rispostaCorretta: item.translation,
+    tipo,
+    argomentoRiferimento: item.originDetail || 'Esercizio',
+    createdAt: item.createdAt || Date.now(),
+    box: item.box || 1,
+    nextReviewAt: item.nextReviewAt || Date.now(),
+    wrongCount: item.wrongCount || 1,
+    lastReviewedAt: item.lastReviewedAt || null,
+    correctStreak: item.correctStreak || 0,
+    spiegazione: item.exampleTranslation || '',
+  };
+}
+
+export async function migrateLegacyMalformedVocabs(
+  userId: string,
+  profileId?: string
+): Promise<{ cleanedVocab: VocabItem[]; migratedErrors: ExerciseError[] }> {
+  const currentVocabs = await fetchVocabItems(userId, profileId);
+  const currentErrors = await fetchExerciseErrors(userId, profileId);
+
+  const toKeep: VocabItem[] = [];
+  const toMigrate: ExerciseError[] = [];
+  const toDeleteIds: string[] = [];
+
+  for (const item of currentVocabs) {
+    if (isMalformedVocabExercise(item)) {
+      toMigrate.push(convertVocabToExerciseError(item));
+      toDeleteIds.push(item.id);
+    } else {
+      toKeep.push(item);
+    }
+  }
+
+  if (toMigrate.length > 0) {
+    console.log(`[Migration] Migrating ${toMigrate.length} malformed exercise items from vocabItems to exerciseErrors`);
+
+    const errorMap = new Map<string, ExerciseError>();
+    currentErrors.forEach((e) => errorMap.set(e.id, e));
+    toMigrate.forEach((e) => errorMap.set(e.id, e));
+    const mergedErrors = Array.from(errorMap.values());
+
+    await bulkSaveExerciseErrors(userId, mergedErrors, profileId);
+
+    // Save cleaned vocab items
+    saveLocalVocabItems(toKeep);
+    if (db && !userId.startsWith('local_user_')) {
+      const targetProfileId = profileId || getLocalUserProfile().activeProfileId || 'en';
+      for (const delId of toDeleteIds) {
+        try {
+          const docRef = doc(db, 'users', userId, 'profiles', targetProfileId, 'vocabItems', delId);
+          await deleteDoc(docRef);
+        } catch (e) {
+          console.warn('Error deleting migrated vocab doc:', delId, e);
+        }
+      }
+    }
+    return { cleanedVocab: toKeep, migratedErrors: mergedErrors };
+  }
+
+  return { cleanedVocab: currentVocabs, migratedErrors: currentErrors };
+}
+
 // ------------------- GRAMMAR PROGRESS -------------------
 export async function fetchGrammarProgress(userId: string, profileId?: string): Promise<Record<string, GrammarTopicProgress>> {
   const targetProfileId = profileId || getLocalUserProfile().activeProfileId || 'en';
@@ -1008,11 +1201,12 @@ export async function resetAllData(userId: string, profileId?: string): Promise<
   const targetProfileId = profileId || getLocalUserProfile().activeProfileId || 'en';
   localStorage.removeItem(LOCAL_USER_KEY);
   localStorage.removeItem(LOCAL_VOCAB_KEY);
+  localStorage.removeItem(LOCAL_EXERCISE_ERRORS_KEY);
   localStorage.removeItem(LOCAL_GRAMMAR_KEY);
   localStorage.removeItem('raccoonary_level_test_history');
 
   if (db && !userId.startsWith('local_user_')) {
-    const subcollections = ['vocabItems', 'grammarProgress', 'readingProgress', 'levelTests'];
+    const subcollections = ['vocabItems', 'exerciseErrors', 'grammarProgress', 'readingProgress', 'levelTests'];
     for (const sub of subcollections) {
       const path = `users/${userId}/profiles/${targetProfileId}/${sub}`;
       try {
@@ -1064,13 +1258,14 @@ export async function adminResetTestData(userId: string, profileId?: string): Pr
   const targetProfileId = profileId || getLocalUserProfile().activeProfileId || 'en';
   localStorage.removeItem(LOCAL_USER_KEY);
   localStorage.removeItem(LOCAL_VOCAB_KEY);
+  localStorage.removeItem(LOCAL_EXERCISE_ERRORS_KEY);
   localStorage.removeItem(LOCAL_GRAMMAR_KEY);
   localStorage.removeItem('raccoonary_level_test_history');
   localStorage.removeItem('raccoonary_grammar_progress');
   localStorage.removeItem('raccoonary_last_active_topic');
 
   if (db && !userId.startsWith('local_user_')) {
-    const subcollections = ['vocabItems', 'grammarProgress', 'readingProgress', 'levelTests'];
+    const subcollections = ['vocabItems', 'exerciseErrors', 'grammarProgress', 'readingProgress', 'levelTests'];
     for (const sub of subcollections) {
       const path = `users/${userId}/profiles/${targetProfileId}/${sub}`;
       try {
@@ -1301,4 +1496,97 @@ export async function fetchUITranslations(nativeLang: string = 'it'): Promise<UI
     generatedAt: Date.now(),
   };
 }
+
+const LOCAL_LESSON_PATH_KEY = 'raccoonary_local_lesson_path';
+
+export async function saveLessonPath(
+  userId: string,
+  targetLanguage: string,
+  path: LessonPath
+): Promise<void> {
+  // Local storage cache
+  try {
+    const raw = localStorage.getItem(LOCAL_LESSON_PATH_KEY);
+    const map = raw ? JSON.parse(raw) : {};
+    const key = `${userId}_${targetLanguage}`;
+    map[key] = path;
+    localStorage.setItem(LOCAL_LESSON_PATH_KEY, JSON.stringify(map));
+  } catch (e) {
+    console.warn('Could not save lesson path to localStorage:', e);
+  }
+
+  if (db && !userId.startsWith('local_user_')) {
+    const pathId = path.id || 'current';
+    const docPath = `users/${userId}/profiles/${targetLanguage}/lessonPath/${pathId}`;
+    try {
+      const docRef = doc(db, 'users', userId, 'profiles', targetLanguage, 'lessonPath', pathId);
+      await withTimeout(setDoc(docRef, path, { merge: true }), 8000);
+    } catch (e) {
+      handleFirestoreError(e, OperationType.WRITE, docPath);
+    }
+  }
+}
+
+export async function fetchLessonPath(
+  userId: string,
+  targetLanguage: string
+): Promise<LessonPath | null> {
+  if (db && !userId.startsWith('local_user_')) {
+    const docPath = `users/${userId}/profiles/${targetLanguage}/lessonPath`;
+    try {
+      const colRef = collection(db, 'users', userId, 'profiles', targetLanguage, 'lessonPath');
+      const snap = await withTimeout(getDocs(colRef), 8000);
+      if (!snap.empty) {
+        // Pick the most recent path
+        const docs = snap.docs.map((d) => d.data() as LessonPath);
+        docs.sort((a, b) => (b.creatoIl || 0) - (a.creatoIl || 0));
+        return docs[0] || null;
+      }
+    } catch (e) {
+      handleFirestoreError(e, OperationType.GET, docPath);
+    }
+  }
+
+  // Fallback to local storage
+  try {
+    const raw = localStorage.getItem(LOCAL_LESSON_PATH_KEY);
+    if (raw) {
+      const map = JSON.parse(raw);
+      const key = `${userId}_${targetLanguage}`;
+      return map[key] || null;
+    }
+  } catch (e) {
+    console.warn('Could not load lesson path from localStorage:', e);
+  }
+
+  return null;
+}
+
+export async function resetLessonPath(
+  userId: string,
+  targetLanguage: string
+): Promise<void> {
+  try {
+    const raw = localStorage.getItem(LOCAL_LESSON_PATH_KEY);
+    if (raw) {
+      const map = JSON.parse(raw);
+      const key = `${userId}_${targetLanguage}`;
+      delete map[key];
+      localStorage.setItem(LOCAL_LESSON_PATH_KEY, JSON.stringify(map));
+    }
+  } catch (e) {}
+
+  if (db && !userId.startsWith('local_user_')) {
+    try {
+      const colRef = collection(db, 'users', userId, 'profiles', targetLanguage, 'lessonPath');
+      const snap = await getDocs(colRef);
+      for (const docSnap of snap.docs) {
+        await deleteDoc(docSnap.ref);
+      }
+    } catch (e) {
+      console.warn('Could not delete lessonPath from Firestore:', e);
+    }
+  }
+}
+
 

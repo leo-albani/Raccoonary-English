@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { UserProfile, VocabItem, GrammarTopicProgress, SharedLanguagePairContent } from './types';
+import React, { useState, useEffect, useRef } from 'react';
+import { UserProfile, VocabItem, ExerciseError, GrammarTopicProgress, SharedLanguagePairContent } from './types';
 import {
   auth,
   fetchUserProfile,
@@ -8,6 +8,11 @@ import {
   saveVocabItem,
   bulkSaveVocabItems,
   deleteVocabItem,
+  fetchExerciseErrors,
+  saveExerciseError,
+  deleteExerciseError,
+  migrateLegacyMalformedVocabs,
+  getLocalExerciseErrors,
   resetAllData,
   adminResetTestData,
   adminSimulateNewUser,
@@ -53,6 +58,7 @@ export function App() {
   const [userId, setUserId] = useState<string>('local_user');
   const [user, setUser] = useState<UserProfile>(getLocalUserProfile());
   const [vocabItems, setVocabItems] = useState<VocabItem[]>(getLocalVocabItems());
+  const [exerciseErrors, setExerciseErrors] = useState<ExerciseError[]>(getLocalExerciseErrors());
   const [currentTab, setCurrentTab] = useState<NavTab>('home');
   const [selectedGrammarTopicId, setSelectedGrammarTopicId] = useState<string | null>(null);
   const [showLevelTest, setShowLevelTest] = useState(false);
@@ -65,6 +71,85 @@ export function App() {
   const [uiTranslationsMap, setUiTranslationsMap] = useState<Record<string, string>>(IT_TRANSLATIONS);
   const [isGeneratingUITranslations, setIsGeneratingUITranslations] = useState<boolean>(false);
   const [showGuidedTour, setShowGuidedTour] = useState<boolean>(false);
+  const [showExitToast, setShowExitToast] = useState<boolean>(false);
+  const lastBackPressRef = useRef<number>(0);
+  const exitToastTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Initialize history state on mount to prevent instant browser ejection
+  useEffect(() => {
+    try {
+      window.history.replaceState({ screen: 'home' }, '');
+      window.history.pushState({ screen: 'home' }, '');
+    } catch (e) {}
+  }, []);
+
+  // Sync sub-screen changes into browser history
+  useEffect(() => {
+    try {
+      if (currentTab !== 'home' || showLevelTest) {
+        window.history.pushState({ screen: currentTab, showLevelTest }, '');
+      }
+    } catch (e) {}
+  }, [currentTab, showLevelTest]);
+
+  // Handle hardware / browser back button:
+  // - On sub-screens: navigates back to Tana (Home)
+  // - On Tana (Root): requires double-press within 2 seconds to exit, showing a toast
+  useEffect(() => {
+    const handlePopState = () => {
+      // 1. If inside Level Test modal/screen, exit back to Home
+      if (showLevelTest) {
+        setShowLevelTest(false);
+        try {
+          window.history.pushState({ screen: 'home' }, '');
+        } catch (e) {}
+        return;
+      }
+
+      // 2. If in any secondary tab, return to Tana (Home)
+      if (currentTab !== 'home') {
+        setSelectedGrammarTopicId(null);
+        setCurrentTab('home');
+        try {
+          window.history.pushState({ screen: 'home' }, '');
+        } catch (e) {}
+        return;
+      }
+
+      // 3. If ALREADY on Tana (Home/Root)
+      const now = Date.now();
+      if (now - lastBackPressRef.current < 2000) {
+        // Second press within 2s -> Allow exiting
+        setShowExitToast(false);
+        if (exitToastTimerRef.current) {
+          clearTimeout(exitToastTimerRef.current);
+        }
+        window.history.back();
+      } else {
+        // First press on Tana -> Block exit, record time, and show toast
+        lastBackPressRef.current = now;
+        try {
+          window.history.pushState({ screen: 'home' }, '');
+        } catch (e) {}
+        setShowExitToast(true);
+
+        if (exitToastTimerRef.current) {
+          clearTimeout(exitToastTimerRef.current);
+        }
+        exitToastTimerRef.current = setTimeout(() => {
+          setShowExitToast(false);
+        }, 2000);
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+      if (exitToastTimerRef.current) {
+        clearTimeout(exitToastTimerRef.current);
+      }
+    };
+  }, [currentTab, showLevelTest]);
 
   const handleCompleteTour = async () => {
     setShowGuidedTour(false);
@@ -190,7 +275,7 @@ export function App() {
           setUserProfiles(profiles);
 
           const profile = await fetchUserProfile(authUser.uid);
-          const items = await fetchVocabItems(authUser.uid, profile.activeProfileId);
+          const { cleanedVocab, migratedErrors } = await migrateLegacyMalformedVocabs(authUser.uid, profile.activeProfileId);
           const grammarMap = await fetchGrammarProgress(authUser.uid, profile.activeProfileId);
           const readingMap = await fetchReadingProgress(authUser.uid, profile.activeProfileId);
 
@@ -224,7 +309,8 @@ export function App() {
             setupDailyReminderTimer(profile.reminderTime || '20:00');
           }
 
-          setVocabItems(items);
+          setVocabItems(cleanedVocab);
+          setExerciseErrors(migratedErrors);
           setGrammarProgress(grammarMap);
           setReadingProgress(readingMap);
           setIsAuthenticated(true);
@@ -327,6 +413,18 @@ export function App() {
     setVocabItems(updated);
   };
 
+  const handleSaveExerciseError = async (item: ExerciseError) => {
+    await saveExerciseError(userId, item, user.activeProfileId);
+    const updated = await fetchExerciseErrors(userId, user.activeProfileId);
+    setExerciseErrors(updated);
+  };
+
+  const handleDeleteExerciseError = async (errorId: string) => {
+    await deleteExerciseError(userId, errorId, user.activeProfileId);
+    const updated = await fetchExerciseErrors(userId, user.activeProfileId);
+    setExerciseErrors(updated);
+  };
+
   const handleSessionComplete = async (acornsEarned: number) => {
     const updatedUser = {
       ...user,
@@ -341,6 +439,7 @@ export function App() {
     const refreshedUser = await fetchUserProfile(userId);
     setUser(refreshedUser);
     setVocabItems([]);
+    setExerciseErrors([]);
     setGrammarProgress({});
     setCurrentTab('home');
   };
@@ -350,9 +449,11 @@ export function App() {
     await adminResetTestData(userId, user.activeProfileId);
     const refreshedUser = await fetchUserProfile(userId);
     const refreshedVocab = await fetchVocabItems(userId, refreshedUser.activeProfileId);
+    const refreshedErrors = await fetchExerciseErrors(userId, refreshedUser.activeProfileId);
     const refreshedGrammar = await fetchGrammarProgress(userId, refreshedUser.activeProfileId);
     setUser(refreshedUser);
     setVocabItems(refreshedVocab);
+    setExerciseErrors(refreshedErrors);
     setGrammarProgress(refreshedGrammar);
     setShowLevelTest(false);
     setIsLoading(false);
@@ -376,11 +477,12 @@ export function App() {
     setIsLoading(true);
     try {
       const updatedProfile = await switchActiveProfile(userId, targetLanguage);
-      const items = await fetchVocabItems(userId, targetLanguage);
+      const { cleanedVocab, migratedErrors } = await migrateLegacyMalformedVocabs(userId, targetLanguage);
       const grammarMap = await fetchGrammarProgress(userId, targetLanguage);
       const readingMap = await fetchReadingProgress(userId, targetLanguage);
       setUser(updatedProfile);
-      setVocabItems(items);
+      setVocabItems(cleanedVocab);
+      setExerciseErrors(migratedErrors);
       setGrammarProgress(grammarMap);
       setReadingProgress(readingMap);
       setShowLevelTest(false);
@@ -399,12 +501,14 @@ export function App() {
       const updatedProfiles = await fetchUserProfiles(userId);
       const updatedProfile = await fetchUserProfile(userId);
       const items = await fetchVocabItems(userId, targetLanguage);
+      const errs = await fetchExerciseErrors(userId, targetLanguage);
       const grammarMap = await fetchGrammarProgress(userId, targetLanguage);
       const readingMap = await fetchReadingProgress(userId, targetLanguage);
 
       setUserProfiles(updatedProfiles);
       setUser(updatedProfile);
       setVocabItems(items);
+      setExerciseErrors(errs);
       setGrammarProgress(grammarMap);
       setReadingProgress(readingMap);
       setShowLevelTest(false);
@@ -429,12 +533,14 @@ export function App() {
       const updatedProfiles = await fetchUserProfiles(userId);
       const updatedUser = await fetchUserProfile(userId);
       const items = await fetchVocabItems(userId, updatedUser.activeProfileId);
+      const errs = await fetchExerciseErrors(userId, updatedUser.activeProfileId);
       const grammarMap = await fetchGrammarProgress(userId, updatedUser.activeProfileId);
       const readingMap = await fetchReadingProgress(userId, updatedUser.activeProfileId);
 
       setUserProfiles(updatedProfiles);
       setUser(updatedUser);
       setVocabItems(items);
+      setExerciseErrors(errs);
       setGrammarProgress(grammarMap);
       setReadingProgress(readingMap);
     } catch (e) {
@@ -468,10 +574,11 @@ export function App() {
           }
           setUserId(localId);
           const profile = await fetchUserProfile(localId);
-          const items = await fetchVocabItems(localId, profile.activeProfileId);
+          const { cleanedVocab, migratedErrors } = await migrateLegacyMalformedVocabs(localId, profile.activeProfileId);
           const grammarMap = await fetchGrammarProgress(localId, profile.activeProfileId);
           setUser(profile);
-          setVocabItems(items);
+          setVocabItems(cleanedVocab);
+          setExerciseErrors(migratedErrors);
           setGrammarProgress(grammarMap);
           setIsAuthenticated(true);
           setIsLoading(false);
@@ -490,9 +597,10 @@ export function App() {
           setIsLoading(true);
           setNeedsProfileSetup(false);
           const updatedProfile = await fetchUserProfile(userId);
-          const items = await fetchVocabItems(userId);
+          const { cleanedVocab, migratedErrors } = await migrateLegacyMalformedVocabs(userId, updatedProfile.activeProfileId);
           setUser(updatedProfile);
-          setVocabItems(items);
+          setVocabItems(cleanedVocab);
+          setExerciseErrors(migratedErrors);
           setIsLoading(false);
         }}
       />
@@ -532,7 +640,9 @@ export function App() {
     );
   }
 
-  const dueItems = vocabItems.filter((i) => i.nextReviewAt <= Date.now());
+  const dueVocabCount = vocabItems.filter((i) => i.nextReviewAt <= Date.now()).length;
+  const dueErrorCount = exerciseErrors.filter((i) => i.nextReviewAt <= Date.now()).length;
+  const dueTotalCount = dueVocabCount + dueErrorCount;
 
   return (
     <div className="min-h-screen bg-[#1A1512] text-[#F2E8D5] font-sans antialiased relative selection:bg-[#E8802F]/30 selection:text-[#F2E8D5]">
@@ -546,7 +656,7 @@ export function App() {
           setSelectedGrammarTopicId(null);
           setCurrentTab(tab);
         }}
-        dueCount={dueItems.length}
+        dueCount={dueTotalCount}
         user={user}
         t={t}
       />
@@ -562,6 +672,7 @@ export function App() {
               await updateUserProfile(u);
             }}
             onSaveErrorVocab={handleSaveItem}
+            onSaveExerciseError={handleSaveExerciseError}
             onBack={() => setShowLevelTest(false)}
             t={t}
           />
@@ -571,6 +682,7 @@ export function App() {
               <Home
                 user={user}
                 vocabItems={vocabItems}
+                exerciseErrors={exerciseErrors}
                 userProfiles={userProfiles}
                 sharedContent={sharedContent}
                 grammarProgress={grammarProgress}
@@ -584,13 +696,17 @@ export function App() {
                   setCurrentTab('grammar');
                 }}
                 onAddVocabItem={handleSaveItem}
+                onSaveExerciseError={handleSaveExerciseError}
                 onDeleteItem={handleDeleteItem}
+                onDeleteExerciseError={handleDeleteExerciseError}
                 onOpenLevelTest={() => setShowLevelTest(true)}
                 onUpdateProfile={async (updated) => {
                   const u = { ...user, ...updated };
                   setUser(u);
                   await updateUserProfile(u);
                 }}
+                onUpdateGrammarProgress={handleUpdateGrammarProgress}
+                onCompleteReading={handleCompleteReading}
                 t={t}
               />
             )}
@@ -608,8 +724,11 @@ export function App() {
             {currentTab === 'memorize' && (
               <Memorization
                 vocabItems={vocabItems}
+                exerciseErrors={exerciseErrors}
                 onSaveItem={handleSaveItem}
+                onSaveExerciseError={handleSaveExerciseError}
                 onDeleteItem={handleDeleteItem}
+                onDeleteExerciseError={handleDeleteExerciseError}
                 onSessionComplete={handleSessionComplete}
                 onBackToHome={() => setCurrentTab('home')}
                 t={t}
@@ -619,6 +738,7 @@ export function App() {
             {currentTab === 'grammar' && (
               <Grammar
                 onSaveErrorVocab={handleSaveItem}
+                onSaveExerciseError={handleSaveExerciseError}
                 selectedTopicId={selectedGrammarTopicId}
                 grammarProgress={grammarProgress}
                 onUpdateGrammarProgress={handleUpdateGrammarProgress}
@@ -643,6 +763,7 @@ export function App() {
             {currentTab === 'reading' && (
               <Reading
                 onSaveVocabItem={handleSaveItem}
+                onSaveExerciseError={handleSaveExerciseError}
                 onCompleteReading={handleCompleteReading}
                 userProfile={user}
                 t={t}
@@ -672,6 +793,7 @@ export function App() {
                 user={user}
                 userProfiles={userProfiles}
                 vocabItems={vocabItems}
+                exerciseErrors={exerciseErrors}
                 onUpdateUser={async (u) => {
                   setUser(u);
                   await updateUserProfile(u);
@@ -680,6 +802,7 @@ export function App() {
                 onAddNewLanguage={handleAddNewLanguage}
                 onDeleteLanguageProfile={handleDeleteLanguageProfile}
                 onDeleteItem={handleDeleteItem}
+                onDeleteExerciseError={handleDeleteExerciseError}
                 onResetData={handleResetData}
                 onAdminResetData={handleAdminResetData}
                 onAdminSimulateNewUser={handleAdminSimulateNewUser}
@@ -699,6 +822,14 @@ export function App() {
           onComplete={handleCompleteTour}
           onSkip={handleCompleteTour}
         />
+      )}
+
+      {/* Double-Back Exit Toast */}
+      {showExitToast && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-[#2B2622]/95 border-2 border-[#E8802F] text-[#F2E8D5] px-4 sm:px-5 py-2.5 rounded-full shadow-2xl backdrop-blur-md flex items-center gap-2.5 text-xs sm:text-sm font-extrabold font-display animate-in fade-in slide-in-from-bottom-3 duration-200 pointer-events-none">
+          <span className="text-base">🚪</span>
+          <span>Premi di nuovo per uscire</span>
+        </div>
       )}
     </div>
   );

@@ -52,6 +52,26 @@
       },
       "required": ["id", "term", "translation", "origin", "createdAt", "box", "nextReviewAt"]
     },
+    "ExerciseError": {
+      "title": "Exercise Error",
+      "description": "Mistakes made during grammar, placement level test, or reading comprehension to review via Leitner system",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "domanda": { "type": "string", "maxLength": 2000 },
+        "rispostaCorretta": { "type": "string", "maxLength": 1000 },
+        "tipo": { "type": "string", "maxLength": 64 },
+        "argomentoRiferimento": { "type": "string", "maxLength": 256 },
+        "createdAt": { "type": "number" },
+        "box": { "type": "number" },
+        "nextReviewAt": { "type": "number" },
+        "wrongCount": { "type": "number" },
+        "lastReviewedAt": { "type": "number" },
+        "correctStreak": { "type": "number" },
+        "spiegazione": { "type": "string", "maxLength": 2000 }
+      },
+      "required": ["id", "domanda", "rispostaCorretta", "tipo", "argomentoRiferimento", "createdAt", "box", "nextReviewAt", "wrongCount"]
+    },
     "GrammarTopicProgress": {
       "title": "Grammar Topic Progress",
       "description": "Progress tracking for individual grammar syllabus topics",
@@ -120,6 +140,32 @@
         "generatedAt": { "type": "number" }
       },
       "required": ["langCode", "strings"]
+    },
+    "LessonPath": {
+      "title": "Guided Lesson Path",
+      "description": "Sequential 8-lesson guided path with checkpoint and mini-test",
+      "type": "object",
+      "properties": {
+        "livelloTarget": { "type": "string", "maxLength": 16 },
+        "lezioni": { "type": "array" },
+        "checkpointSuperato": { "type": "boolean" },
+        "miniTestSuperato": { "type": "boolean" },
+        "creatoIl": { "type": "number" }
+      },
+      "required": ["livelloTarget", "lezioni", "creatoIl"]
+    },
+    "ScenarioRecord": {
+      "title": "Scenario Record",
+      "description": "Real life contextual scenario practice record",
+      "type": "object",
+      "properties": {
+        "scenarioId": { "type": "string", "maxLength": 128 },
+        "title": { "type": "string", "maxLength": 256 },
+        "status": { "type": "string", "maxLength": 32 },
+        "completedAt": { "type": "number" },
+        "lastPracticedAt": { "type": "number" }
+      },
+      "required": ["scenarioId", "title", "status"]
     }
   },
   "firestore": {
@@ -143,6 +189,10 @@
       "schema": "VocabItem",
       "description": "Language profile vocabulary collection"
     },
+    "/users/{userId}/profiles/{profileId}/exerciseErrors/{errorId}": {
+      "schema": "ExerciseError",
+      "description": "Language profile exercise mistakes collection for Leitner review"
+    },
     "/users/{userId}/profiles/{profileId}/grammarProgress/{topicId}": {
       "schema": "GrammarTopicProgress",
       "description": "Language profile grammar topic progress subcollection"
@@ -150,6 +200,14 @@
     "/users/{userId}/profiles/{profileId}/levelTests/{testId}": {
       "schema": "LevelTestResult",
       "description": "Language profile CEFR level test attempt history"
+    },
+    "/users/{userId}/profiles/{profileId}/scenarios/{scenarioId}": {
+      "schema": "ScenarioRecord",
+      "description": "Language profile scenario practice progress"
+    },
+    "/users/{userId}/profiles/{profileId}/lessonPath/{pathId}": {
+      "schema": "LessonPath",
+      "description": "Language profile 8-lesson guided pathway state"
     },
     "/users/{userId}/vocabItems/{itemId}": {
       "schema": "VocabItem",

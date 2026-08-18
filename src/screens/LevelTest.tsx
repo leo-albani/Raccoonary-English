@@ -1,15 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { Mascot } from '../mascot/Mascot';
-import { CEFRLevel, LevelTestQuestion, LevelTestResult, UserProfile, VocabItem } from '../types';
+import { CEFRLevel, LevelTestQuestion, LevelTestResult, UserProfile, VocabItem, ExerciseError } from '../types';
 import { generateLevelTest } from '../services/gemini';
-import { fetchLevelTests, saveLevelTestResult } from '../services/firebase';
+import { fetchLevelTests, saveLevelTestResult, resetLessonPath } from '../services/firebase';
 import { NATIVE_LANGUAGES, TARGET_LANGUAGES } from '../data/languages';
 import { playSound } from '../services/sound';
 
 interface LevelTestProps {
   userProfile: UserProfile;
   onUpdateProfile: (updated: Partial<UserProfile>) => void;
-  onSaveErrorVocab: (item: VocabItem) => void;
+  onSaveErrorVocab?: (item: VocabItem) => void;
+  onSaveExerciseError?: (item: ExerciseError) => void;
   onBack: () => void;
   t?: (key: string, params?: Record<string, string | number>) => string;
 }
@@ -20,6 +21,7 @@ export const LevelTest: React.FC<LevelTestProps> = ({
   userProfile,
   onUpdateProfile,
   onSaveErrorVocab,
+  onSaveExerciseError,
   onBack,
 }) => {
   const [questionsByLevel, setQuestionsByLevel] = useState<Record<CEFRLevel, LevelTestQuestion[]>>({
@@ -132,25 +134,44 @@ export const LevelTest: React.FC<LevelTestProps> = ({
           lvlCorrect += 1;
           totalCorrect += 1;
         } else {
-          const errorVocab: VocabItem = {
-            id: `level_test_${Date.now()}_${lvl}_${idx}_${Math.random().toString(36).substring(2, 6)}`,
-            term: q.domanda,
-            translation: q.rispostaCorretta,
-            sourceLang: targetLang,
-            targetLang: nativeLang,
-            synonyms: [],
-            exampleSource: q.testo_contesto || q.domanda,
-            exampleTranslation: `Risposta corretta del test: ${q.rispostaCorretta}`,
-            origin: 'level_test_error',
-            originDetail: `Livello ${q.level}`,
-            createdAt: Date.now(),
-            lastReviewedAt: null,
-            box: 1,
-            nextReviewAt: Date.now(),
-            correctStreak: 0,
-            wrongCount: 1,
-          };
-          onSaveErrorVocab(errorVocab);
+          if (onSaveExerciseError) {
+            const errorItem: ExerciseError = {
+              id: `level_test_${Date.now()}_${lvl}_${idx}_${Math.random().toString(36).substring(2, 6)}`,
+              domanda: q.domanda,
+              rispostaCorretta: q.rispostaCorretta,
+              tipo: 'test_livello',
+              argomentoRiferimento: `Test di Livello (${q.level})`,
+              createdAt: Date.now(),
+              box: 1,
+              nextReviewAt: Date.now(),
+              wrongCount: 1,
+              lastReviewedAt: null,
+              correctStreak: 0,
+              spiegazione: q.testo_contesto ? `Contesto: ${q.testo_contesto}` : undefined,
+              opzioni: q.opzioni,
+            };
+            onSaveExerciseError(errorItem);
+          } else if (onSaveErrorVocab) {
+            const errorVocab: VocabItem = {
+              id: `level_test_${Date.now()}_${lvl}_${idx}_${Math.random().toString(36).substring(2, 6)}`,
+              term: q.domanda,
+              translation: q.rispostaCorretta,
+              sourceLang: targetLang,
+              targetLang: nativeLang,
+              synonyms: [],
+              exampleSource: q.testo_contesto || q.domanda,
+              exampleTranslation: `Risposta corretta del test: ${q.rispostaCorretta}`,
+              origin: 'level_test_error',
+              originDetail: `Livello ${q.level}`,
+              createdAt: Date.now(),
+              lastReviewedAt: null,
+              box: 1,
+              nextReviewAt: Date.now(),
+              correctStreak: 0,
+              wrongCount: 1,
+            };
+            onSaveErrorVocab(errorVocab);
+          }
         }
       });
 
@@ -188,9 +209,11 @@ export const LevelTest: React.FC<LevelTestProps> = ({
     setTestHistory(updatedHistory);
     if (userProfile.userId) {
       saveLevelTestResult(userProfile.userId, newResult, userProfile.activeProfileId);
+      resetLessonPath(userProfile.userId, userProfile.activeProfileId || targetLang).catch(console.warn);
     } else {
       try {
         localStorage.setItem(`raccoonary_level_test_history_${targetLang}`, JSON.stringify(updatedHistory));
+        resetLessonPath('local_user_test', targetLang).catch(console.warn);
       } catch (e) {
         console.error(e);
       }

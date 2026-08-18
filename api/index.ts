@@ -974,6 +974,313 @@ function getFallbackLevelTestQuestions() {
   ];
 }
 
+// API 10: Generate Checkpoint (10 questions covering 8 guided lessons)
+router.post("/generate-checkpoint", async (req, res) => {
+  try {
+    const {
+      targetLang = "en",
+      nativeLang = "it",
+      targetName = "Inglese",
+      nativeName = "Italiano",
+      level = "A1",
+      topicsSummary = [],
+    } = req.body;
+
+    const ai = getGeminiClient();
+
+    const topicsText = Array.isArray(topicsSummary) && topicsSummary.length > 0
+      ? `Argomenti affrontati nelle 8 lezioni: ${topicsSummary.join(", ")}.`
+      : `Percorso di livello CEFR ${level}.`;
+
+    const prompt = `Sei un esaminatore esperto di ${targetName} per studenti madrelingua ${nativeName}.
+Genera un Checkpoint finale di 10 domande per verificare l'apprendimento al livello CEFR ${level}.
+${topicsText}
+
+Requisiti:
+1. Genera esattamente 10 domande:
+   - 4 domande di Vocabolario (significato, sinonimi, completamento in contesto)
+   - 4 domande di Grammatica (regole, tempi verbali, concordanza, trasformazione)
+   - 2 domande di Lettura / Comprensione breve (includi un brevissimo testo di 2 frasi nel campo della domanda o come premessa)
+2. Tipi ammessi per ogni domanda: "multiple_choice" (con 4 opzioni plausibili) o "fill_in_blank".
+3. Istruzioni e spiegazioni in ${nativeName}. Domande e opzioni nella lingua target (${targetName}).
+4. Ogni domanda deve avere:
+   - "id": "cp_1" ... "cp_10"
+   - "tipo": "multiple_choice" | "fill_in_blank"
+   - "lezioneTipo": "vocabolario" | "grammatica" | "lettura"
+   - "domanda": testo chiaro della domanda
+   - "opzioni": array di 4 opzioni per multiple_choice, oppure array vuoto [] se fill_in_blank
+   - "rispostaCorretta": la risposta corretta esatta
+   - "spiegazione": breve e amichevole spiegazione della risposta esatta in ${nativeName}
+
+Rispondi RIGOROSAMENTE SOLO in JSON con questo array di 10 oggetti:
+[
+  {
+    "id": "cp_1",
+    "tipo": "multiple_choice",
+    "lezioneTipo": "vocabolario",
+    "domanda": "...",
+    "opzioni": ["A", "B", "C", "D"],
+    "rispostaCorretta": "...",
+    "spiegazione": "..."
+  }
+]`;
+
+    const response = await ai.models.generateContent({
+      model: "gemini-3.7-flash",
+      contents: prompt,
+      config: {
+        responseMimeType: "application/json",
+      },
+    });
+
+    const parsed = JSON.parse(cleanJsonOutput(response.text || "[]"));
+    if (Array.isArray(parsed) && parsed.length >= 8) {
+      return res.json({ questions: parsed.slice(0, 10) });
+    }
+
+    res.json({ questions: getFallbackCheckpointQuestions(level) });
+  } catch (err: any) {
+    console.error("Error generating checkpoint:", err);
+    res.json({ questions: getFallbackCheckpointQuestions(req.body.level || "A1") });
+  }
+});
+
+function getFallbackCheckpointQuestions(level: string) {
+  return [
+    {
+      id: "cp_1",
+      tipo: "multiple_choice",
+      lezioneTipo: "vocabolario",
+      domanda: "Qual è il significato del termine 'Everyday'?",
+      opzioni: ["Quotidiano", "Domani", "Mai", "Raramente"],
+      rispostaCorretta: "Quotidiano",
+      spiegazione: "'Everyday' indica qualcosa di comune o quotidiano."
+    },
+    {
+      id: "cp_2",
+      tipo: "multiple_choice",
+      lezioneTipo: "grammatica",
+      domanda: "Scegli la forma corretta: 'She ___ coffee every morning.'",
+      opzioni: ["drinks", "drink", "drinking", "is drink"],
+      rispostaCorretta: "drinks",
+      spiegazione: "Alla terza persona singolare del Present Simple si aggiunge la 's'."
+    },
+    {
+      id: "cp_3",
+      tipo: "fill_in_blank",
+      lezioneTipo: "vocabolario",
+      domanda: "Completa con il plurale di 'child': 'They have three ___.'",
+      rispostaCorretta: "children",
+      spiegazione: "'Children' è il plurale irregolare di 'child'."
+    },
+    {
+      id: "cp_4",
+      tipo: "multiple_choice",
+      lezioneTipo: "grammatica",
+      domanda: "Scegli l'opzione corretta: 'They ___ at home yesterday.'",
+      opzioni: ["were", "was", "are", "been"],
+      rispostaCorretta: "were",
+      spiegazione: "Per 'they' al Past Simple del verbo to be si usa 'were'."
+    },
+    {
+      id: "cp_5",
+      tipo: "multiple_choice",
+      lezioneTipo: "lettura",
+      domanda: "Leggi: 'Marco woke up at 7:00 and immediately had breakfast before going to the station.' A che ora si è svegliato Marco?",
+      opzioni: ["Alle 7:00", "Alle 8:00", "A mezzogiorno", "Non è specificato"],
+      rispostaCorretta: "Alle 7:00",
+      spiegazione: "Il testo specifica 'woke up at 7:00'."
+    },
+    {
+      id: "cp_6",
+      tipo: "multiple_choice",
+      lezioneTipo: "vocabolario",
+      domanda: "Cosa significa l'espressione 'Looking forward to'?",
+      opzioni: ["Non vedere l'ora di", "Guardare indietro", "Cercare qualcosa", "Voltarsi"],
+      rispostaCorretta: "Non vedere l'ora di",
+      spiegazione: "'Look forward to' significa attendere con impazienza/entusiasmo."
+    },
+    {
+      id: "cp_7",
+      tipo: "fill_in_blank",
+      lezioneTipo: "grammatica",
+      domanda: "Inserisci la preposizione corretta: 'I will see you ___ Monday.'",
+      rispostaCorretta: "on",
+      spiegazione: "Con i giorni della settimana in inglese si usa la preposizione 'on'."
+    },
+    {
+      id: "cp_8",
+      tipo: "multiple_choice",
+      lezioneTipo: "grammatica",
+      domanda: "Qual è la forma corretta? 'This book is ___ than that one.'",
+      opzioni: ["better", "gooder", "more good", "best"],
+      rispostaCorretta: "better",
+      spiegazione: "'Better' è il comparativo irregolare di 'good'."
+    },
+    {
+      id: "cp_9",
+      tipo: "multiple_choice",
+      lezioneTipo: "lettura",
+      domanda: "Leggi: 'The library is open from Monday to Friday, but closed on weekends.' Quando è chiusa la biblioteca?",
+      opzioni: ["Nel fine settimana", "Il lunedì", "Tutti i giorni", "Mai"],
+      rispostaCorretta: "Nel fine settimana",
+      spiegazione: "'Closed on weekends' significa chiusa il sabato e la domenica."
+    },
+    {
+      id: "cp_10",
+      tipo: "fill_in_blank",
+      lezioneTipo: "vocabolario",
+      domanda: "Completa con il contrario di 'difficult': 'The test was very ___ (facile)'.",
+      rispostaCorretta: "easy",
+      spiegazione: "L'opposto di 'difficult' è 'easy'."
+    }
+  ];
+}
+
+// API 11: Generate Mini-Test (10 questions at next level for level jump assessment)
+router.post("/generate-mini-test", async (req, res) => {
+  try {
+    const {
+      targetLang = "en",
+      nativeLang = "it",
+      targetName = "Inglese",
+      nativeName = "Italiano",
+      currentLevel = "A1",
+      nextLevel = "A2",
+    } = req.body;
+
+    const ai = getGeminiClient();
+
+    const prompt = `Sei un esaminatore esperto di ${targetName} per studenti madrelingua ${nativeName}.
+Lo studente sta completando il livello ${currentLevel} e vuole verificare se è pronto a salire al livello CEFR ${nextLevel}.
+Genera un Mini-Test rapido di esattamente 10 domande mirate al livello ${nextLevel}.
+
+Requisiti:
+1. Esattamente 10 domande focalizzate sulle competenze chiave richieste nel livello ${nextLevel} (grammatica, vocabolario pratico, comprensione).
+2. Tipi ammessi: "multiple_choice" (4 opzioni) o "fill_in_blank".
+3. Domande e opzioni in ${targetName}, istruzioni e spiegazioni in ${nativeName}.
+4. Ogni domanda deve avere:
+   - "id": "mt_1" ... "mt_10"
+   - "tipo": "multiple_choice" | "fill_in_blank"
+   - "domanda": testo chiaro della domanda
+   - "opzioni": array di 4 opzioni per multiple_choice o []
+   - "rispostaCorretta": risposta esatta
+   - "spiegazione": spiegazione incoraggiante in ${nativeName}
+
+Rispondi RIGOROSAMENTE SOLO in JSON con questo array di 10 oggetti:
+[
+  {
+    "id": "mt_1",
+    "tipo": "multiple_choice",
+    "domanda": "...",
+    "opzioni": ["A", "B", "C", "D"],
+    "rispostaCorretta": "...",
+    "spiegazione": "..."
+  }
+]`;
+
+    const response = await ai.models.generateContent({
+      model: "gemini-3.7-flash",
+      contents: prompt,
+      config: {
+        responseMimeType: "application/json",
+      },
+    });
+
+    const parsed = JSON.parse(cleanJsonOutput(response.text || "[]"));
+    if (Array.isArray(parsed) && parsed.length >= 8) {
+      return res.json({ targetLevel: nextLevel, questions: parsed.slice(0, 10) });
+    }
+
+    res.json({ targetLevel: nextLevel, questions: getFallbackMiniTestQuestions(nextLevel) });
+  } catch (err: any) {
+    console.error("Error generating mini-test:", err);
+    res.json({ targetLevel: req.body.nextLevel || "A2", questions: getFallbackMiniTestQuestions(req.body.nextLevel || "A2") });
+  }
+});
+
+function getFallbackMiniTestQuestions(level: string) {
+  return [
+    {
+      id: "mt_1",
+      tipo: "multiple_choice",
+      domanda: "Yesterday we ___ to a great Italian restaurant.",
+      opzioni: ["went", "go", "gone", "was going"],
+      rispostaCorretta: "went",
+      spiegazione: "Il past simple del verbo irregolare 'to go' è 'went'."
+    },
+    {
+      id: "mt_2",
+      tipo: "multiple_choice",
+      domanda: "Have you ever ___ sushi?",
+      opzioni: ["eaten", "ate", "eat", "eating"],
+      rispostaCorretta: "eaten",
+      spiegazione: "Con il Present Perfect si usa il participio passato 'eaten'."
+    },
+    {
+      id: "mt_3",
+      tipo: "fill_in_blank",
+      domanda: "She is much ___ (tall) than her sister.",
+      rispostaCorretta: "taller",
+      spiegazione: "Il comparativo di maggioranza di 'tall' è 'taller'."
+    },
+    {
+      id: "mt_4",
+      tipo: "multiple_choice",
+      domanda: "You ___ not smoke here, it is forbidden.",
+      opzioni: ["must", "can", "should", "would"],
+      rispostaCorretta: "must",
+      spiegazione: "'Must not' esprime una proibizione formale."
+    },
+    {
+      id: "mt_5",
+      tipo: "multiple_choice",
+      domanda: "If it rains tomorrow, we ___ at home.",
+      opzioni: ["will stay", "stayed", "would stay", "staying"],
+      rispostaCorretta: "will stay",
+      spiegazione: "Nel primo periodo ipotetico si usa 'will + forma base' nella proposizione principale."
+    },
+    {
+      id: "mt_6",
+      tipo: "fill_in_blank",
+      domanda: "I haven't seen him ___ three weeks. (for / since)",
+      rispostaCorretta: "for",
+      spiegazione: "'For' si usa con una durata di tempo ('three weeks')."
+    },
+    {
+      id: "mt_7",
+      tipo: "multiple_choice",
+      domanda: "The person ___ helped me was very kind.",
+      opzioni: ["who", "which", "where", "whose"],
+      rispostaCorretta: "who",
+      spiegazione: "'Who' è il pronome relativo per le persone."
+    },
+    {
+      id: "mt_8",
+      tipo: "fill_in_blank",
+      domanda: "He gave ___ smoking last year (smise / phrasal verb: give ___).",
+      rispostaCorretta: "up",
+      spiegazione: "'Give up' significa smettere / abbandonare un'abitudine."
+    },
+    {
+      id: "mt_9",
+      tipo: "multiple_choice",
+      domanda: "I would travel around the world if I ___ more time.",
+      opzioni: ["had", "have", "will have", "would have"],
+      rispostaCorretta: "had",
+      spiegazione: "Nel secondo condizionale si usa il Past Simple ('had') dopo 'if'."
+    },
+    {
+      id: "mt_10",
+      tipo: "multiple_choice",
+      domanda: "The museum was ___ by thousands of tourists last summer.",
+      opzioni: ["visited", "visiting", "visit", "visits"],
+      rispostaCorretta: "visited",
+      spiegazione: "Forma passiva al passato: 'was + participio passato (visited)'."
+    }
+  ];
+}
+
 // Cron Endpoint: Daily Push Notification Reminders
 // Invoked hourly by GitHub Actions or scheduled crons
 router.all("/cron/send-reminders", async (req, res) => {
