@@ -175,7 +175,7 @@ export const Memorization: React.FC<MemorizationProps> = ({
                   setIsFinished(false);
                   setEvaluation(null);
                   setSessionStarted(true);
-                  playSound('pop');
+                  playSound('review');
                 }}
                 className="btn-zucca w-full py-4 text-base shadow-xl flex items-center justify-center gap-2 cursor-pointer font-black"
               >

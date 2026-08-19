@@ -315,28 +315,28 @@ export const Pronunciation: React.FC<PronunciationProps> = ({
       <div className="p-4 sm:p-6 max-w-lg mx-auto text-center space-y-6 pt-8 animate-fade-in pb-28">
         <Mascot pose="happy" size={120} speechBubble={tr('pronunciation.mascotFinished')} />
 
-        <div className="bento-card space-y-5 border-2 border-[#6B7C4F]/30">
-          <h2 className="text-2xl font-bold font-display text-[#3A2B22]">
+        <div className="bento-card space-y-5 border-2 border-[#6B7C4F]/40 bg-[#2B2622]">
+          <h2 className="text-2xl font-extrabold font-display text-[#F2E8D5]">
             {tr('pronunciation.finishedTitle')}
           </h2>
 
           <div className="grid grid-cols-2 gap-3 py-1">
-            <div className="bg-[#6B7C4F]/10 p-4 rounded-2xl">
-              <div className="text-3xl font-bold font-display text-[#6B7C4F]">
+            <div className="bg-[#1A1512] p-4 rounded-2xl border border-[#6B7C4F]/30">
+              <div className="text-3xl font-black font-display text-[#859966]">
                 {successCount} / {sessionPool.length}
               </div>
-              <div className="text-xs text-[#3A2B22]/70 font-medium mt-1">{tr('pronunciation.successfulCount')}</div>
+              <div className="text-xs text-[#F2E8D5]/70 font-medium mt-1">{tr('pronunciation.successfulCount')}</div>
             </div>
 
-            <div className="bg-[#C99A3D]/10 p-4 rounded-2xl">
-              <div className="text-3xl font-bold font-display text-[#C99A3D]">
+            <div className="bg-[#1A1512] p-4 rounded-2xl border border-[#C99A3D]/30">
+              <div className="text-3xl font-black font-display text-[#E8802F]">
                 +{totalEarned} 🌰
               </div>
-              <div className="text-xs text-[#3A2B22]/70 font-medium mt-1">{tr('pronunciation.earnedAcorns')}</div>
+              <div className="text-xs text-[#F2E8D5]/70 font-medium mt-1">{tr('pronunciation.earnedAcorns')}</div>
             </div>
           </div>
 
-          <p className="text-xs text-[#3A2B22]/80 leading-relaxed font-medium">
+          <p className="text-xs text-[#F2E8D5]/80 leading-relaxed font-medium">
             {tr('pronunciation.finishedTip')}
           </p>
 
@@ -349,7 +349,7 @@ export const Pronunciation: React.FC<PronunciationProps> = ({
             </button>
             <button
               onClick={onBack}
-              className="py-3 px-5 rounded-2xl bg-white border-2 border-[#6B7C4F]/30 text-[#3A2B22] text-sm font-bold font-display hover:bg-[#F2E8D5]/50 transition-all cursor-pointer"
+              className="btn-secondary flex-1 py-3 text-sm"
             >
               🏠 {tr('pronunciation.backToTana')}
             </button>
@@ -363,7 +363,7 @@ export const Pronunciation: React.FC<PronunciationProps> = ({
     return (
       <div className="p-6 text-center max-w-md mx-auto pt-12 space-y-4">
         <Mascot pose="thinking" size={90} />
-        <p className="text-sm font-medium text-[#3A2B22]">{tr('pronunciation.loading')}</p>
+        <p className="text-sm font-bold text-[#F2E8D5]">{tr('pronunciation.loading')}</p>
       </div>
     );
   }
@@ -371,26 +371,26 @@ export const Pronunciation: React.FC<PronunciationProps> = ({
   return (
     <div className="p-4 sm:p-6 max-w-xl mx-auto space-y-6 pb-28">
       {/* Top Header */}
-      <div className="flex items-center justify-between border-b border-[#6B7C4F]/15 pb-3">
+      <div className="flex items-center justify-between border-b border-[#6B7C4F]/25 pb-3">
         <button
           onClick={onBack}
-          className="text-xs font-bold text-[#6B7C4F] hover:underline font-display flex items-center gap-1 cursor-pointer"
+          className="text-xs font-bold text-[#859966] hover:text-[#E8802F] font-display flex items-center gap-1 cursor-pointer transition-colors"
         >
           ← {tr('pronunciation.backToTana')}
         </button>
-        <span className="text-xs font-bold font-display text-[#6B7C4F] bg-[#6B7C4F]/10 px-3 py-1 rounded-full">
+        <span className="text-xs font-bold font-display text-[#E8802F] bg-[#1A1512] border border-[#E8802F]/30 px-3 py-1 rounded-full">
           {tr('pronunciation.exerciseProgress', { current: currentIndex + 1, total: sessionPool.length })}
         </span>
       </div>
 
       {/* Raccoon Explanation Banner */}
-      <div className="bento-card flex items-start sm:items-center gap-4 bg-[#F2E8D5]/70 border border-[#6B7C4F]/25 p-4">
+      <div className="bento-card flex items-start sm:items-center gap-4 bg-[#1A1512] border border-[#6B7C4F]/30 p-4">
         <div className="shrink-0">
           <Mascot pose="greeting" size={65} />
         </div>
         <div>
-          <h1 className="text-lg font-bold font-display text-[#3A2B22]">{tr('pronunciation.bannerTitle')}</h1>
-          <p className="text-xs text-[#3A2B22]/80 leading-relaxed font-medium mt-0.5">
+          <h1 className="text-lg font-extrabold font-display text-[#F2E8D5]">{tr('pronunciation.bannerTitle')}</h1>
+          <p className="text-xs text-[#F2E8D5]/80 leading-relaxed font-medium mt-0.5">
             "{tr('pronunciation.bannerSpeech')}"
           </p>
         </div>
@@ -399,9 +399,9 @@ export const Pronunciation: React.FC<PronunciationProps> = ({
       {/* Active Pronunciation Card */}
       <div className="bento-card space-y-6 border-2 border-[#6B7C4F]/30 shadow-sm relative">
         {/* Progress bar */}
-        <div className="w-full bg-gray-100 h-2 rounded-full overflow-hidden">
+        <div className="w-full bg-[#1A1512] h-2.5 rounded-full overflow-hidden border border-[#6B7C4F]/20">
           <div
-            className="bg-[#6B7C4F] h-full transition-all duration-300 rounded-full"
+            className="bg-[#E8802F] h-full transition-all duration-300 rounded-full"
             style={{ width: `${((currentIndex + 1) / sessionPool.length) * 100}%` }}
           />
         </div>
@@ -409,14 +409,14 @@ export const Pronunciation: React.FC<PronunciationProps> = ({
         {/* Display Term */}
         <div className="text-center space-y-2 py-2">
           <span className="badge-leaf">{tr('pronunciation.langLabel', { lang: targetName })}</span>
-          <h2 className="text-3xl sm:text-4xl font-bold font-display text-[#3A2B22]">
+          <h2 className="text-3xl sm:text-4xl font-black font-display text-[#F2E8D5]">
             {currentItem.term}
           </h2>
-          <p className="text-sm sm:text-base text-[#6B7C4F] font-bold">
+          <p className="text-sm sm:text-base text-[#859966] font-bold">
             {currentItem.translation}
           </p>
           {currentItem.example && (
-            <p className="text-xs sm:text-sm text-[#3A2B22]/70 italic max-w-md mx-auto pt-1 font-medium">
+            <p className="text-xs sm:text-sm text-[#F2E8D5]/70 italic max-w-md mx-auto pt-1 font-medium">
               "{currentItem.example}"
             </p>
           )}
@@ -428,7 +428,7 @@ export const Pronunciation: React.FC<PronunciationProps> = ({
             {/* 1. Model Audio Button */}
             <button
               onClick={handleSpeakModel}
-              className="py-3.5 px-4 rounded-2xl bg-[#6B7C4F]/15 border-2 border-[#6B7C4F]/40 hover:bg-[#6B7C4F]/25 text-[#3A2B22] font-bold font-display text-sm flex items-center justify-center gap-2 transition-all cursor-pointer shadow-xs"
+              className="py-3.5 px-4 rounded-2xl bg-[#1A1512] border-2 border-[#6B7C4F]/40 hover:bg-[#2B2622] hover:border-[#E8802F] text-[#F2E8D5] font-bold font-display text-sm flex items-center justify-center gap-2 transition-all cursor-pointer shadow-xs"
             >
               <span>🔊</span>
               <span>{tr('pronunciation.listenModel')}</span>
@@ -438,7 +438,7 @@ export const Pronunciation: React.FC<PronunciationProps> = ({
             {!micSupported || micPermissionDenied ? (
               <button
                 disabled
-                className="py-3.5 px-4 rounded-2xl bg-gray-100 border-2 border-gray-200 text-gray-400 font-bold font-display text-xs flex items-center justify-center gap-2 cursor-not-allowed"
+                className="py-3.5 px-4 rounded-2xl bg-[#1A1512] border-2 border-gray-700 text-gray-500 font-bold font-display text-xs flex items-center justify-center gap-2 cursor-not-allowed"
                 title={tr('pronunciation.micUnavailableTitle')}
               >
                 <span>🎙️</span>
@@ -447,7 +447,7 @@ export const Pronunciation: React.FC<PronunciationProps> = ({
             ) : isRecording ? (
               <button
                 onClick={handleStopRecording}
-                className="py-3.5 px-4 rounded-2xl bg-red-500 hover:bg-red-600 text-white font-bold font-display text-sm flex items-center justify-center gap-2 transition-all cursor-pointer shadow-md animate-pulse"
+                className="py-3.5 px-4 rounded-2xl bg-red-600 hover:bg-red-700 text-white font-bold font-display text-sm flex items-center justify-center gap-2 transition-all cursor-pointer shadow-md animate-pulse"
               >
                 <span className="w-3 h-3 rounded-full bg-white animate-ping" />
                 <span>⏹️ {tr('pronunciation.stopRecording')}</span>
@@ -455,7 +455,7 @@ export const Pronunciation: React.FC<PronunciationProps> = ({
             ) : (
               <button
                 onClick={handleStartRecording}
-                className="py-3.5 px-4 rounded-2xl bg-[#E8802F] hover:bg-[#d47023] text-white font-bold font-display text-sm flex items-center justify-center gap-2 transition-all cursor-pointer shadow-md"
+                className="btn-zucca py-3.5 px-4 text-sm flex items-center justify-center gap-2"
               >
                 <span>🎙️</span>
                 <span>{tr('pronunciation.startRecording')}</span>
@@ -465,21 +465,21 @@ export const Pronunciation: React.FC<PronunciationProps> = ({
 
           {/* User Recording Playback & Replay Controls */}
           {userAudioUrl && (
-            <div className="p-4 rounded-2xl bg-[#F2E8D5]/60 border border-[#6B7C4F]/30 space-y-3 animate-fade-in text-center">
+            <div className="p-4 rounded-2xl bg-[#1A1512] border border-[#6B7C4F]/30 space-y-3 animate-fade-in text-center">
               <audio ref={userAudioRef} src={userAudioUrl} className="hidden" />
-              <div className="text-xs font-bold text-[#3A2B22] flex items-center justify-center gap-2">
+              <div className="text-xs font-bold text-[#F2E8D5] flex items-center justify-center gap-2">
                 <span>🎧 {tr('pronunciation.recordingReady')}</span>
               </div>
               <div className="flex items-center justify-center gap-2 flex-wrap">
                 <button
                   onClick={handleSpeakModel}
-                  className="py-2 px-3.5 rounded-xl bg-white border border-[#6B7C4F]/30 text-xs font-bold text-[#3A2B22] hover:bg-gray-50 flex items-center gap-1.5 cursor-pointer shadow-xs"
+                  className="py-2 px-3.5 rounded-xl bg-[#2B2622] border border-[#6B7C4F]/30 text-xs font-bold text-[#F2E8D5] hover:border-[#E8802F] flex items-center gap-1.5 cursor-pointer shadow-xs"
                 >
                   <span>🔊 {tr('pronunciation.replayModel')}</span>
                 </button>
                 <button
                   onClick={() => userAudioRef.current?.play()}
-                  className="py-2 px-3.5 rounded-xl bg-[#6B7C4F] text-white text-xs font-bold font-display hover:bg-[#586740] flex items-center gap-1.5 cursor-pointer shadow-xs"
+                  className="py-2 px-3.5 rounded-xl bg-[#6B7C4F] text-[#1A1512] text-xs font-extrabold font-display hover:bg-[#859966] flex items-center gap-1.5 cursor-pointer shadow-xs"
                 >
                   <span>🎧 {tr('pronunciation.replayUser')}</span>
                 </button>
@@ -487,7 +487,7 @@ export const Pronunciation: React.FC<PronunciationProps> = ({
 
               {/* Optional Speech Recognition feedback badge if present */}
               {recognitionFeedback && (
-                <div className="text-[11px] font-medium text-[#3A2B22]/80 bg-white/80 p-2 rounded-xl border border-[#6B7C4F]/20">
+                <div className="text-[11px] font-medium text-[#F2E8D5]/90 bg-[#2B2622] p-2 rounded-xl border border-[#6B7C4F]/30">
                   {recognitionFeedback}
                 </div>
               )}
@@ -495,15 +495,15 @@ export const Pronunciation: React.FC<PronunciationProps> = ({
           )}
 
           {/* Self-Evaluation Section */}
-          <div className="border-t border-[#6B7C4F]/15 pt-4 space-y-2">
-            <label className="block text-center text-xs font-bold text-[#3A2B22] uppercase tracking-wider font-display">
+          <div className="border-t border-[#6B7C4F]/20 pt-4 space-y-2">
+            <label className="block text-center text-xs font-extrabold text-[#F2E8D5] uppercase tracking-wider font-display">
               {tr('pronunciation.selfEvalTitle')}
             </label>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
               <button
                 onClick={() => handleSelfEval(true)}
-                className="py-3 px-4 rounded-2xl bg-[#6B7C4F] hover:bg-[#586740] text-white font-bold font-display text-xs sm:text-sm shadow-xs transition-all cursor-pointer flex items-center justify-center gap-2"
+                className="py-3 px-4 rounded-2xl bg-[#6B7C4F] hover:bg-[#586740] text-white font-extrabold font-display text-xs sm:text-sm shadow-xs transition-all cursor-pointer flex items-center justify-center gap-2"
               >
                 <span>✨</span>
                 <span>{tr('pronunciation.selfEvalSuccess')}</span>
@@ -511,7 +511,7 @@ export const Pronunciation: React.FC<PronunciationProps> = ({
 
               <button
                 onClick={() => handleSelfEval(false)}
-                className="py-3 px-4 rounded-2xl bg-white border-2 border-[#6B7C4F]/30 text-[#3A2B22] hover:bg-[#F2E8D5]/50 font-bold font-display text-xs sm:text-sm shadow-xs transition-all cursor-pointer flex items-center justify-center gap-2"
+                className="py-3 px-4 rounded-2xl bg-[#1A1512] border-2 border-[#6B7C4F]/40 text-[#F2E8D5] hover:border-[#E8802F] font-bold font-display text-xs sm:text-sm shadow-xs transition-all cursor-pointer flex items-center justify-center gap-2"
               >
                 <span>🌱</span>
                 <span>{tr('pronunciation.selfEvalRetry')}</span>

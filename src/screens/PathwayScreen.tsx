@@ -285,46 +285,167 @@ export const PathwayScreen: React.FC<PathwayScreenProps> = ({
           </div>
         </div>
 
-        {/* Winding Vertical Game Trail */}
-        <div className="relative py-2 px-2">
-          {/* Sequential Game Nodes */}
-          <div className="relative z-10 space-y-7 sm:space-y-8">
-            {/* 1. CURRENT ACTIVE CEFR LEVEL - STARTING BADGE */}
-            <div className="flex flex-col items-center relative pb-2">
-              <div className="relative animate-bounce mb-1">
-                <Mascot pose="happy" size={56} />
-              </div>
+        {/* Winding Mountain Trail */}
+        <div className="relative py-4 px-2">
+          {/* Dynamic SVG Trail Background */}
+          {(() => {
+            const xCoords = [50, 32, 46, 72, 54, 28, 44, 74, 36, 50, 50];
+            const totalNodes = lezioni.length + 2 + (nextLevel ? 1 : 0);
+            const rowHeight = 110;
+            const totalHeight = totalNodes * rowHeight;
 
-              {/* Start node */}
-              <div className="px-4 py-1.5 rounded-full bg-[#E8802F] text-[#1A1512] border-2 border-[#F2E8D5] shadow-lg flex items-center gap-2 font-display">
-                <span className="text-xs font-black">START</span>
-                <span className="text-xs font-bold opacity-80">•</span>
-                <span className="text-xs font-black">Livello {currentStudyLevel}</span>
+            // Generate SVG paths
+            let fullPathD = `M ${xCoords[0]} ${rowHeight * 0.5}`;
+            for (let i = 0; i < totalNodes - 1; i++) {
+              const x0 = xCoords[i % xCoords.length];
+              const y0 = i * rowHeight + rowHeight * 0.5;
+              const x1 = xCoords[(i + 1) % xCoords.length];
+              const y1 = (i + 1) * rowHeight + rowHeight * 0.5;
+              const cy1 = y0 + (y1 - y0) * 0.5;
+              const cy2 = y1 - (y1 - y0) * 0.5;
+              fullPathD += ` C ${x0} ${cy1}, ${x1} ${cy2}, ${x1} ${y1}`;
+            }
+
+            // Calculate completed segments for illuminated path
+            let completedSegments = 0;
+            for (let i = 0; i < lezioni.length; i++) {
+              if (lezioni[i].stato === 'completata') {
+                completedSegments = i + 1;
+              } else {
+                break;
+              }
+            }
+            if (lessonPath?.checkpointSuperato) {
+              completedSegments = lezioni.length + 1;
+            }
+
+            let completedPathD = `M ${xCoords[0]} ${rowHeight * 0.5}`;
+            for (let i = 0; i < Math.min(completedSegments, totalNodes - 1); i++) {
+              const x0 = xCoords[i % xCoords.length];
+              const y0 = i * rowHeight + rowHeight * 0.5;
+              const x1 = xCoords[(i + 1) % xCoords.length];
+              const y1 = (i + 1) * rowHeight + rowHeight * 0.5;
+              const cy1 = y0 + (y1 - y0) * 0.5;
+              const cy2 = y1 - (y1 - y0) * 0.5;
+              completedPathD += ` C ${x0} ${cy1}, ${x1} ${cy2}, ${x1} ${y1}`;
+            }
+
+            return (
+              <svg
+                className="absolute inset-0 w-full h-full pointer-events-none z-0"
+                viewBox={`0 0 100 ${totalHeight}`}
+                preserveAspectRatio="none"
+              >
+                <defs>
+                  <filter id="zucca-glow" x="-20%" y="-20%" width="140%" height="140%">
+                    <feGaussianBlur stdDeviation="1.5" result="blur" />
+                    <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                  </filter>
+                  <linearGradient id="trail-active-grad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#E8802F" />
+                    <stop offset="100%" stopColor="#859966" />
+                  </linearGradient>
+                </defs>
+
+                {/* Base Shadow & Outer Bed */}
+                <path
+                  d={fullPathD}
+                  fill="none"
+                  stroke="#1A1512"
+                  strokeWidth="16"
+                  strokeLinecap="round"
+                />
+
+                {/* Trail Bed */}
+                <path
+                  d={fullPathD}
+                  fill="none"
+                  stroke="#2B2622"
+                  strokeWidth="10"
+                  strokeLinecap="round"
+                />
+
+                {/* Forest dashed trail markings */}
+                <path
+                  d={fullPathD}
+                  fill="none"
+                  stroke="#6B7C4F"
+                  strokeOpacity="0.45"
+                  strokeWidth="4"
+                  strokeDasharray="4 3"
+                  strokeLinecap="round"
+                />
+
+                {/* Stepping stone dots */}
+                <path
+                  d={fullPathD}
+                  fill="none"
+                  stroke="#C99A3D"
+                  strokeOpacity="0.3"
+                  strokeWidth="2"
+                  strokeDasharray="1 6"
+                  strokeLinecap="round"
+                />
+
+                {/* Completed / Active Trail with energetic glow */}
+                {completedSegments > 0 && (
+                  <>
+                    <path
+                      d={completedPathD}
+                      fill="none"
+                      stroke="#E8802F"
+                      strokeWidth="5"
+                      strokeLinecap="round"
+                      filter="url(#zucca-glow)"
+                    />
+                    <path
+                      d={completedPathD}
+                      fill="none"
+                      stroke="#F2E8D5"
+                      strokeWidth="1.5"
+                      strokeDasharray="3 4"
+                      strokeLinecap="round"
+                    />
+                  </>
+                )}
+              </svg>
+            );
+          })()}
+
+          {/* Sequential Game Nodes positioned along the trail */}
+          <div className="relative z-10">
+            {/* 1. CURRENT ACTIVE CEFR LEVEL - STARTING BADGE (Node 0: x=50%) */}
+            <div className="h-[110px] flex items-center justify-center relative">
+              <div className="flex flex-col items-center relative">
+                <div className="relative animate-bounce mb-1">
+                  <Mascot pose="happy" size={54} />
+                </div>
+
+                {/* Start node */}
+                <div className="px-4 py-1.5 rounded-full bg-[#E8802F] text-[#1A1512] border-2 border-[#F2E8D5] shadow-lg flex items-center gap-2 font-display">
+                  <span className="text-xs font-black">START</span>
+                  <span className="text-xs font-bold opacity-80">•</span>
+                  <span className="text-xs font-black">Livello {currentStudyLevel}</span>
+                </div>
               </div>
             </div>
 
-            {/* 2. THE 8 SEQUENTIAL GUIDED LESSON COMPACT NODES */}
+            {/* 2. THE 8 SEQUENTIAL GUIDED LESSON NODES */}
             {loadingPath ? (
-              <div className="py-10 text-center">
+              <div className="py-16 text-center">
                 <p className="text-xs font-bold text-[#859966] font-display animate-pulse">
-                  Caricamento del percorso guidato...
+                  Caricamento del sentiero guidato...
                 </p>
               </div>
             ) : (
               lezioni.map((lesson, idx) => {
+                const xCoords = [32, 46, 72, 54, 28, 44, 74, 36];
+                const xPos = xCoords[idx % xCoords.length];
                 const isFirst = idx === 0;
                 const prevLesson = idx > 0 ? lezioni[idx - 1] : null;
                 const isUnlocked = isFirst || (prevLesson && prevLesson.stato === 'completata');
                 const isCompleted = lesson.stato === 'completata';
                 const isNextUp = isUnlocked && !isCompleted;
-
-                // Alternate gentle zig-zag offset for game feel
-                const offsetClass =
-                  idx % 3 === 0
-                    ? 'justify-center sm:-translate-x-8'
-                    : idx % 3 === 1
-                    ? 'justify-center sm:translate-x-8'
-                    : 'justify-center';
 
                 // Type Icon
                 let typeEmoji = '🌲';
@@ -338,60 +459,68 @@ export const PathwayScreen: React.FC<PathwayScreenProps> = ({
                 }
 
                 return (
-                  <div key={lesson.id} className={`flex ${offsetClass}`}>
+                  <div
+                    key={lesson.id}
+                    className="h-[110px] relative flex items-center"
+                  >
                     <div
-                      onClick={() => {
-                        if (isUnlocked) {
-                          setActiveLesson(lesson);
-                        }
-                      }}
-                      className={`flex flex-col items-center transition-all ${
-                        isUnlocked ? 'cursor-pointer group' : 'opacity-50 cursor-not-allowed'
-                      }`}
+                      style={{ left: `${xPos}%`, transform: 'translateX(-50%)' }}
+                      className="absolute flex flex-col items-center"
                     >
-                      {/* Interactive circular game node */}
-                      <div className="relative">
-                        {isNextUp && (
-                          <span className="absolute -top-6 left-1/2 -translate-x-1/2 bg-[#E8802F] text-[#1A1512] font-black text-[10px] font-display px-2 py-0.5 rounded-full shadow-md whitespace-nowrap animate-bounce z-10">
-                            Tocca per iniziare!
-                          </span>
-                        )}
-
-                        <div
-                          className={`w-14 h-14 sm:w-16 sm:h-16 rounded-full flex items-center justify-center border-3 transition-transform shadow-lg ${
-                            isCompleted
-                              ? 'bg-[#6B7C4F] text-[#1A1512] border-[#859966] group-hover:scale-105'
-                              : isNextUp
-                              ? 'bg-[#E8802F] text-[#1A1512] border-[#F2E8D5] ring-4 ring-[#E8802F]/30 group-hover:scale-110 shadow-xl'
-                              : 'bg-[#1A1512] text-[#F2E8D5]/30 border-[#6B7C4F]/25'
-                          }`}
-                        >
-                          {isCompleted ? (
-                            <Check className="w-7 h-7 stroke-[3] text-[#1A1512]" />
-                          ) : isUnlocked ? (
-                            <span className="text-2xl">{typeEmoji}</span>
-                          ) : (
-                            <Lock className="w-5 h-5 text-[#F2E8D5]/35" />
+                      <div
+                        onClick={() => {
+                          if (isUnlocked) {
+                            setActiveLesson(lesson);
+                          }
+                        }}
+                        className={`flex flex-col items-center transition-all ${
+                          isUnlocked ? 'cursor-pointer group' : 'opacity-50 cursor-not-allowed'
+                        }`}
+                      >
+                        {/* Interactive circular game node */}
+                        <div className="relative">
+                          {isNextUp && (
+                            <span className="absolute -top-6 left-1/2 -translate-x-1/2 bg-[#E8802F] text-[#1A1512] font-black text-[10px] font-display px-2 py-0.5 rounded-full shadow-md whitespace-nowrap animate-bounce z-10">
+                              Tocca per iniziare!
+                            </span>
                           )}
-                        </div>
-                      </div>
 
-                      {/* Compact text pill below the node */}
-                      <div className="mt-1.5 text-center max-w-[160px]">
-                        <span
-                          className={`text-[11px] font-black font-display block leading-tight ${
-                            isCompleted
-                              ? 'text-[#859966]'
-                              : isNextUp
-                              ? 'text-[#E8802F] group-hover:underline'
-                              : 'text-[#F2E8D5]/50'
-                          }`}
-                        >
-                          {lesson.ordine}. {typeLabel}
-                        </span>
-                        <span className="text-[10px] text-[#F2E8D5]/70 font-medium truncate block">
-                          {lesson.title}
-                        </span>
+                          <div
+                            className={`w-14 h-14 sm:w-16 sm:h-16 rounded-full flex items-center justify-center border-3 transition-transform shadow-lg ${
+                              isCompleted
+                                ? 'bg-[#6B7C4F] text-[#1A1512] border-[#859966] group-hover:scale-105'
+                                : isNextUp
+                                ? 'bg-[#E8802F] text-[#1A1512] border-[#F2E8D5] ring-4 ring-[#E8802F]/30 group-hover:scale-110 shadow-xl'
+                                : 'bg-[#1A1512] text-[#F2E8D5]/30 border-[#6B7C4F]/25'
+                            }`}
+                          >
+                            {isCompleted ? (
+                              <Check className="w-7 h-7 stroke-[3] text-[#1A1512]" />
+                            ) : isUnlocked ? (
+                              <span className="text-2xl">{typeEmoji}</span>
+                            ) : (
+                              <Lock className="w-5 h-5 text-[#F2E8D5]/35" />
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Compact text pill below the node */}
+                        <div className="mt-1 text-center max-w-[140px] sm:max-w-[160px] bg-[#1A1512]/80 backdrop-blur-xs px-2 py-0.5 rounded-lg border border-[#6B7C4F]/20">
+                          <span
+                            className={`text-[11px] font-black font-display block leading-tight ${
+                              isCompleted
+                                ? 'text-[#859966]'
+                                : isNextUp
+                                ? 'text-[#E8802F] group-hover:underline'
+                                : 'text-[#F2E8D5]/60'
+                            }`}
+                          >
+                            {lesson.ordine}. {typeLabel}
+                          </span>
+                          <span className="text-[10px] text-[#F2E8D5]/80 font-medium truncate block">
+                            {lesson.title}
+                          </span>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -399,8 +528,8 @@ export const PathwayScreen: React.FC<PathwayScreenProps> = ({
               })
             )}
 
-            {/* 3. CHECKPOINT NODE (Compact game node) */}
-            <div className="flex flex-col items-center pt-2">
+            {/* 3. CHECKPOINT NODE (Node 9: x=50%) */}
+            <div className="h-[110px] relative flex items-center justify-center">
               <div
                 onClick={() => {
                   if (allLessonsCompleted) {
@@ -412,7 +541,7 @@ export const PathwayScreen: React.FC<PathwayScreenProps> = ({
                 }`}
               >
                 <div
-                  className={`w-16 h-16 sm:w-20 sm:h-20 rounded-3xl flex items-center justify-center border-3 transition-transform shadow-xl ${
+                  className={`w-16 h-16 sm:w-18 sm:h-18 rounded-3xl flex items-center justify-center border-3 transition-transform shadow-xl ${
                     lessonPath?.checkpointSuperato === true
                       ? 'bg-[#6B7C4F] text-[#1A1512] border-[#859966] group-hover:scale-105'
                       : allLessonsCompleted
@@ -429,30 +558,30 @@ export const PathwayScreen: React.FC<PathwayScreenProps> = ({
                   )}
                 </div>
 
-                <div className="mt-2 text-center max-w-[180px]">
+                <div className="mt-1 text-center max-w-[180px] bg-[#1A1512]/80 backdrop-blur-xs px-2 py-0.5 rounded-lg border border-[#6B7C4F]/20">
                   <span
                     className={`text-xs font-black font-display block leading-tight ${
                       lessonPath?.checkpointSuperato === true
                         ? 'text-[#859966]'
                         : allLessonsCompleted
                         ? 'text-[#E8802F]'
-                        : 'text-[#F2E8D5]/50'
+                        : 'text-[#F2E8D5]/60'
                     }`}
                   >
                     {lessonPath?.checkpointSuperato === true
                       ? 'Checkpoint Superato ✓'
                       : 'Checkpoint (10 Domande)'}
                   </span>
-                  <span className="text-[10px] text-[#F2E8D5]/65 font-medium block">
+                  <span className="text-[10px] text-[#F2E8D5]/80 font-medium block">
                     {allLessonsCompleted ? 'Tocca per avviare il test' : `${completedCount}/8 lezioni completate`}
                   </span>
                 </div>
               </div>
             </div>
 
-            {/* 4. NEXT CEFR GOAL / LEVEL TEST COMPACT NODE */}
+            {/* 4. NEXT CEFR GOAL / LEVEL TEST COMPACT NODE (Node 10: x=50%) */}
             {nextLevel && (
-              <div className="flex flex-col items-center pt-2 pb-6">
+              <div className="h-[110px] relative flex items-center justify-center">
                 <button
                   type="button"
                   onClick={onOpenLevelTest}
@@ -461,12 +590,14 @@ export const PathwayScreen: React.FC<PathwayScreenProps> = ({
                   <div className="w-14 h-14 rounded-2xl bg-[#1A1512] text-[#E8802F] border-2 border-[#E8802F]/40 group-hover:border-[#E8802F] flex items-center justify-center font-black font-display text-base shadow-md group-hover:scale-105 transition-transform">
                     <Target className="w-6 h-6" />
                   </div>
-                  <span className="mt-1.5 text-xs font-black text-[#F2E8D5]/80 group-hover:text-[#E8802F] transition-colors font-display">
-                    Test Livello {nextLevel}
-                  </span>
-                  <span className="text-[10px] text-[#859966] font-medium">
-                    Sblocca il prossimo livello →
-                  </span>
+                  <div className="mt-1 text-center bg-[#1A1512]/80 backdrop-blur-xs px-2 py-0.5 rounded-lg border border-[#6B7C4F]/20">
+                    <span className="text-xs font-black text-[#F2E8D5]/90 group-hover:text-[#E8802F] transition-colors font-display block">
+                      Test Livello {nextLevel}
+                    </span>
+                    <span className="text-[10px] text-[#859966] font-medium block">
+                      Sblocca il prossimo livello →
+                    </span>
+                  </div>
                 </button>
               </div>
             )}

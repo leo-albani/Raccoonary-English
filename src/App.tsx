@@ -662,7 +662,7 @@ export function App() {
       />
 
       {/* Active Tab Screen */}
-      <main className="min-h-screen relative z-10">
+      <main className="min-h-screen relative z-10 pb-20 sm:pb-24">
         {showLevelTest ? (
           <LevelTest
             userProfile={user}
@@ -715,8 +715,10 @@ export function App() {
               <TranslatorScreen
                 user={user}
                 vocabItems={vocabItems}
+                exerciseErrors={exerciseErrors}
                 onAddVocabItem={handleSaveItem}
                 onDeleteItem={handleDeleteItem}
+                onDeleteExerciseError={handleDeleteExerciseError}
                 t={t}
               />
             )}

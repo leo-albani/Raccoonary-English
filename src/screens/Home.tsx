@@ -6,6 +6,7 @@ import { TARGET_LANGUAGES } from '../data/languages';
 import { GRAMMAR_SYLLABUS } from '../data/grammarSyllabus';
 import { NavTab } from '../components/Navigation';
 import { PathwayScreen } from './PathwayScreen';
+import { TanaManager } from '../components/TanaManager';
 import { genderedWord } from '../utils/gender';
 import { playSound } from '../services/sound';
 
@@ -69,6 +70,7 @@ export const Home: React.FC<HomeProps> = ({
   const [showAddModal, setShowAddModal] = useState(false);
   const [showLevelModal, setShowLevelModal] = useState(false);
   const [showPathwayScreen, setShowPathwayScreen] = useState(false);
+  const [showTanaManagerModal, setShowTanaManagerModal] = useState(false);
 
   const activeLang = TARGET_LANGUAGES.find((l) => l.code === (user.activeProfileId || 'en')) || {
     code: 'en',
@@ -84,6 +86,7 @@ export const Home: React.FC<HomeProps> = ({
   
   // Active study level & objectives calculations
   const currentStudyLevel = (user.livelloStudioAttivo || user.currentLevel || 'A1') as CEFRLevel;
+  const levelDetail = CEFR_LEVEL_DETAILS.find((d) => d.level === currentStudyLevel) || CEFR_LEVEL_DETAILS[0];
   const currentLevelIndex = Math.max(0, CEFR_LEVELS.indexOf(currentStudyLevel));
   const isMaxLevel = currentStudyLevel === 'C2' || currentLevelIndex === CEFR_LEVELS.length - 1;
   const nextLevel = !isMaxLevel ? CEFR_LEVELS[currentLevelIndex + 1] : null;
@@ -170,22 +173,23 @@ export const Home: React.FC<HomeProps> = ({
       : 'Tutti i vocaboli in tana sono in pari per oggi!';
 
   return (
-    <div className="pb-16 pt-16 sm:pt-14 px-4 sm:px-6 max-w-5xl mx-auto space-y-7 select-none">
-      {/* 1. Saluto + Bollino del livello attivo & 2. Card Streak e Ghiande */}
-      <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-[#2B2622] p-5 sm:p-6 rounded-[28px] border-2 border-[#6B7C4F]/30 shadow-xl relative text-[#F2E8D5]">
-        <div className="flex items-center gap-4">
+    <div className="pb-20 pt-8 sm:pt-10 px-4 sm:px-6 max-w-5xl mx-auto space-y-8 select-none">
+      {/* 1. Saluto + Livello Attivo in Grande Evidenza (Direttamente su sfondo scuro, senza card box) */}
+      <header className="flex flex-col md:flex-row md:items-center justify-between gap-5 relative text-[#F2E8D5]">
+        <div className="flex items-start sm:items-center gap-4">
           <div className="relative shrink-0">
-            <div className="w-18 h-18 sm:w-20 sm:h-20 bg-[#1A1512] rounded-full border-2 border-[#6B7C4F]/40 flex items-center justify-center overflow-hidden shadow-md">
+            <div className="w-16 h-16 sm:w-20 sm:h-20 bg-[#2B2622] rounded-full border-2 border-[#6B7C4F]/40 flex items-center justify-center overflow-hidden shadow-lg">
               <Mascot
                 pose={dueItems.length > 0 ? 'greeting' : 'happy'}
-                size={75}
+                size={72}
+                activeOutfit={user.activeOutfit}
               />
             </div>
           </div>
 
-          <div>
+          <div className="space-y-1">
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-xs font-extrabold uppercase tracking-wider text-[#859966] font-display">
+              <span className="text-[11px] font-black uppercase tracking-wider text-[#859966] font-display">
                 {headerGreeting}
               </span>
 
@@ -194,7 +198,7 @@ export const Home: React.FC<HomeProps> = ({
                 <button
                   type="button"
                   onClick={() => setShowProfileMenu((prev) => !prev)}
-                  className="flex items-center gap-1.5 bg-[#1A1512] px-3 py-1 rounded-full border border-[#6B7C4F]/40 hover:border-[#E8802F] shadow-xs text-[#F2E8D5] font-bold text-xs cursor-pointer transition-all"
+                  className="flex items-center gap-1.5 bg-[#2B2622]/90 hover:bg-[#2B2622] px-3 py-1 rounded-full border border-[#6B7C4F]/40 hover:border-[#E8802F] shadow-xs text-[#F2E8D5] font-bold text-xs cursor-pointer transition-all active:scale-95"
                   title="Cambia o aggiungi lingua"
                 >
                   <span className="text-sm">{activeLang.flag}</span>
@@ -260,100 +264,118 @@ export const Home: React.FC<HomeProps> = ({
                 )}
               </div>
 
-              {/* Level of Study Pill Badge */}
-              {user.livelloStudioAttivo ? (
-                <button
-                  type="button"
-                  onClick={() => setShowLevelModal(true)}
-                  className="flex items-center gap-1.5 bg-[#1A1512] hover:bg-[#342D28] text-[#F2E8D5] border border-[#6B7C4F]/40 px-3 py-1 rounded-full shadow-xs text-xs font-bold font-display cursor-pointer transition-all"
-                  title="Livello attivo di studio. Tocca per cambiare."
-                >
-                  <span className="text-[10px] text-[#859966] uppercase tracking-wider font-extrabold">Livello</span>
-                  <span className="bg-[#6B7C4F] text-[#F2E8D5] px-2 py-0.2 rounded-md text-xs font-black">{user.livelloStudioAttivo}</span>
-                  <span className="text-[#859966] text-[10px]">✏️</span>
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={onOpenLevelTest}
-                  className="flex items-center gap-1.5 bg-[#E8802F]/20 hover:bg-[#E8802F]/30 text-[#E8802F] border border-[#E8802F]/40 px-3 py-1 rounded-full shadow-xs text-xs font-bold font-display cursor-pointer transition-all"
-                  title="Scopri il tuo livello con il test adattivo"
-                >
-                  <span>🎯</span>
-                  <span>Scopri il tuo livello</span>
-                  <span className="text-xs">→</span>
-                </button>
-              )}
-
-              {/* Direct and prominent button to "La mia tana" (Saved Words & Translator) */}
+              {/* Direct button to "La mia tana" */}
               <button
                 type="button"
-                onClick={() => onNavigate('translator')}
+                onClick={() => {
+                  playSound('acorn');
+                  setShowTanaManagerModal(true);
+                }}
                 id="btn-direct-tana-vocab"
-                className="flex items-center gap-1.5 bg-[#6B7C4F]/25 hover:bg-[#6B7C4F]/45 text-[#F2E8D5] border-2 border-[#6B7C4F] hover:border-[#859966] px-3.5 py-1 rounded-full shadow-sm text-xs font-black font-display cursor-pointer transition-all active:scale-95 group"
+                className="flex items-center gap-1.5 bg-[#6B7C4F]/25 hover:bg-[#6B7C4F]/45 text-[#F2E8D5] border border-[#6B7C4F]/60 hover:border-[#859966] px-3 py-1 rounded-full shadow-xs text-xs font-black font-display cursor-pointer transition-all active:scale-95 group"
                 title="Apri La mia tana per consultare tutte le parole salvate"
               >
-                <span className="text-sm group-hover:scale-110 transition-transform">📚</span>
-                <span>La mia tana ({totalCount})</span>
-                <span className="text-[#859966] group-hover:text-[#F2E8D5] group-hover:translate-x-0.5 transition-transform font-black">→</span>
+                <span className="text-xs group-hover:scale-110 transition-transform">📚</span>
+                <span>Tana ({totalCount})</span>
+                <span className="text-[#859966] group-hover:text-[#F2E8D5] transition-transform font-black">→</span>
               </button>
             </div>
 
-            <h1 className="text-2xl sm:text-3xl font-extrabold font-display text-[#F2E8D5] leading-tight mt-1">
+            <h1 className="text-2xl sm:text-3xl font-black font-display text-[#F2E8D5] leading-tight">
               La tua tana di {activeLang.name}
             </h1>
-            <p className="text-xs sm:text-sm text-[#F2E8D5]/75 font-medium mt-0.5">
+            <p className="text-xs sm:text-sm text-[#F2E8D5]/75 font-medium leading-snug">
               <ProgressiveText text={raccoonGreeting} speedMs={75} />
             </p>
           </div>
         </div>
 
-        {/* Header Stats Badges: Bold, Large Numbers */}
-        <div id="tour-target-streak" className="flex gap-3 justify-between md:justify-end">
-          <div
-            className="bg-[#1A1512] rounded-2xl px-5 py-3 flex items-center gap-3.5 border-2 border-[#6B7C4F]/30 shadow-md flex-1 md:flex-none text-left"
-          >
-            <span className="text-3xl">🌙</span>
-            <div>
-              <p className="text-[11px] uppercase font-extrabold text-[#F2E8D5]/60 font-display leading-none">Streak</p>
-              <p className="text-xl sm:text-2xl font-black font-display text-[#F2E8D5] mt-0.5">
-                {user.streakCount} <span className="text-xs font-bold text-[#F2E8D5]/70">{user.streakCount === 1 ? 'notte' : 'notti'}</span>
-              </p>
-            </div>
-          </div>
-          <div
-            className="bg-[#1A1512] rounded-2xl px-5 py-3 flex items-center gap-3.5 border-2 border-[#6B7C4F]/30 shadow-md flex-1 md:flex-none text-left"
-          >
-            <span className="text-3xl">🌰</span>
-            <div>
-              <p className="text-[11px] uppercase font-extrabold text-[#F2E8D5]/60 font-display leading-none">Ghiande</p>
-              <p className="text-xl sm:text-2xl font-black font-display text-[#E8802F] mt-0.5">{user.totalAcorns}</p>
-            </div>
-          </div>
+        {/* 2. Livello di Studio Attivo in Grande Evidenza (Al posto di Streak & Ghiande) */}
+        <div id="tour-target-streak" className="shrink-0">
+          {user.livelloStudioAttivo || user.currentLevel ? (
+            <button
+              type="button"
+              onClick={() => {
+                playSound('acorn');
+                setShowLevelModal(true);
+              }}
+              className="w-full md:w-auto text-left bg-gradient-to-br from-[#2B2622] to-[#1E1916] hover:from-[#342D28] hover:to-[#26201D] border-2 border-[#6B7C4F]/50 hover:border-[#E8802F] p-3.5 sm:p-4 rounded-3xl shadow-xl transition-all active:scale-98 cursor-pointer flex items-center justify-between md:justify-start gap-4 group"
+              title="Livello CEFR attivo. Tocca per cambiare o sostenere il test di livello"
+            >
+              <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-[#6B7C4F] text-[#1A1512] flex items-center justify-center font-black font-display text-2xl sm:text-3xl shadow-md group-hover:scale-105 transition-transform shrink-0">
+                {currentStudyLevel}
+              </div>
+              <div className="pr-2">
+                <span className="text-[10px] sm:text-xs font-black uppercase tracking-wider text-[#859966] font-display block">
+                  Livello di studio attivo
+                </span>
+                <span className="text-base sm:text-lg font-black font-display text-[#F2E8D5] group-hover:text-[#E8802F] transition-colors block leading-tight">
+                  {levelDetail.title}
+                </span>
+                <span className="text-[11px] text-[#F2E8D5]/60 font-medium block mt-0.5">
+                  Tocca per dettagli o test →
+                </span>
+              </div>
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => {
+                playSound('acorn');
+                onOpenLevelTest();
+              }}
+              className="w-full md:w-auto text-left bg-gradient-to-br from-[#2B2622] to-[#1E1916] hover:from-[#342D28] hover:to-[#26201D] border-2 border-[#E8802F]/50 hover:border-[#E8802F] p-3.5 sm:p-4 rounded-3xl shadow-xl transition-all active:scale-98 cursor-pointer flex items-center justify-between md:justify-start gap-4 group"
+              title="Scopri il tuo livello con il test adattivo"
+            >
+              <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-[#E8802F] text-[#1A1512] flex items-center justify-center text-2xl sm:text-3xl shadow-md group-hover:scale-105 transition-transform shrink-0">
+                🎯
+              </div>
+              <div className="pr-2">
+                <span className="text-[10px] sm:text-xs font-black uppercase tracking-wider text-[#E8802F] font-display block">
+                  Test Adattivo CEFR
+                </span>
+                <span className="text-base sm:text-lg font-black font-display text-[#F2E8D5] group-hover:text-[#E8802F] transition-colors block leading-tight">
+                  Scopri il tuo livello
+                </span>
+                <span className="text-[11px] text-[#859966] font-bold block mt-0.5">
+                  Inizia subito il test →
+                </span>
+              </div>
+            </button>
+          )}
         </div>
       </header>
 
-      {/* 3. Percorso verso il livello successivo (Card di accesso al percorso a schermo intero) */}
-      <section id="tour-target-word-burrow" className="space-y-4">
+      {/* 3. Percorso CEFR: Banner/Poster Integrato nella Pagina */}
+      <section id="tour-target-word-burrow">
         <div
           onClick={() => {
             playSound('review');
             setShowPathwayScreen(true);
           }}
-          className="bento-card p-5 sm:p-6 bg-[#2B2622] border-2 border-[#6B7C4F]/35 hover:border-[#E8802F] text-[#F2E8D5] cursor-pointer group transition-all duration-300 shadow-xl relative overflow-hidden"
+          className="bg-gradient-to-br from-[#2B2622] via-[#332A24] to-[#241F1C] rounded-[28px] p-6 sm:p-8 border border-[#6B7C4F]/35 hover:border-[#E8802F]/70 text-[#F2E8D5] cursor-pointer group transition-all duration-300 shadow-2xl relative overflow-hidden space-y-5"
           title="Tocca per aprire il percorso a schermo intero"
         >
-          {/* Top header row */}
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2.5">
-              <div className="w-10 h-10 rounded-2xl bg-[#1A1512] border border-[#6B7C4F]/40 flex items-center justify-center text-xl group-hover:scale-105 transition-transform shrink-0">
+          {/* Ambient Glow accents */}
+          <div className="absolute top-0 right-0 w-72 h-72 bg-[#6B7C4F]/10 rounded-full blur-3xl pointer-events-none -mr-20 -mt-20" />
+          <div className="absolute bottom-0 left-0 w-48 h-48 bg-[#E8802F]/10 rounded-full blur-2xl pointer-events-none -ml-12 -mb-12" />
+
+          {/* Banner Top Row */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 relative z-10">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-2xl bg-[#1A1512] border border-[#6B7C4F]/40 flex items-center justify-center text-2xl group-hover:scale-105 transition-transform shadow-md shrink-0">
                 🧭
               </div>
               <div>
-                <span className="text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-[#859966] font-display">
-                  Il tuo percorso CEFR
-                </span>
-                <h2 className="text-lg sm:text-xl font-black font-display text-[#F2E8D5] group-hover:text-[#E8802F] transition-colors leading-tight">
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] sm:text-xs font-black uppercase tracking-wider text-[#859966] font-display">
+                    Percorso Guidato CEFR
+                  </span>
+                  <span className="px-2.5 py-0.5 rounded-full bg-[#6B7C4F] text-[#1A1512] text-[10px] font-black font-display shadow-xs">
+                    Livello {currentStudyLevel}
+                  </span>
+                </div>
+                <h2 className="text-xl sm:text-2xl font-black font-display text-[#F2E8D5] group-hover:text-[#E8802F] transition-colors leading-tight mt-0.5">
                   {isMaxLevel
                     ? 'Traguardo Livello C2 (Padronanza)'
                     : `Verso il livello ${nextLevel}`}
@@ -361,80 +383,68 @@ export const Home: React.FC<HomeProps> = ({
               </div>
             </div>
 
-            <div className="flex items-center gap-2 shrink-0">
-              <span className="px-3 py-1 rounded-full bg-[#1A1512] border border-[#6B7C4F]/30 text-xs font-black font-display text-[#859966]">
-                Livello {currentStudyLevel}
+            <div className="flex items-center gap-2 self-start sm:self-auto">
+              <span className="text-xs sm:text-sm font-black font-display text-[#859966] bg-[#1A1512]/80 px-3.5 py-1.5 rounded-full border border-[#6B7C4F]/30">
+                {Math.round((obj1Percent + obj2Percent + (isMaxLevel ? 100 : obj3Percent)) / (isMaxLevel ? 2 : 3))}% completato
               </span>
             </div>
           </div>
 
-          {/* Visual track preview with Level badge & status */}
-          <div className="mt-4 pt-4 border-t border-[#6B7C4F]/20 flex items-center justify-between gap-3 bg-[#1A1512] p-3.5 sm:p-4 rounded-2xl border border-[#6B7C4F]/25">
-            <div className="flex items-center gap-3 min-w-0">
-              <div className="w-9 h-9 rounded-xl bg-[#E8802F] text-[#1A1512] flex items-center justify-center font-black font-display text-xs shadow-md shrink-0">
-                {currentStudyLevel}
-              </div>
-              <div className="flex flex-col min-w-0">
-                <span className="text-xs font-black font-display text-[#F2E8D5] truncate">
-                  {allObjectivesComplete ? 'Checkpoint pronto 🎯' : `${(isObj1Complete ? 1 : 0) + (isObj2Complete ? 1 : 0) + (isObj3Complete ? 1 : 0)}/3 obiettivi completati`}
-                </span>
-                <span className="text-[11px] font-medium text-[#F2E8D5]/65 truncate">
-                  8 lezioni sequenziali + checkpoint
-                </span>
-              </div>
-            </div>
-
-            <div className="text-right shrink-0">
-              <span className="text-xs font-black text-[#859966] font-display">
-                {Math.round((obj1Percent + obj2Percent + (isMaxLevel ? 100 : obj3Percent)) / (isMaxLevel ? 2 : 3))}%
-              </span>
-            </div>
-          </div>
-
-          {/* Progress bar */}
-          <div className="mt-3">
-            <div className="progress-track h-2 bg-[#1A1512] border border-[#6B7C4F]/20">
+          {/* Progress Bar & Stage Indicator */}
+          <div className="space-y-2 relative z-10">
+            <div className="progress-track h-2.5 bg-[#1A1512] border border-[#6B7C4F]/30 rounded-full overflow-hidden">
               <div
-                className="progress-fill progress-fill-zucca"
+                className="progress-fill progress-fill-zucca h-full transition-all duration-500 rounded-full"
                 style={{
                   width: `${Math.round((obj1Percent + obj2Percent + (isMaxLevel ? 100 : obj3Percent)) / (isMaxLevel ? 2 : 3))}%`,
                 }}
               />
             </div>
+
+            <div className="flex items-center justify-between text-xs text-[#F2E8D5]/70 font-medium px-0.5">
+              <span>
+                {allObjectivesComplete ? '🎯 Checkpoint finale pronto!' : `${(isObj1Complete ? 1 : 0) + (isObj2Complete ? 1 : 0) + (isObj3Complete ? 1 : 0)}/3 obiettivi completati`}
+              </span>
+              <span>8 lezioni sequenziali + checkpoint</span>
+            </div>
           </div>
 
-          {/* Prominent Large Zucca Button: "Vai al percorso" */}
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              playSound('review');
-              setShowPathwayScreen(true);
-            }}
-            className="btn-zucca w-full py-3 sm:py-3.5 px-4 font-black text-sm sm:text-base flex items-center justify-center gap-2 shadow-lg hover:shadow-xl transition-all cursor-pointer mt-4"
-          >
-            <span>🧭</span>
-            <span>Vai al percorso</span>
-            <span>→</span>
-          </button>
+          {/* Action Button embedded in banner */}
+          <div className="pt-1 relative z-10">
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                playSound('review');
+                setShowPathwayScreen(true);
+              }}
+              className="btn-zucca w-full py-3.5 px-6 font-black text-sm sm:text-base flex items-center justify-center gap-2 shadow-xl hover:shadow-2xl transition-all cursor-pointer rounded-2xl"
+            >
+              <span>🧭</span>
+              <span>Vai al percorso a schermo intero</span>
+              <span className="text-lg">→</span>
+            </button>
+          </div>
         </div>
       </section>
 
-      {/* 4. Griglia di attività: Hub di pratica compatto (3 riquadri per riga, stile gioco) */}
+      {/* 4. Griglia Attività di Studio (Senza riquadro card, icone e testo direttamente su sfondo scuro come icone app) */}
       <section className="space-y-3">
-        <h2 className="text-base sm:text-lg font-extrabold font-display text-[#F2E8D5] px-1 flex items-center gap-2">
+        <h2 className="text-base sm:text-lg font-black font-display text-[#F2E8D5] flex items-center gap-2">
           <span>⚡</span>
           <span>Attività di Studio</span>
         </h2>
 
-        <div className="grid grid-cols-3 gap-2.5 sm:gap-3">
+        <div className="grid grid-cols-3 sm:grid-cols-6 gap-3 sm:gap-4 pt-1">
           {/* Tile 1: Grammatica */}
           <button
             type="button"
             onClick={() => onNavigate('grammar')}
-            className="p-3 sm:p-4 rounded-2xl bg-[#2B2622] hover:bg-[#342D28] border border-[#6B7C4F]/30 hover:border-[#6B7C4F] text-center flex flex-col items-center justify-center gap-1.5 cursor-pointer transition-all active:scale-95 shadow-sm group"
+            className="flex flex-col items-center justify-start text-center gap-2 group cursor-pointer p-2 rounded-2xl hover:bg-[#2B2622]/40 transition-colors"
           >
-            <span className="text-2xl sm:text-3xl group-hover:scale-110 transition-transform">🌲</span>
+            <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-[#2B2622] group-hover:bg-[#38312B] group-hover:scale-105 border border-[#6B7C4F]/30 group-hover:border-[#859966] flex items-center justify-center text-2xl sm:text-3xl shadow-md transition-all active:scale-95">
+              🌲
+            </div>
             <span className="text-xs sm:text-sm font-black font-display text-[#F2E8D5] group-hover:text-[#859966] transition-colors leading-tight">
               Grammatica
             </span>
@@ -444,9 +454,11 @@ export const Home: React.FC<HomeProps> = ({
           <button
             type="button"
             onClick={() => onNavigate('reading')}
-            className="p-3 sm:p-4 rounded-2xl bg-[#2B2622] hover:bg-[#342D28] border border-[#6B7C4F]/30 hover:border-[#C99A3D] text-center flex flex-col items-center justify-center gap-1.5 cursor-pointer transition-all active:scale-95 shadow-sm group"
+            className="flex flex-col items-center justify-start text-center gap-2 group cursor-pointer p-2 rounded-2xl hover:bg-[#2B2622]/40 transition-colors"
           >
-            <span className="text-2xl sm:text-3xl group-hover:scale-110 transition-transform">📚</span>
+            <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-[#2B2622] group-hover:bg-[#38312B] group-hover:scale-105 border border-[#6B7C4F]/30 group-hover:border-[#C99A3D] flex items-center justify-center text-2xl sm:text-3xl shadow-md transition-all active:scale-95">
+              📚
+            </div>
             <span className="text-xs sm:text-sm font-black font-display text-[#F2E8D5] group-hover:text-[#C99A3D] transition-colors leading-tight">
               Letture
             </span>
@@ -459,12 +471,14 @@ export const Home: React.FC<HomeProps> = ({
               if (onStartReview) onStartReview();
               else onNavigate('memorize');
             }}
-            className="p-3 sm:p-4 rounded-2xl bg-[#2B2622] hover:bg-[#342D28] border border-[#6B7C4F]/30 hover:border-[#E8802F] text-center flex flex-col items-center justify-center gap-1.5 cursor-pointer transition-all active:scale-95 shadow-sm relative group"
+            className="flex flex-col items-center justify-start text-center gap-2 group cursor-pointer p-2 rounded-2xl hover:bg-[#2B2622]/40 transition-colors relative"
           >
-            {dueItems.length > 0 && (
-              <span className="absolute top-2 right-2 w-2.5 h-2.5 rounded-full bg-[#E8802F] animate-pulse" />
-            )}
-            <span className="text-2xl sm:text-3xl group-hover:scale-110 transition-transform">⚡</span>
+            <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-[#2B2622] group-hover:bg-[#38312B] group-hover:scale-105 border border-[#6B7C4F]/30 group-hover:border-[#E8802F] flex items-center justify-center text-2xl sm:text-3xl shadow-md transition-all active:scale-95 relative">
+              {dueItems.length > 0 && (
+                <span className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full bg-[#E8802F] border-2 border-[#1A1512] animate-pulse" />
+              )}
+              ⚡
+            </div>
             <span className="text-xs sm:text-sm font-black font-display text-[#F2E8D5] group-hover:text-[#E8802F] transition-colors leading-tight">
               Ripasso
             </span>
@@ -474,9 +488,11 @@ export const Home: React.FC<HomeProps> = ({
           <button
             type="button"
             onClick={() => onNavigate('pronunciation')}
-            className="p-3 sm:p-4 rounded-2xl bg-[#2B2622] hover:bg-[#342D28] border border-[#6B7C4F]/30 hover:border-[#E8802F] text-center flex flex-col items-center justify-center gap-1.5 cursor-pointer transition-all active:scale-95 shadow-sm group"
+            className="flex flex-col items-center justify-start text-center gap-2 group cursor-pointer p-2 rounded-2xl hover:bg-[#2B2622]/40 transition-colors"
           >
-            <span className="text-2xl sm:text-3xl group-hover:scale-110 transition-transform">🎙️</span>
+            <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-[#2B2622] group-hover:bg-[#38312B] group-hover:scale-105 border border-[#6B7C4F]/30 group-hover:border-[#E8802F] flex items-center justify-center text-2xl sm:text-3xl shadow-md transition-all active:scale-95">
+              🎙️
+            </div>
             <span className="text-xs sm:text-sm font-black font-display text-[#F2E8D5] group-hover:text-[#E8802F] transition-colors leading-tight">
               Pronuncia
             </span>
@@ -486,9 +502,11 @@ export const Home: React.FC<HomeProps> = ({
           <button
             type="button"
             onClick={() => onNavigate('scenarios')}
-            className="p-3 sm:p-4 rounded-2xl bg-[#2B2622] hover:bg-[#342D28] border border-[#6B7C4F]/30 hover:border-[#D88A3D] text-center flex flex-col items-center justify-center gap-1.5 cursor-pointer transition-all active:scale-95 shadow-sm group"
+            className="flex flex-col items-center justify-start text-center gap-2 group cursor-pointer p-2 rounded-2xl hover:bg-[#2B2622]/40 transition-colors"
           >
-            <span className="text-2xl sm:text-3xl group-hover:scale-110 transition-transform">🎭</span>
+            <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-[#2B2622] group-hover:bg-[#38312B] group-hover:scale-105 border border-[#6B7C4F]/30 group-hover:border-[#D88A3D] flex items-center justify-center text-2xl sm:text-3xl shadow-md transition-all active:scale-95">
+              🎭
+            </div>
             <span className="text-xs sm:text-sm font-black font-display text-[#F2E8D5] group-hover:text-[#D88A3D] transition-colors leading-tight">
               Scenari
             </span>
@@ -498,9 +516,11 @@ export const Home: React.FC<HomeProps> = ({
           <button
             type="button"
             onClick={() => onNavigate('translator')}
-            className="p-3 sm:p-4 rounded-2xl bg-[#2B2622] hover:bg-[#342D28] border border-[#6B7C4F]/30 hover:border-[#859966] text-center flex flex-col items-center justify-center gap-1.5 cursor-pointer transition-all active:scale-95 shadow-sm group"
+            className="flex flex-col items-center justify-start text-center gap-2 group cursor-pointer p-2 rounded-2xl hover:bg-[#2B2622]/40 transition-colors"
           >
-            <span className="text-2xl sm:text-3xl group-hover:scale-110 transition-transform">📖</span>
+            <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-[#2B2622] group-hover:bg-[#38312B] group-hover:scale-105 border border-[#6B7C4F]/30 group-hover:border-[#859966] flex items-center justify-center text-2xl sm:text-3xl shadow-md transition-all active:scale-95">
+              📖
+            </div>
             <span className="text-xs sm:text-sm font-black font-display text-[#F2E8D5] group-hover:text-[#859966] transition-colors leading-tight">
               Traduttore
             </span>
@@ -508,22 +528,25 @@ export const Home: React.FC<HomeProps> = ({
         </div>
       </section>
 
-      {/* 5. La mia lista di parole: Singola riga compatta con freccia */}
-      <section className="pt-1">
+      {/* 5. La mia lista di parole: Riga semplice, nessuna card pesante */}
+      <section className="pt-2">
         <div
-          onClick={() => onNavigate('translator')}
-          className="flex items-center justify-between py-3 px-4 rounded-2xl bg-[#2B2622]/80 hover:bg-[#2B2622] border border-[#6B7C4F]/25 hover:border-[#6B7C4F]/50 text-[#F2E8D5] cursor-pointer transition-all group shadow-sm"
+          onClick={() => {
+            playSound('acorn');
+            setShowTanaManagerModal(true);
+          }}
+          className="flex items-center justify-between py-3.5 px-4 rounded-2xl bg-[#2B2622]/40 hover:bg-[#2B2622]/80 border border-[#6B7C4F]/20 hover:border-[#6B7C4F]/40 text-[#F2E8D5] cursor-pointer transition-all group"
         >
           <div className="flex items-center gap-3">
-            <span className="text-lg">📚</span>
-            <span className="text-xs sm:text-sm font-bold font-display text-[#F2E8D5] group-hover:text-[#E8802F] transition-colors">
+            <span className="text-xl">📚</span>
+            <span className="text-xs sm:text-sm font-black font-display text-[#F2E8D5] group-hover:text-[#E8802F] transition-colors">
               La mia lista di parole ({totalCount} vocaboli in tana)
             </span>
           </div>
 
-          <div className="flex items-center gap-1 text-xs font-black text-[#859966] group-hover:text-[#E8802F] transition-colors font-display">
+          <div className="flex items-center gap-1.5 text-xs font-black text-[#859966] group-hover:text-[#E8802F] transition-colors font-display">
             <span>Vedi tutte</span>
-            <span>→</span>
+            <span className="group-hover:translate-x-0.5 transition-transform">→</span>
           </div>
         </div>
       </section>
@@ -698,6 +721,25 @@ export const Home: React.FC<HomeProps> = ({
           onUpdateGrammarProgress={onUpdateGrammarProgress}
           onCompleteReading={onCompleteReading}
         />
+      )}
+
+      {/* Tana Manager Modal */}
+      {showTanaManagerModal && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 z-50 animate-fade-in">
+          <div className="w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+            <TanaManager
+              vocabItems={vocabItems}
+              exerciseErrors={exerciseErrors}
+              onDeleteItem={(id) => {
+                if (onDeleteItem) onDeleteItem(id);
+              }}
+              onDeleteExerciseError={(id) => {
+                if (onDeleteExerciseError) onDeleteExerciseError(id);
+              }}
+              onClose={() => setShowTanaManagerModal(false)}
+            />
+          </div>
+        </div>
       )}
     </div>
   );

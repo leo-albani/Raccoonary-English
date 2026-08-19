@@ -124,7 +124,7 @@ export const IT_TRANSLATIONS: Record<string, string> = {
   'tour.next': 'Avanti',
   'tour.finish': 'Inizia',
   'tour.finalTitle': 'Tutto chiaro!',
-  'tour.step.streak': 'Ciao, sono Rocky! Qui vedi il tuo streak e le ghiande raccolte — più torni, più crescono.',
+  'tour.step.streak': 'Ciao, sono Rocky! Qui vedi il tuo livello di studio attivo — fai progressi completando lezioni e letture per sbloccare il livello successivo.',
   'tour.step.translator': 'Cerca qui qualsiasi parola o frase. Ti do la traduzione e, se ti serve, la salvi in tana con la stella.',
   'tour.step.review': 'Da qui parti con gli esercizi di memorizzazione, basati su quello che hai già in tana.',
   'tour.step.grammar': 'Argomenti, phrasal verbs, falsi amici — con un percorso che tiene traccia di cosa hai già superato.',

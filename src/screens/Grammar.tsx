@@ -227,14 +227,14 @@ export const Grammar: React.FC<GrammarProps> = ({
   return (
     <div className="p-4 sm:p-6 max-w-4xl mx-auto space-y-6 pb-28">
       {/* Top Tab Switcher */}
-      <div className="bg-white p-1.5 rounded-2xl border border-[#6B7C4F]/20 flex shadow-xs max-w-lg mx-auto">
+      <div className="bg-[#1A1512] p-1.5 rounded-2xl border border-[#6B7C4F]/30 flex shadow-xs max-w-lg mx-auto">
         <button
           onClick={() => {
             setActiveTab('syllabus');
             setSelectedTopic(null);
           }}
           className={`flex-1 py-2.5 rounded-xl font-bold font-display text-xs transition-all cursor-pointer ${
-            activeTab === 'syllabus' ? 'bg-[#6B7C4F] text-white shadow-xs' : 'text-[#3A2B22]/70 hover:text-[#3A2B22]'
+            activeTab === 'syllabus' ? 'bg-[#E8802F] text-[#1A1512] shadow-xs' : 'text-[#F2E8D5]/70 hover:text-[#F2E8D5]'
           }`}
         >
           {t ? t('grammar.tabSyllabus') : '🌲 Syllabus Grammatica'}
@@ -247,7 +247,7 @@ export const Grammar: React.FC<GrammarProps> = ({
               setSelectedTopic(null);
             }}
             className={`flex-1 py-2.5 rounded-xl font-bold font-display text-xs transition-all cursor-pointer ${
-              activeTab === 'special' ? 'bg-[#6B7C4F] text-white shadow-xs' : 'text-[#3A2B22]/70 hover:text-[#3A2B22]'
+              activeTab === 'special' ? 'bg-[#E8802F] text-[#1A1512] shadow-xs' : 'text-[#F2E8D5]/70 hover:text-[#F2E8D5]'
             }`}
           >
             {t ? t('grammar.tabSpecial') : '⭐ Sezioni Speciali'}
@@ -261,7 +261,7 @@ export const Grammar: React.FC<GrammarProps> = ({
               setSelectedTopic(null);
             }}
             className={`flex-1 py-2.5 rounded-xl font-bold font-display text-xs transition-all cursor-pointer ${
-              activeTab === 'irregular' ? 'bg-[#6B7C4F] text-white shadow-xs' : 'text-[#3A2B22]/70 hover:text-[#3A2B22]'
+              activeTab === 'irregular' ? 'bg-[#E8802F] text-[#1A1512] shadow-xs' : 'text-[#F2E8D5]/70 hover:text-[#F2E8D5]'
             }`}
           >
             {t ? t('grammar.tabIrregular') : '📖 Verbi Irregolari'}
@@ -281,8 +281,8 @@ export const Grammar: React.FC<GrammarProps> = ({
                 }}
                 className={`px-4 py-2 rounded-xl font-bold text-xs font-display whitespace-nowrap cursor-pointer ${
                   selectedSpecialIdx === idx
-                    ? 'bg-[#E8802F] text-white shadow-xs'
-                    : 'bg-white text-[#3A2B22]/70 hover:bg-[#F2E8D5]/50 border border-[#6B7C4F]/20'
+                    ? 'bg-[#E8802F] text-[#1A1512] shadow-xs'
+                    : 'bg-[#2B2622] text-[#F2E8D5]/70 hover:bg-[#1A1512] border border-[#6B7C4F]/30'
                 }`}
               >
                 {sec.nome}
@@ -302,13 +302,13 @@ export const Grammar: React.FC<GrammarProps> = ({
               <div className="space-y-4">
                 <div className="bento-card space-y-3">
                   <span className="badge-leaf">Sezione Speciale</span>
-                  <h2 className="font-bold font-display text-2xl text-[#3A2B22]">{currentSec.nome}</h2>
+                  <h2 className="font-extrabold font-display text-2xl text-[#F2E8D5]">{currentSec.nome}</h2>
                   <input
                     type="text"
                     value={specialFilter}
                     onChange={(e) => setSpecialFilter(e.target.value)}
                     placeholder="Cerca voce o significato..."
-                    className="w-full p-3.5 rounded-xl bg-[#F2E8D5]/50 border border-[#6B7C4F]/30 focus:outline-none focus:border-[#6B7C4F] text-sm font-medium"
+                    className="w-full p-3.5 rounded-xl bg-[#1A1512] border border-[#6B7C4F]/30 focus:outline-none focus:border-[#E8802F] text-sm font-medium text-[#F2E8D5]"
                   />
                 </div>
 
@@ -316,14 +316,14 @@ export const Grammar: React.FC<GrammarProps> = ({
                   {items.map((item, idx) => (
                     <div key={idx} className="bento-card p-4 flex items-start justify-between gap-3 text-xs">
                       <div className="space-y-1">
-                        <div className="font-bold text-sm text-[#3A2B22] font-display">
+                        <div className="font-extrabold text-sm text-[#F2E8D5] font-display">
                           {item.voce}
                         </div>
-                        <div className="text-xs text-[#6B7C4F] font-bold">
+                        <div className="text-xs text-[#859966] font-bold">
                           {item.significato}
                         </div>
                         {item.esempio && (
-                          <div className="text-[11px] text-[#3A2B22]/70 italic mt-1 font-medium">
+                          <div className="text-[11px] text-[#F2E8D5]/70 italic mt-1 font-medium">
                             "{item.esempio}"
                           </div>
                         )}
@@ -350,7 +350,7 @@ export const Grammar: React.FC<GrammarProps> = ({
                           };
                           onSaveErrorVocab(vocabItem);
                         }}
-                        className="text-xs font-bold text-[#E8802F] hover:underline shrink-0 font-display cursor-pointer bg-[#E8802F]/10 px-2.5 py-1 rounded-lg"
+                        className="text-xs font-bold text-[#E8802F] hover:underline shrink-0 font-display cursor-pointer bg-[#E8802F]/15 px-2.5 py-1 rounded-lg"
                         title="Salva in tana"
                       >
                         + Tana 📥
@@ -367,13 +367,13 @@ export const Grammar: React.FC<GrammarProps> = ({
         <div className="space-y-4">
           <div className="bento-card space-y-3">
             <span className="badge-leaf">Consultazione</span>
-            <h2 className="font-bold font-display text-2xl text-[#3A2B22]">Tabella Verbi Irregolari</h2>
+            <h2 className="font-extrabold font-display text-2xl text-[#F2E8D5]">Tabella Verbi Irregolari</h2>
             <input
               type="text"
               value={verbFilter}
               onChange={(e) => setVerbFilter(e.target.value)}
               placeholder="Cerca verbo (es. write, pensare)..."
-              className="w-full p-3.5 rounded-xl bg-[#F2E8D5]/50 border border-[#6B7C4F]/30 focus:outline-none focus:border-[#6B7C4F] text-sm font-medium"
+              className="w-full p-3.5 rounded-xl bg-[#1A1512] border border-[#6B7C4F]/30 focus:outline-none focus:border-[#E8802F] text-sm font-medium text-[#F2E8D5]"
             />
           </div>
 
@@ -381,10 +381,10 @@ export const Grammar: React.FC<GrammarProps> = ({
             {filteredVerbs.map((v, idx) => (
               <div key={idx} className="bento-card p-4 flex items-center justify-between text-xs">
                 <div>
-                  <div className="font-bold text-sm text-[#3A2B22] font-display">
-                    {v.base} <span className="font-normal text-xs text-[#3A2B22]/60">({v.translation})</span>
+                  <div className="font-extrabold text-sm text-[#F2E8D5] font-display">
+                    {v.base} <span className="font-normal text-xs text-[#F2E8D5]/60">({v.translation})</span>
                   </div>
-                  <div className="text-xs text-[#6B7C4F] mt-1 font-medium">
+                  <div className="text-xs text-[#859966] mt-1 font-medium">
                     Past: <strong>{v.pastSimple}</strong> | Part: <strong>{v.pastParticiple}</strong>
                   </div>
                 </div>
@@ -397,7 +397,7 @@ export const Grammar: React.FC<GrammarProps> = ({
         <div className="space-y-6 animate-fade-in max-w-2xl mx-auto">
           <button
             onClick={() => setSelectedTopic(null)}
-            className="text-xs font-bold text-[#6B7C4F] font-display hover:underline cursor-pointer"
+            className="text-xs font-bold text-[#859966] font-display hover:text-[#E8802F] cursor-pointer transition-colors"
           >
             ← Torna al syllabus
           </button>
@@ -405,7 +405,7 @@ export const Grammar: React.FC<GrammarProps> = ({
           {/* Theory Bento Card */}
           <div className="bento-card space-y-4">
             <div className="flex items-center justify-between">
-              <span className="badge-leaf bg-[#C99A3D]">
+              <span className="badge-leaf bg-[#E8802F] text-[#1A1512]">
                 Livello {selectedTopic.level}
               </span>
               <button
@@ -416,18 +416,18 @@ export const Grammar: React.FC<GrammarProps> = ({
               </button>
             </div>
 
-            <h2 className="text-2xl font-bold font-display text-[#3A2B22]">
+            <h2 className="text-2xl font-extrabold font-display text-[#F2E8D5]">
               {selectedTopic.name}
             </h2>
 
-            <p className="text-sm text-[#3A2B22]/85 leading-relaxed font-medium">
+            <p className="text-sm text-[#F2E8D5]/90 leading-relaxed font-medium">
               {selectedTopic.summary}
             </p>
 
-            <div className="bg-[#F2E8D5]/60 p-4 rounded-2xl space-y-1.5 border border-[#6B7C4F]/15">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-[#6B7C4F] font-display">Esempi pratici:</span>
+            <div className="bg-[#1A1512] p-4 rounded-2xl space-y-1.5 border border-[#6B7C4F]/25">
+              <span className="text-[10px] font-extrabold uppercase tracking-wider text-[#859966] font-display">Esempi pratici:</span>
               {selectedTopic.examples.map((ex, idx) => (
-                <p key={idx} className="text-xs italic text-[#3A2B22] font-medium">
+                <p key={idx} className="text-xs italic text-[#F2E8D5]/90 font-medium">
                   • "{ex}"
                 </p>
               ))}
@@ -438,11 +438,11 @@ export const Grammar: React.FC<GrammarProps> = ({
           {isLoading ? (
             <div className="bento-card text-center py-10 space-y-3">
               <Mascot pose="thinking" size={120} speechBubble="Sto preparando gli esercizi per questo argomento..." />
-              <p className="text-xs text-[#3A2B22]/70 font-medium">Un attimo di pazienza per la tana...</p>
+              <p className="text-xs text-[#F2E8D5]/70 font-medium">Un attimo di pazienza per la tana...</p>
             </div>
           ) : exercises.length > 0 ? (
             <div className="space-y-4">
-              <div className="flex justify-between items-center text-xs font-bold text-[#3A2B22]/70 font-display">
+              <div className="flex justify-between items-center text-xs font-bold text-[#F2E8D5]/70 font-display">
                 <span>Esercizio {currentExIndex + 1} di {exercises.length}</span>
                 <div className="flex gap-1">
                   {exercises.map((_, idx) => (
@@ -465,7 +465,7 @@ export const Grammar: React.FC<GrammarProps> = ({
 
                 return (
                   <div className="bento-card space-y-4">
-                    <p className="font-bold text-lg text-[#3A2B22] font-display">
+                    <p className="font-extrabold text-lg text-[#F2E8D5] font-display">
                       {ex.domanda}
                     </p>
 
@@ -478,8 +478,8 @@ export const Grammar: React.FC<GrammarProps> = ({
                             disabled={isChecked}
                             className={`p-4 rounded-2xl text-left text-sm font-bold font-display border-2 transition-all cursor-pointer ${
                               userAns === opt
-                                ? 'bg-[#6B7C4F]/10 border-[#6B7C4F] text-[#3A2B22]'
-                                : 'bg-white border-[#6B7C4F]/20 hover:border-[#6B7C4F] text-[#3A2B22]'
+                                ? 'bg-[#E8802F] border-[#E8802F] text-[#1A1512]'
+                                : 'bg-[#1A1512] border-[#6B7C4F]/30 hover:border-[#E8802F] text-[#F2E8D5]'
                             }`}
                           >
                             {opt}
@@ -493,7 +493,7 @@ export const Grammar: React.FC<GrammarProps> = ({
                         onChange={(e) => setUserAnswers((prev) => ({ ...prev, [currentExIndex]: e.target.value }))}
                         disabled={isChecked}
                         placeholder="Scrivi qui la tua risposta..."
-                        className="w-full p-4 rounded-2xl bg-[#F2E8D5]/40 border-2 border-[#6B7C4F]/30 focus:border-[#6B7C4F] focus:outline-none text-base text-[#3A2B22] font-medium"
+                        className="w-full p-4 rounded-2xl bg-[#1A1512] border-2 border-[#6B7C4F]/30 focus:border-[#E8802F] focus:outline-none text-base text-[#F2E8D5] font-medium"
                       />
                     )}
 
@@ -509,14 +509,14 @@ export const Grammar: React.FC<GrammarProps> = ({
                       <div
                         className={`p-4 rounded-2xl border-2 space-y-2 text-xs ${
                           isCorrect
-                            ? 'bg-[#6B7C4F]/10 border-[#6B7C4F]'
-                            : 'bg-[#C99A3D]/15 border-[#C99A3D]'
+                            ? 'bg-[#1A1512] border-[#6B7C4F]'
+                            : 'bg-[#1A1512] border-[#E8802F]'
                         }`}
                       >
-                        <div className="font-bold font-display text-base">
+                        <div className={`font-extrabold font-display text-base ${isCorrect ? 'text-[#859966]' : 'text-[#E8802F]'}`}>
                           {isCorrect ? '✨ Esatto!' : `💡 Risposta: "${ex.rispostaCorretta}"`}
                         </div>
-                        <p className="text-[#3A2B22]/85 text-xs sm:text-sm leading-relaxed">{ex.spiegazione}</p>
+                        <p className="text-[#F2E8D5]/90 text-xs sm:text-sm leading-relaxed">{ex.spiegazione}</p>
 
                         {currentExIndex < exercises.length - 1 ? (
                           <button
@@ -546,7 +546,7 @@ export const Grammar: React.FC<GrammarProps> = ({
         <div className="space-y-6">
           {/* Level Filter Bar */}
           <div className="flex items-center justify-between gap-2 overflow-x-auto no-scrollbar pb-1">
-            <div className="flex items-center gap-1.5 bg-white/70 backdrop-blur-xs p-1 rounded-2xl border border-[#6B7C4F]/20 shadow-xs">
+            <div className="flex items-center gap-1.5 bg-[#1A1512] p-1 rounded-2xl border border-[#6B7C4F]/30 shadow-xs">
               {(['TUTTI', 'A1', 'A2', 'B1', 'B2', 'C1', 'C2'] as const).map((lvl) => {
                 const isSelected = selectedLevelFilter === lvl;
                 const isUserActiveLevel = activeStudyLevel === lvl;
@@ -556,8 +556,8 @@ export const Grammar: React.FC<GrammarProps> = ({
                     onClick={() => setSelectedLevelFilter(lvl)}
                     className={`px-3 py-1.5 rounded-xl font-bold font-display text-xs transition-all cursor-pointer whitespace-nowrap flex items-center gap-1 ${
                       isSelected
-                        ? 'bg-[#6B7C4F] text-white shadow-xs'
-                        : 'text-[#3A2B22]/70 hover:text-[#3A2B22] hover:bg-gray-100/50'
+                        ? 'bg-[#E8802F] text-[#1A1512] shadow-xs'
+                        : 'text-[#F2E8D5]/70 hover:text-[#F2E8D5] hover:bg-[#2B2622]'
                     }`}
                   >
                     <span>{lvl === 'TUTTI' ? 'Tutti i livelli' : lvl}</span>
@@ -588,48 +588,48 @@ export const Grammar: React.FC<GrammarProps> = ({
                         <div
                           key={t.id}
                           onClick={() => startTopicExercises(t)}
-                          className={`bento-card hover:border-[#6B7C4F] cursor-pointer flex items-center justify-between gap-3 group relative overflow-hidden transition-all ${
+                          className={`bento-card hover:border-[#E8802F] cursor-pointer flex items-center justify-between gap-3 group relative overflow-hidden transition-all ${
                             isPassed
-                              ? 'border-2 border-[#6B7C4F]/60 bg-[#6B7C4F]/5'
+                              ? 'border-2 border-[#6B7C4F] bg-[#1A1512]'
                               : isMatchingActiveLevel
-                              ? 'border-2 border-[#6B7C4F]/40 bg-[#6B7C4F]/5'
+                              ? 'border-2 border-[#E8802F]/60 bg-[#1A1512]'
                               : ''
                           }`}
                         >
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 mb-1 flex-wrap">
-                              <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-[#C99A3D]/20 text-[#C99A3D] font-display">
+                              <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-[#E8802F]/20 text-[#E8802F] font-display">
                                 {t.level}
                               </span>
                               {isMatchingActiveLevel && (
-                                <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-[#6B7C4F]/20 text-[#6B7C4F] font-display">
+                                <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-[#6B7C4F]/30 text-[#859966] font-display">
                                   🎯 Tuo livello
                                 </span>
                               )}
                               {isPassed && (
-                                <span className="text-[10px] font-extrabold px-2 py-0.5 rounded bg-[#6B7C4F] text-white font-display">
+                                <span className="text-[10px] font-extrabold px-2 py-0.5 rounded bg-[#6B7C4F] text-[#1A1512] font-display">
                                   ✓ Superato
                                 </span>
                               )}
                               {prog && prog.bestScorePercent !== undefined && (
-                                <span className="text-[10px] font-bold text-[#3A2B22]/60 font-display">
+                                <span className="text-[10px] font-bold text-[#F2E8D5]/60 font-display">
                                   Best: {prog.bestScorePercent}%
                                 </span>
                               )}
                             </div>
-                            <h3 className="font-bold text-base text-[#3A2B22] font-display truncate">
+                            <h3 className="font-extrabold text-base text-[#F2E8D5] font-display truncate">
                               {t.name}
                             </h3>
-                            <p className="text-xs text-[#3A2B22]/70 line-clamp-2 mt-1 font-medium">
+                            <p className="text-xs text-[#F2E8D5]/70 line-clamp-2 mt-1 font-medium">
                               {t.summary}
                             </p>
                           </div>
 
                           {/* Mascot indicator for last active topic */}
                           {isLastActive && (
-                            <div className="shrink-0 flex items-center gap-1 bg-[#F2E8D5] px-2 py-1 rounded-xl border border-[#6B7C4F]/30 shadow-xs">
+                            <div className="shrink-0 flex items-center gap-1 bg-[#1A1512] px-2 py-1 rounded-xl border border-[#6B7C4F]/40 shadow-xs">
                               <span className="text-sm">🦝</span>
-                              <span className="text-[10px] font-bold text-[#6B7C4F]">Qui</span>
+                              <span className="text-[10px] font-bold text-[#859966]">Qui</span>
                             </div>
                           )}
 
@@ -658,18 +658,18 @@ export const Grammar: React.FC<GrammarProps> = ({
                     <div className="flex items-center justify-between px-1">
                       <div className="space-y-0.5">
                         <div className="flex items-center gap-2">
-                          <span className="badge-leaf bg-[#6B7C4F] text-white">
+                          <span className="badge-leaf bg-[#6B7C4F] text-[#1A1512]">
                             Il tuo livello ({activeStudyLevel})
                           </span>
-                          <span className="text-xs font-bold text-[#6B7C4F] font-display">
+                          <span className="text-xs font-bold text-[#859966] font-display">
                             Consolidamento
                           </span>
                         </div>
-                        <p className="text-xs text-[#3A2B22]/70 font-medium">
+                        <p className="text-xs text-[#F2E8D5]/70 font-medium">
                           Tutti gli argomenti fondamentali per consolidare il tuo livello attuale.
                         </p>
                       </div>
-                      <span className="text-xs font-bold text-[#3A2B22]/60 font-display">
+                      <span className="text-xs font-bold text-[#F2E8D5]/60 font-display">
                         {activeTopics.length} {activeTopics.length === 1 ? 'argomento' : 'argomenti'}
                       </span>
                     </div>
@@ -684,40 +684,40 @@ export const Grammar: React.FC<GrammarProps> = ({
                           <div
                             key={t.id}
                             onClick={() => startTopicExercises(t)}
-                            className={`bento-card hover:border-[#6B7C4F] cursor-pointer flex items-center justify-between gap-3 group relative overflow-hidden transition-all ${
+                            className={`bento-card hover:border-[#E8802F] cursor-pointer flex items-center justify-between gap-3 group relative overflow-hidden transition-all ${
                               isPassed
-                                ? 'border-2 border-[#6B7C4F]/60 bg-[#6B7C4F]/5'
-                                : 'border-2 border-[#6B7C4F]/30 hover:border-[#6B7C4F]'
+                                ? 'border-2 border-[#6B7C4F] bg-[#1A1512]'
+                                : 'border-2 border-[#6B7C4F]/30 hover:border-[#E8802F]'
                             }`}
                           >
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2 mb-1 flex-wrap">
-                                <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-[#6B7C4F]/20 text-[#6B7C4F] font-display">
+                                <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-[#6B7C4F]/30 text-[#859966] font-display">
                                   {t.level}
                                 </span>
                                 {isPassed && (
-                                  <span className="text-[10px] font-extrabold px-2 py-0.5 rounded bg-[#6B7C4F] text-white font-display">
+                                  <span className="text-[10px] font-extrabold px-2 py-0.5 rounded bg-[#6B7C4F] text-[#1A1512] font-display">
                                     ✓ Superato
                                   </span>
                                 )}
                                 {prog && prog.bestScorePercent !== undefined && (
-                                  <span className="text-[10px] font-bold text-[#3A2B22]/60 font-display">
+                                  <span className="text-[10px] font-bold text-[#F2E8D5]/60 font-display">
                                     Best: {prog.bestScorePercent}%
                                   </span>
                                 )}
                               </div>
-                              <h3 className="font-bold text-base text-[#3A2B22] font-display truncate">
+                              <h3 className="font-extrabold text-base text-[#F2E8D5] font-display truncate">
                                 {t.name}
                               </h3>
-                              <p className="text-xs text-[#3A2B22]/70 line-clamp-2 mt-1 font-medium">
+                              <p className="text-xs text-[#F2E8D5]/70 line-clamp-2 mt-1 font-medium">
                                 {t.summary}
                               </p>
                             </div>
 
                             {isLastActive && (
-                              <div className="shrink-0 flex items-center gap-1 bg-[#F2E8D5] px-2 py-1 rounded-xl border border-[#6B7C4F]/30 shadow-xs">
+                              <div className="shrink-0 flex items-center gap-1 bg-[#1A1512] px-2 py-1 rounded-xl border border-[#6B7C4F]/40 shadow-xs">
                                 <span className="text-sm">🦝</span>
-                                <span className="text-[10px] font-bold text-[#6B7C4F]">Qui</span>
+                                <span className="text-[10px] font-bold text-[#859966]">Qui</span>
                               </div>
                             )}
 
@@ -736,18 +736,18 @@ export const Grammar: React.FC<GrammarProps> = ({
                       <div className="flex items-center justify-between px-1">
                         <div className="space-y-0.5">
                           <div className="flex items-center gap-2">
-                            <span className="badge-leaf bg-[#E8802F] text-white">
+                            <span className="badge-leaf bg-[#E8802F] text-[#1A1512]">
                               Un passo avanti ({nextStudyLevel})
                             </span>
                             <span className="text-xs font-bold text-[#E8802F] font-display">
                               ✨ Avanzamento (i+1)
                             </span>
                           </div>
-                          <p className="text-xs text-[#3A2B22]/70 font-medium">
+                          <p className="text-xs text-[#F2E8D5]/70 font-medium">
                             Argomenti selezionati in anticipo ({advanceTopics.length} di {nextTopics.length}) per iniziare a esplorare il livello {nextStudyLevel}.
                           </p>
                         </div>
-                        <span className="text-xs font-bold text-[#E8802F] font-display bg-[#E8802F]/10 px-2 py-0.5 rounded-full">
+                        <span className="text-xs font-bold text-[#E8802F] font-display bg-[#E8802F]/15 px-2 py-0.5 rounded-full">
                           Facoltativo
                         </span>
                       </div>
@@ -762,8 +762,8 @@ export const Grammar: React.FC<GrammarProps> = ({
                             <div
                               key={t.id}
                               onClick={() => startTopicExercises(t)}
-                              className={`bento-card cursor-pointer flex items-center justify-between gap-3 group relative overflow-hidden transition-all border-2 border-[#E8802F]/40 hover:border-[#E8802F] bg-gradient-to-br from-white to-[#E8802F]/5 ${
-                                isPassed ? 'border-[#6B7C4F] bg-[#6B7C4F]/5' : ''
+                              className={`bento-card cursor-pointer flex items-center justify-between gap-3 group relative overflow-hidden transition-all border-2 border-[#E8802F]/40 hover:border-[#E8802F] bg-[#1A1512] ${
+                                isPassed ? 'border-[#6B7C4F]' : ''
                               }`}
                             >
                               <div className="flex-1 min-w-0">
@@ -772,7 +772,7 @@ export const Grammar: React.FC<GrammarProps> = ({
                                     {t.level} • Avanzato
                                   </span>
                                   {isPassed ? (
-                                    <span className="text-[10px] font-extrabold px-2 py-0.5 rounded bg-[#6B7C4F] text-white font-display">
+                                    <span className="text-[10px] font-extrabold px-2 py-0.5 rounded bg-[#6B7C4F] text-[#1A1512] font-display">
                                       ✓ Superato
                                     </span>
                                   ) : (
@@ -781,23 +781,23 @@ export const Grammar: React.FC<GrammarProps> = ({
                                     </span>
                                   )}
                                   {prog && prog.bestScorePercent !== undefined && (
-                                    <span className="text-[10px] font-bold text-[#3A2B22]/60 font-display">
+                                    <span className="text-[10px] font-bold text-[#F2E8D5]/60 font-display">
                                       Best: {prog.bestScorePercent}%
                                     </span>
                                   )}
                                 </div>
-                                <h3 className="font-bold text-base text-[#3A2B22] font-display truncate">
+                                <h3 className="font-extrabold text-base text-[#F2E8D5] font-display truncate">
                                   {t.name}
                                 </h3>
-                                <p className="text-xs text-[#3A2B22]/70 line-clamp-2 mt-1 font-medium">
+                                <p className="text-xs text-[#F2E8D5]/70 line-clamp-2 mt-1 font-medium">
                                   {t.summary}
                                 </p>
                               </div>
 
                               {isLastActive && (
-                                <div className="shrink-0 flex items-center gap-1 bg-[#F2E8D5] px-2 py-1 rounded-xl border border-[#6B7C4F]/30 shadow-xs">
+                                <div className="shrink-0 flex items-center gap-1 bg-[#2B2622] px-2 py-1 rounded-xl border border-[#6B7C4F]/40 shadow-xs">
                                   <span className="text-sm">🦝</span>
-                                  <span className="text-[10px] font-bold text-[#6B7C4F]">Qui</span>
+                                  <span className="text-[10px] font-bold text-[#859966]">Qui</span>
                                 </div>
                               )}
 
@@ -821,21 +821,21 @@ export const Grammar: React.FC<GrammarProps> = ({
                 <div className="space-y-3">
                   <div className="flex items-center justify-between px-1">
                     <div className="flex items-center gap-2">
-                      <span className="badge-leaf bg-[#6B7C4F] text-white">Livello {selectedLevelFilter}</span>
+                      <span className="badge-leaf bg-[#6B7C4F] text-[#1A1512]">Livello {selectedLevelFilter}</span>
                       {activeStudyLevel === selectedLevelFilter && (
-                        <span className="text-xs font-bold text-[#6B7C4F] font-display">
+                        <span className="text-xs font-bold text-[#859966] font-display">
                           (Il tuo livello di studio attivo)
                         </span>
                       )}
                     </div>
-                    <span className="text-xs font-bold text-[#3A2B22]/60 font-display">
+                    <span className="text-xs font-bold text-[#F2E8D5]/60 font-display">
                       {filteredTopics.length} {filteredTopics.length === 1 ? 'argomento' : 'argomenti'}
                     </span>
                   </div>
 
                   {filteredTopics.length === 0 ? (
                     <div className="bento-card text-center py-8">
-                      <p className="text-xs font-medium text-[#3A2B22]/70">
+                      <p className="text-xs font-medium text-[#F2E8D5]/70">
                         Nessun argomento specifico trovato per il livello {selectedLevelFilter}.
                       </p>
                     </div>
@@ -850,38 +850,38 @@ export const Grammar: React.FC<GrammarProps> = ({
                           <div
                             key={t.id}
                             onClick={() => startTopicExercises(t)}
-                            className={`bento-card hover:border-[#6B7C4F] cursor-pointer flex items-center justify-between gap-3 group relative overflow-hidden transition-all ${
-                              isPassed ? 'border-2 border-[#6B7C4F]/60 bg-[#6B7C4F]/5' : ''
+                            className={`bento-card hover:border-[#E8802F] cursor-pointer flex items-center justify-between gap-3 group relative overflow-hidden transition-all ${
+                              isPassed ? 'border-2 border-[#6B7C4F] bg-[#1A1512]' : ''
                             }`}
                           >
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2 mb-1 flex-wrap">
-                                <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-[#C99A3D]/20 text-[#C99A3D] font-display">
+                                <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-[#E8802F]/20 text-[#E8802F] font-display">
                                   {t.level}
                                 </span>
                                 {isPassed && (
-                                  <span className="text-[10px] font-extrabold px-2 py-0.5 rounded bg-[#6B7C4F] text-white font-display">
+                                  <span className="text-[10px] font-extrabold px-2 py-0.5 rounded bg-[#6B7C4F] text-[#1A1512] font-display">
                                     ✓ Superato
                                   </span>
                                 )}
                                 {prog && prog.bestScorePercent !== undefined && (
-                                  <span className="text-[10px] font-bold text-[#3A2B22]/60 font-display">
+                                  <span className="text-[10px] font-bold text-[#F2E8D5]/60 font-display">
                                     Best: {prog.bestScorePercent}%
                                   </span>
                                 )}
                               </div>
-                              <h3 className="font-bold text-base text-[#3A2B22] font-display truncate">
+                              <h3 className="font-extrabold text-base text-[#F2E8D5] font-display truncate">
                                 {t.name}
                               </h3>
-                              <p className="text-xs text-[#3A2B22]/70 line-clamp-2 mt-1 font-medium">
+                              <p className="text-xs text-[#F2E8D5]/70 line-clamp-2 mt-1 font-medium">
                                 {t.summary}
                               </p>
                             </div>
 
                             {isLastActive && (
-                              <div className="shrink-0 flex items-center gap-1 bg-[#F2E8D5] px-2 py-1 rounded-xl border border-[#6B7C4F]/30 shadow-xs">
+                              <div className="shrink-0 flex items-center gap-1 bg-[#1A1512] px-2 py-1 rounded-xl border border-[#6B7C4F]/40 shadow-xs">
                                 <span className="text-sm">🦝</span>
-                                <span className="text-[10px] font-bold text-[#6B7C4F]">Qui</span>
+                                <span className="text-[10px] font-bold text-[#859966]">Qui</span>
                               </div>
                             )}
 
@@ -902,24 +902,24 @@ export const Grammar: React.FC<GrammarProps> = ({
 
       {/* Confirmation Modal for Regenerate */}
       {showConfirmModal && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-3xl p-6 max-w-sm w-full space-y-4 text-center border-2 border-[#6B7C4F]">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+          <div className="bg-[#2B2622] rounded-3xl p-6 max-w-sm w-full space-y-4 text-center border-2 border-[#6B7C4F]/50">
             <Mascot pose="thinking" size={90} />
-            <h3 className="text-lg font-bold font-display text-[#3A2B22]">Aggiornare il set?</h3>
-            <p className="text-xs text-[#3A2B22]/80 leading-relaxed">
+            <h3 className="text-lg font-extrabold font-display text-[#F2E8D5]">Aggiornare il set?</h3>
+            <p className="text-xs text-[#F2E8D5]/80 leading-relaxed">
               Hai ancora alcuni esercizi da completare in questo set. Vuoi sostituirli con un nuovo set generato?
             </p>
 
             <div className="flex gap-2 pt-2">
               <button
                 onClick={() => setShowConfirmModal(false)}
-                className="flex-1 py-3 rounded-2xl bg-gray-100 text-[#3A2B22] font-bold text-xs"
+                className="btn-secondary flex-1 py-3 text-xs"
               >
                 Annulla
               </button>
               <button
                 onClick={confirmRegenerate}
-                className="flex-1 py-3 rounded-2xl bg-[#E8802F] text-white font-bold text-xs"
+                className="btn-zucca flex-1 py-3 text-xs"
               >
                 Sì, aggiorna
               </button>

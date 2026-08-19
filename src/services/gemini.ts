@@ -36,6 +36,34 @@ export async function evaluateUserAnswer(
   }
 }
 
+export async function generateSuggestedVocab(
+  count: number = 6,
+  level: string = 'A1',
+  targetLang?: string,
+  nativeLang?: string,
+  targetName?: string,
+  nativeName?: string,
+  existingTerms: string[] = []
+): Promise<Array<{ termine: string; traduzione: string; esempio: string; esempioTraduzione?: string }>> {
+  try {
+    const res = await fetch('/api/generate-suggested-vocab', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ count, level, targetLang, nativeLang, targetName, nativeName, existingTerms }),
+    });
+
+    if (!res.ok) {
+      throw new Error(`Server returned ${res.status}`);
+    }
+
+    const data = await res.json();
+    return data.items || [];
+  } catch (err) {
+    console.warn('Failed to generate suggested vocab via API, using level fallback:', err);
+    return [];
+  }
+}
+
 export async function generateGrammarExercises(
   topicName: string,
   level: string = 'A1',
@@ -55,7 +83,36 @@ export async function generateGrammarExercises(
   }
 
   const data = await res.json();
-  return data.exercises || [];
+  const rawList: any[] = data.exercises || [];
+
+  return rawList
+    .map((ex, idx) => {
+      const q = (ex.domanda || ex.question || ex.frase || ex.instruction || '').trim();
+      const a = (ex.rispostaCorretta || ex.correctAnswer || ex.correctSentence || '').trim();
+      const exp = (ex.spiegazione || ex.explanation || 'Risposta esatta per questo argomento.').trim();
+      const opts = Array.isArray(ex.opzioni)
+        ? ex.opzioni
+        : Array.isArray(ex.options)
+        ? ex.options
+        : [];
+
+      return {
+        id: ex.id || `ex_${idx + 1}`,
+        tipo: ex.tipo || ex.type || 'fill_in_blank',
+        type: ex.tipo || ex.type || 'fill_in_blank',
+        domanda: q,
+        question: q,
+        rispostaCorretta: a,
+        correctAnswer: a,
+        spiegazione: exp,
+        explanation: exp,
+        opzioni: opts,
+        options: opts,
+        scrambledWords: ex.scrambledWords,
+        correctSentence: ex.correctSentence,
+      } as Exercise;
+    })
+    .filter((ex) => ex.domanda && ex.domanda.length >= 3 && ex.rispostaCorretta && ex.rispostaCorretta.length >= 1);
 }
 
 export async function generateReadingText(

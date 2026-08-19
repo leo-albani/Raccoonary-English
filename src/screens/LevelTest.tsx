@@ -276,10 +276,10 @@ export const LevelTest: React.FC<LevelTestProps> = ({
         <div className="bento-card text-center py-16 space-y-6">
           <Mascot pose="thinking" size={150} speechBubble="Sto preparando il tuo test di livello personalizzato..." />
           <div className="space-y-2">
-            <h3 className="text-xl font-extrabold text-[#3A2B22] font-display">
+            <h3 className="text-xl font-extrabold text-[#F2E8D5] font-display">
               Generazione domande in corso
             </h3>
-            <p className="text-xs sm:text-sm font-medium text-[#3A2B22]/70 max-w-sm mx-auto">
+            <p className="text-xs sm:text-sm font-medium text-[#F2E8D5]/70 max-w-sm mx-auto">
               Difficoltà progressiva da A1 a C2 per individuare esattamente dove ti trovi.
             </p>
           </div>
@@ -288,7 +288,7 @@ export const LevelTest: React.FC<LevelTestProps> = ({
         <div className="bento-card text-center py-12 space-y-6">
           <Mascot pose="digging" size={130} speechBubble="Oops! Qualcosa non è andato." />
           <div className="space-y-2">
-            <p className="text-base font-extrabold text-red-600 font-display">{errorMsg}</p>
+            <p className="text-base font-extrabold text-red-400 font-display">{errorMsg}</p>
           </div>
           <button type="button" onClick={loadNewTest} className="btn-zucca py-3 px-8 text-sm">
             Riprova 🔄
@@ -298,7 +298,7 @@ export const LevelTest: React.FC<LevelTestProps> = ({
         /* IMMERSIVE CELEBRATIVE RESULTS SCREEN */
         <div className="space-y-8 animate-fade-in text-center">
           {/* Main Hero Card with Rocky protagonist */}
-          <div className="bento-card p-6 sm:p-8 space-y-6 border-2 border-[#6B7C4F]/30 bg-white/95">
+          <div className="bento-card p-6 sm:p-8 space-y-6 border-2 border-[#6B7C4F]/40 bg-[#2B2622]">
             <div className="relative">
               <Mascot
                 pose={testResult.resultLevel === 'Sotto A1' ? 'greeting' : 'happy'}
@@ -312,7 +312,7 @@ export const LevelTest: React.FC<LevelTestProps> = ({
             </div>
 
             <div className="space-y-2">
-              <span className="text-xs font-extrabold uppercase tracking-wider text-[#6B7C4F] font-display">
+              <span className="text-xs font-extrabold uppercase tracking-wider text-[#859966] font-display">
                 Esito Test di Livello Adattivo
               </span>
               
@@ -322,7 +322,7 @@ export const LevelTest: React.FC<LevelTestProps> = ({
                 </span>
               </div>
 
-              <p className="text-sm font-bold text-[#3A2B22]/80 font-display">
+              <p className="text-sm font-bold text-[#F2E8D5]/90 font-display">
                 {testResult.totalCorrect} risposte corrette su {testResult.totalQuestions} ({testResult.totalQuestions > 0 ? Math.round((testResult.totalCorrect / testResult.totalQuestions) * 100) : 0}%)
               </p>
             </div>
@@ -337,23 +337,23 @@ export const LevelTest: React.FC<LevelTestProps> = ({
                     key={lvl}
                     className={`p-4 rounded-2xl border-2 space-y-2 transition-all ${
                       !wasAdministered
-                        ? 'bg-white/40 border-dashed border-[#6B7C4F]/20 opacity-60'
+                        ? 'bg-[#1A1512]/40 border-dashed border-[#6B7C4F]/20 opacity-50'
                         : b.passed
-                        ? 'bg-[#6B7C4F]/10 border-[#6B7C4F] shadow-2xs'
-                        : 'bg-amber-50/80 border-amber-300'
+                        ? 'bg-[#1A1512] border-[#6B7C4F] shadow-2xs'
+                        : 'bg-[#1A1512] border-amber-500/50'
                     }`}
                   >
                     <div className="flex justify-between items-center">
-                      <span className="font-extrabold font-display text-base text-[#3A2B22]">
+                      <span className="font-extrabold font-display text-base text-[#F2E8D5]">
                         {lvl}
                       </span>
                       <span
                         className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full ${
                           !wasAdministered
-                            ? 'bg-gray-100 text-gray-500'
+                            ? 'bg-[#2B2622] text-gray-400'
                             : b.passed
-                            ? 'bg-[#6B7C4F] text-white'
-                            : 'bg-amber-200 text-amber-900'
+                            ? 'bg-[#6B7C4F] text-[#1A1512]'
+                            : 'bg-amber-500 text-[#1A1512]'
                         }`}
                       >
                         {!wasAdministered ? 'Non affrontato' : b.passed ? '✓ Superato' : 'Da rivedere'}
@@ -370,7 +370,7 @@ export const LevelTest: React.FC<LevelTestProps> = ({
                       </div>
                     )}
 
-                    <p className="text-[11px] font-bold text-[#3A2B22]/75">
+                    <p className="text-[11px] font-bold text-[#F2E8D5]/75">
                       {!wasAdministered
                         ? 'Interrotto prima'
                         : `${b.correct}/${b.total} corrette (${b.percent}%)`}
@@ -411,22 +411,22 @@ export const LevelTest: React.FC<LevelTestProps> = ({
           {/* Test History List */}
           {testHistory.length > 1 && (
             <div className="bento-card space-y-3 text-left">
-              <h3 className="font-extrabold font-display text-base text-[#3A2B22]">Storico dei tuoi test</h3>
+              <h3 className="font-extrabold font-display text-base text-[#F2E8D5]">Storico dei tuoi test</h3>
               <div className="space-y-2">
                 {testHistory.slice(1).map((item, idx) => (
                   <div
                     key={item.id || idx}
-                    className="p-3.5 bg-[#F2E8D5]/40 rounded-2xl border border-[#6B7C4F]/20 flex justify-between items-center text-xs"
+                    className="p-3.5 bg-[#1A1512] rounded-2xl border border-[#6B7C4F]/30 flex justify-between items-center text-xs"
                   >
                     <div>
-                      <span className="font-bold text-[#3A2B22] font-display text-sm">
+                      <span className="font-bold text-[#F2E8D5] font-display text-sm">
                         Livello {item.resultLevel}
                       </span>
-                      <span className="text-[#3A2B22]/65 ml-2 font-semibold">
+                      <span className="text-[#F2E8D5]/70 ml-2 font-semibold">
                         ({item.totalCorrect}/{item.totalQuestions} corrette)
                       </span>
                     </div>
-                    <span className="text-[#3A2B22]/60 font-bold">
+                    <span className="text-[#E8802F] font-bold">
                       {new Date(item.takenAt).toLocaleDateString('it-IT')}
                     </span>
                   </div>
@@ -440,16 +440,16 @@ export const LevelTest: React.FC<LevelTestProps> = ({
         <div className="space-y-6">
           {/* Header Level & Progress Bar */}
           <div className="space-y-2.5">
-            <div className="flex justify-between items-center text-xs font-extrabold font-display text-[#3A2B22]">
+            <div className="flex justify-between items-center text-xs font-extrabold font-display text-[#F2E8D5]">
               <div className="flex items-center gap-2">
-                <span className="text-[11px] font-black px-3 py-0.5 rounded-full bg-[#C99A3D] text-white">
+                <span className="text-[11px] font-black px-3 py-0.5 rounded-full bg-[#E8802F] text-[#1A1512]">
                   Livello {currentLevel}
                 </span>
                 <span>
                   Domanda {currentQuestionInLevel + 1} di {currentLevelQuestions.length || 6}
                 </span>
               </div>
-              <span>
+              <span className="text-[#E8802F]">
                 {Math.round(((currentQuestionInLevel + 1) / (currentLevelQuestions.length || 6)) * 100)}%
               </span>
             </div>
@@ -467,11 +467,11 @@ export const LevelTest: React.FC<LevelTestProps> = ({
 
           {/* Reading Context if applicable */}
           {currentQ.testo_contesto && (
-            <div className="bento-card bg-[#F2E8D5]/50 space-y-2 border-l-6 border-[#6B7C4F]">
-              <span className="text-xs font-extrabold uppercase tracking-wider text-[#6B7C4F] font-display">
+            <div className="bento-card bg-[#1A1512] space-y-2 border-l-6 border-[#6B7C4F]">
+              <span className="text-xs font-extrabold uppercase tracking-wider text-[#859966] font-display">
                 📖 Leggi il brano seguente:
               </span>
-              <p className="text-xs sm:text-sm text-[#3A2B22] leading-relaxed font-medium italic">
+              <p className="text-xs sm:text-sm text-[#F2E8D5] leading-relaxed font-medium italic">
                 "{currentQ.testo_contesto}"
               </p>
             </div>
@@ -479,7 +479,7 @@ export const LevelTest: React.FC<LevelTestProps> = ({
 
           {/* Question Card */}
           <div className="bento-card p-6 sm:p-7 space-y-6">
-            <h2 className="text-xl sm:text-2xl font-extrabold font-display text-[#3A2B22] leading-tight">
+            <h2 className="text-xl sm:text-2xl font-extrabold font-display text-[#F2E8D5] leading-tight">
               {currentQ.domanda}
             </h2>
 
@@ -493,8 +493,8 @@ export const LevelTest: React.FC<LevelTestProps> = ({
                     onClick={() => setUserAnswers((prev) => ({ ...prev, [currentQ.id]: opt }))}
                     className={`p-4 sm:p-5 rounded-2xl text-left text-xs sm:text-sm font-extrabold font-display border-2 transition-all cursor-pointer ${
                       currentAnswer === opt
-                        ? 'bg-[#6B7C4F]/15 border-[#6B7C4F] ring-4 ring-[#6B7C4F]/25 text-[#3A2B22] shadow-sm'
-                        : 'bg-white border-[#3A2B22]/15 hover:border-[#6B7C4F] text-[#3A2B22]'
+                        ? 'bg-[#E8802F] border-[#E8802F] ring-4 ring-[#E8802F]/30 text-[#1A1512] shadow-sm'
+                        : 'bg-[#1A1512] border-[#6B7C4F]/30 hover:border-[#E8802F] text-[#F2E8D5]'
                     }`}
                   >
                     {opt}
@@ -508,7 +508,7 @@ export const LevelTest: React.FC<LevelTestProps> = ({
                   value={currentAnswer}
                   onChange={(e) => setUserAnswers((prev) => ({ ...prev, [currentQ.id]: e.target.value }))}
                   placeholder="Scrivi la tua risposta qui..."
-                  className="w-full p-4 rounded-2xl bg-[#F2E8D5]/40 border-2 border-[#6B7C4F]/30 focus:border-[#6B7C4F] focus:bg-white focus:outline-none text-base text-[#3A2B22] font-bold"
+                  className="w-full p-4 rounded-2xl bg-[#1A1512] border-2 border-[#6B7C4F]/40 focus:border-[#E8802F] focus:outline-none text-base text-[#F2E8D5] font-bold"
                 />
               </div>
             )}

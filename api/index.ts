@@ -203,6 +203,141 @@ ${JSON.stringify(masterTranslations, null, 2)}`;
   }
 });
 
+// Helper: Tiered Fallback Suggested Vocabulary per CEFR Level
+function getFallbackSuggestedVocab(level: string = "A1"): Array<{ termine: string; traduzione: string; esempio: string; esempioTraduzione?: string }> {
+  const norm = (level || "A1").toUpperCase().trim();
+  const pool: Record<string, Array<{ termine: string; traduzione: string; esempio: string; esempioTraduzione?: string }>> = {
+    A1: [
+      { termine: "schedule", traduzione: "programma / orario", esempio: "What is your schedule for today?", esempioTraduzione: "Qual è il tuo programma per oggi?" },
+      { termine: "neighbor", traduzione: "vicino di casa", esempio: "My neighbor is very friendly.", esempioTraduzione: "Il mio vicino è molto amichevole." },
+      { termine: "breakfast", traduzione: "colazione", esempio: "I have breakfast at seven o'clock.", esempioTraduzione: "Faccio colazione alle sette." },
+      { termine: "weekend", traduzione: "fine settimana", esempio: "We can meet during the weekend.", esempioTraduzione: "Possiamo vederci durante il fine settimana." },
+      { termine: "journey", traduzione: "viaggio / tragitto", esempio: "Have a safe journey!", esempioTraduzione: "Fai un buon viaggio!" },
+      { termine: "weather", traduzione: "tempo atmosferico", esempio: "The weather is sunny and warm.", esempioTraduzione: "Il tempo è soleggiato e caldo." },
+      { termine: "kitchen", traduzione: "cucina", esempio: "She is cooking in the kitchen.", esempioTraduzione: "Sta cucinando in cucina." },
+      { termine: "ticket", traduzione: "biglietto", esempio: "I need a bus ticket to the station.", esempioTraduzione: "Mi serve un biglietto dell'autobus per la stazione." },
+      { termine: "market", traduzione: "mercato", esempio: "Let's buy fresh fruit at the market.", esempioTraduzione: "Compriamo frutta fresca al mercato." },
+      { termine: "luggage", traduzione: "bagaglio / valigie", esempio: "Please keep your luggage with you.", esempioTraduzione: "Tieni i bagagli con te per favore." },
+      { termine: "umbrella", traduzione: "ombrello", esempio: "Take an umbrella because it might rain.", esempioTraduzione: "Prendi un ombrello perché potrebbe piovere." },
+      { termine: "address", traduzione: "indirizzo", esempio: "Could you write down your address?", esempioTraduzione: "Potresti annotare il tuo indirizzo?" }
+    ],
+    A2: [
+      { termine: "improve", traduzione: "migliorare", esempio: "I want to improve my speaking skills.", esempioTraduzione: "Voglio migliorare le mie abilità nel parlato." },
+      { termine: "advice", traduzione: "consiglio / consigli", esempio: "Can you give me some advice?", esempioTraduzione: "Puoi darmi qualche consiglio?" },
+      { termine: "appointment", traduzione: "appuntamento", esempio: "I have a dentist appointment at 3 PM.", esempioTraduzione: "Ho un appuntamento dal dentista alle 15:00." },
+      { termine: "borrow", traduzione: "prendere in prestito", esempio: "Can I borrow your pen for a minute?", esempioTraduzione: "Posso prendere in prestito la tua penna per un minuto?" },
+      { termine: "opportunity", traduzione: "opportunità", esempio: "This job is a great opportunity.", esempioTraduzione: "Questo lavoro è una grande opportunità." },
+      { termine: "describe", traduzione: "descrivere", esempio: "Can you describe the picture?", esempioTraduzione: "Puoi descrivere l'immagine?" },
+      { termine: "celebrate", traduzione: "festeggiare / celebrare", esempio: "We celebrate birthdays with cake.", esempioTraduzione: "Festeggiamo i compleanni con una torta." },
+      { termine: "customer", traduzione: "cliente", esempio: "The shop assistant helped the customer.", esempioTraduzione: "Il commesso ha aiutato il cliente." },
+      { termine: "explain", traduzione: "spiegare", esempio: "Can you explain the rules to me?", esempioTraduzione: "Puoi spiegarmi le regole?" },
+      { termine: "invitation", traduzione: "invito", esempio: "Thanks for the party invitation.", esempioTraduzione: "Grazie per l'invito alla festa." },
+      { termine: "environment", traduzione: "ambiente", esempio: "We must protect the environment.", esempioTraduzione: "Dobbiamo proteggere l'ambiente." },
+      { termine: "passenger", traduzione: "passeggero", esempio: "All passengers must fasten seatbelts.", esempioTraduzione: "Tutti i passeggeri devono allacciare le cinture." }
+    ],
+    B1: [
+      { termine: "reliable", traduzione: "affidabile", esempio: "She is a very reliable teammate.", esempioTraduzione: "È una compagna di squadra molto affidabile." },
+      { termine: "achieve", traduzione: "raggiungere / conseguire", esempio: "You can achieve your goals with persistence.", esempioTraduzione: "Puoi raggiungere i tuoi obiettivi con la perseveranza." },
+      { termine: "convenient", traduzione: "comodo / pratico", esempio: "The subway station is very convenient.", esempioTraduzione: "La stazione della metro è molto comoda." },
+      { termine: "essential", traduzione: "fondamentale / essenziale", esempio: "Water is essential for life.", esempioTraduzione: "L'acqua è essenziale per la vita." },
+      { termine: "persuade", traduzione: "persuadere / convincere", esempio: "He tried to persuade them to join.", esempioTraduzione: "Ha cercato di convincerli a partecipare." },
+      { termine: "complain", traduzione: "lamentarsi / reclamare", esempio: "Customers rarely complain about our service.", esempioTraduzione: "I clienti raramente si lamentano del nostro servizio." },
+      { termine: "encourage", traduzione: "incoraggiare", esempio: "Teachers encourage students to read more.", esempioTraduzione: "Gli insegnanti incoraggiano gli studenti a leggere di più." },
+      { termine: "destination", traduzione: "destinazione / meta", esempio: "Our holiday destination was beautiful.", esempioTraduzione: "La meta delle nostre vacanze era bellissima." },
+      { termine: "hesitate", traduzione: "esitare / indugiare", esempio: "Do not hesitate to ask questions.", esempioTraduzione: "Non esitare a fare domande." },
+      { termine: "solution", traduzione: "soluzione", esempio: "We need a quick solution to the issue.", esempioTraduzione: "Ci serve una soluzione rapida al problema." },
+      { termine: "challenging", traduzione: "impegnativo / stimolante", esempio: "The project was difficult but challenging.", esempioTraduzione: "Il progetto era difficile ma stimolante." },
+      { termine: "atmosphere", traduzione: "atmosfera / ambiente", esempio: "The café has a cozy atmosphere.", esempioTraduzione: "Il caffè ha un'atmosfera accogliente." }
+    ],
+    B2: [
+      { termine: "overcome", traduzione: "superare / sormontare", esempio: "Together we can overcome any obstacle.", esempioTraduzione: "Insieme possiamo superare qualsiasi ostacolo." },
+      { termine: "insight", traduzione: "intuizione / visione profonda", esempio: "Her lecture gave us valuable insights.", esempioTraduzione: "La sua conferenza ci ha dato spunti preziosi." },
+      { termine: "reluctant", traduzione: "riluttante / restio", esempio: "He was reluctant to admit his mistake.", esempioTraduzione: "Era restio ad ammettere il suo errore." },
+      { termine: "subtle", traduzione: "sottile / impercettibile", esempio: "There is a subtle difference between the two terms.", esempioTraduzione: "C'è una sottile differenza tra i due termini." },
+      { termine: "comprehensive", traduzione: "esaustivo / completo", esempio: "They provided a comprehensive guide.", esempioTraduzione: "Hanno fornito una guida esaustiva." },
+      { termine: "accurate", traduzione: "accurato / preciso", esempio: "The measurements were completely accurate.", esempioTraduzione: "Le misurazioni erano completamente precise." },
+      { termine: "feasible", traduzione: "fattibile / attuabile", esempio: "The proposed timeline is completely feasible.", esempioTraduzione: "La tempistica proposta è del tutto fattibile." },
+      { termine: "enhance", traduzione: "potenziare / migliorare", esempio: "This technique enhances overall memory recall.", esempioTraduzione: "Questa tecnica potenzia la memoria complessiva." },
+      { termine: "inevitable", traduzione: "inevitabile", esempio: "Technological advancement is inevitable.", esempioTraduzione: "Il progresso tecnologico è inevitabile." },
+      { termine: "emphasize", traduzione: "enfatizzare / sottolineare", esempio: "The report emphasizes the need for change.", esempioTraduzione: "Il rapporto sottolinea la necessità di cambiare." },
+      { termine: "sustainable", traduzione: "sostenibile", esempio: "We are moving toward sustainable energy sources.", esempioTraduzione: "Ci stiamo muovendo verso fonti di energia sostenibili." },
+      { termine: "contradict", traduzione: "contraddire", esempio: "The results contradict previous hypotheses.", esempioTraduzione: "I risultati contraddicono le ipotesi precedenti." }
+    ],
+    C1: [
+      { termine: "inevitable", traduzione: "inevitabile", esempio: "Change is an inevitable part of growth.", esempioTraduzione: "Il cambiamento è una parte inevitabile della crescita." },
+      { termine: "nuance", traduzione: "sfumatura / sottigliezza", esempio: "Pay attention to the nuances of native speech.", esempioTraduzione: "Fai attenzione alle sfumature del parlato madrelingua." },
+      { termine: "eloquent", traduzione: "eloquente / espressivo", esempio: "He delivered an eloquent presentation.", esempioTraduzione: "Ha tenuto una presentazione eloquente." },
+      { termine: "pivotal", traduzione: "fondamentale / cardine", esempio: "This decision marked a pivotal moment.", esempioTraduzione: "Questa decisione ha segnato un momento cardine." },
+      { termine: "scrutinize", traduzione: "esaminare attentamente", esempio: "The committee will scrutinize every detail.", esempioTraduzione: "Il comitato esaminerà attentamente ogni dettaglio." },
+      { termine: "unprecedented", traduzione: "senza precedenti", esempio: "We are witnessing unprecedented progress.", esempioTraduzione: "Stiamo assistendo a un progresso senza precedenti." },
+      { termine: "pragmatic", traduzione: "pragmatico / realistico", esempio: "We need a pragmatic approach to resolve this.", esempioTraduzione: "Ci serve un approccio pragmatico per risolvere la cosa." },
+      { termine: "resilience", traduzione: "resilienza / capacità di ripresa", esempio: "The team showed remarkable resilience during crisis.", esempioTraduzione: "La squadra ha mostrato una notevole resilienza durante la crisi." },
+      { termine: "ambiguous", traduzione: "ambiguo / equivocabile", esempio: "The wording in the contract was ambiguous.", esempioTraduzione: "La formulazione nel contratto era ambigua." },
+      { termine: "pervasive", traduzione: "pervasivo / diffuso", esempio: "Social media has a pervasive influence on society.", esempioTraduzione: "I social media hanno un'influenza pervasiva sulla società." },
+      { termine: "scrutiny", traduzione: "attento esame / scrutinio", esempio: "The proposal will come under close scrutiny.", esempioTraduzione: "La proposta sarà sottoposta a un attento esame." },
+      { termine: "advocate", traduzione: "sostenere / farsi promotore", esempio: "Scientists advocate for swift climate action.", esempioTraduzione: "Gli scienziati promuovono un'azione climatica tempestiva." }
+    ],
+    C2: [
+      { termine: "ubiquitous", traduzione: "onnipresente / ubiquo", esempio: "Smartphones have become ubiquitous in daily life.", esempioTraduzione: "Gli smartphone sono diventati onnipresenti nella vita quotidiana." },
+      { termine: "quintessential", traduzione: "rappresentativo / per eccellenza", esempio: "It is the quintessential example of modern architecture.", esempioTraduzione: "È l'esempio per eccellenza dell'architettura moderna." },
+      { termine: "fastidious", traduzione: "meticoloso / pignolo", esempio: "He is fastidious about grammatical precision.", esempioTraduzione: "È pignolo riguardo alla precisione grammaticale." },
+      { termine: "ephemeral", traduzione: "effimero / fugace", esempio: "Fame can often be ephemeral.", esempioTraduzione: "La fama spesso può essere effimera." },
+      { termine: "juxtaposition", traduzione: "accostamento / contrapposizione", esempio: "The juxtaposition of old and new created a striking effect.", esempioTraduzione: "L'accostamento di antico e nuovo ha creato un effetto sorprendente." },
+      { termine: "discombobulate", traduzione: "disorientare / confondere", esempio: "The sudden change of plans discombobulated everyone.", esempioTraduzione: "L'improvviso cambio di piani ha confuso tutti." },
+      { termine: "serendipity", traduzione: "serendipità / felice scoperta fortuita", esempio: "Finding this book was sheer serendipity.", esempioTraduzione: "Trovare questo libro è stata pura serendipità." },
+      { termine: "obfuscate", traduzione: "offuscare / rendere oscuro", esempio: "They tried to obfuscate the real meaning.", esempioTraduzione: "Hanno cercato di offuscare il significato reale." },
+      { termine: "tenacious", traduzione: "tenace / perseverante", esempio: "Her tenacious pursuit of truth inspired many.", esempioTraduzione: "La sua tenace ricerca della verità ha ispirato molti." },
+      { termine: "mellifluous", traduzione: "melifluo / soavemente armonico", esempio: "The speaker had a calm, mellifluous tone.", esempioTraduzione: "Il relatore aveva un tono calmo e melodioso." },
+      { termine: "magnanimous", traduzione: "magnanimo / generoso d'animo", esempio: "He was magnanimous in victory.", esempioTraduzione: "Fu magnanimo nella vittoria." },
+      { termine: "clandestine", traduzione: "clandestino / segreto", esempio: "They held a clandestine gathering at dusk.", esempioTraduzione: "Hanno tenuto un incontro clandestino al tramonto." }
+    ]
+  };
+  return pool[norm] || pool["A1"];
+}
+
+// API 0.8: Generate Suggested Vocab according to active CEFR Level
+router.post("/generate-suggested-vocab", async (req, res) => {
+  try {
+    const {
+      count = 10,
+      level = "A1",
+      targetLang = "en",
+      nativeLang = "it",
+      targetName = "Inglese",
+      nativeName = "Italiano",
+      existingTerms = []
+    } = req.body;
+
+    const ai = getGeminiClient();
+    const prompt = `Genera ${count} parole o espressioni ${targetName} di difficoltà CEFR ${level} (non parole base per principianti assoluti, a meno che il livello attivo non sia proprio A1), con traduzione ${nativeName} ed esempio d'uso.
+${Array.isArray(existingTerms) && existingTerms.length > 0 ? `Non includere queste parole già note all'utente: ${existingTerms.slice(0, 40).join(", ")}.` : ""}
+Destinatario: studente di madrelingua ${nativeName} che studia ${targetName}.
+Rispondi SOLO in JSON: [{"termine": "...", "traduzione": "...", "esempio": "..."}]`;
+
+    const response = await ai.models.generateContent({
+      model: "gemini-3.7-flash",
+      contents: prompt,
+      config: {
+        responseMimeType: "application/json",
+      },
+    });
+
+    const parsed = JSON.parse(cleanJsonOutput(response.text || "[]"));
+    const validItems = Array.isArray(parsed)
+      ? parsed.filter((item: any) => item && typeof item.termine === "string" && item.termine.trim().length > 0 && typeof item.traduzione === "string" && item.traduzione.trim().length > 0)
+      : [];
+
+    if (validItems.length > 0) {
+      return res.json({ items: validItems });
+    }
+
+    res.json({ items: getFallbackSuggestedVocab(level).slice(0, count) });
+  } catch (err: any) {
+    console.error("Error generating suggested vocab for level:", err);
+    res.json({ items: getFallbackSuggestedVocab(req.body.level || "A1").slice(0, req.body.count || 10) });
+  }
+});
+
 // API 1: Evaluate Answer (Non-rigid Spaced Repetition)
 router.post("/evaluate-answer", async (req, res) => {
   try {
@@ -249,6 +384,142 @@ Rispondi SOLO in formato JSON con la seguente struttura:
   }
 });
 
+// Helper: Fallback Grammar Exercises (10 varied questions)
+function getFallbackGrammarExercises(topicName: string, level: string = "A1") {
+  return [
+    {
+      id: "ex_1",
+      tipo: "multiple_choice",
+      type: "multiple_choice",
+      domanda: `Completa la frase (${topicName}): "She ___ to work by bus every morning."`,
+      question: `Completa la frase (${topicName}): "She ___ to work by bus every morning."`,
+      opzioni: ["goes", "go", "going", "gone"],
+      options: ["goes", "go", "going", "gone"],
+      rispostaCorretta: "goes",
+      correctAnswer: "goes",
+      spiegazione: "Con la terza persona singolare si usa la desinenza 'goes'.",
+      explanation: "Con la terza persona singolare si usa la desinenza 'goes'."
+    },
+    {
+      id: "ex_2",
+      tipo: "fill_in_blank",
+      type: "fill_in_blank",
+      domanda: `Completa la frase (${topicName}): "They ___ (not / see) that film yesterday."`,
+      question: `Completa la frase (${topicName}): "They ___ (not / see) that film yesterday."`,
+      rispostaCorretta: "did not see",
+      correctAnswer: "did not see",
+      opzioni: [],
+      options: [],
+      spiegazione: "Nel passato negativo si usa l'ausiliare 'did not' seguito dalla forma base del verbo.",
+      explanation: "Nel passato negativo si usa l'ausiliare 'did not' seguito dalla forma base del verbo."
+    },
+    {
+      id: "ex_3",
+      tipo: "multiple_choice",
+      type: "multiple_choice",
+      domanda: `Scegli l'opzione corretta (${topicName}): "I have ___ finished my homework."`,
+      question: `Scegli l'opzione corretta (${topicName}): "I have ___ finished my homework."`,
+      opzioni: ["already", "yet", "still", "ever"],
+      options: ["already", "yet", "still", "ever"],
+      rispostaCorretta: "already",
+      correctAnswer: "already",
+      spiegazione: "'Already' si colloca tra ausiliare e participio passato nelle frasi affermative.",
+      explanation: "'Already' si colloca tra ausiliare e participio passato nelle frasi affermative."
+    },
+    {
+      id: "ex_4",
+      tipo: "fill_in_blank",
+      type: "fill_in_blank",
+      domanda: `Completa la frase (${topicName}): "If it rains tomorrow, we ___ (stay) at home."`,
+      question: `Completa la frase (${topicName}): "If it rains tomorrow, we ___ (stay) at home."`,
+      rispostaCorretta: "will stay",
+      correctAnswer: "will stay",
+      opzioni: [],
+      options: [],
+      spiegazione: "Nel periodo ipotetico di 1° tipo la frase principale usa 'will + verbo'.",
+      explanation: "Nel periodo ipotetico di 1° tipo la frase principale usa 'will + verbo'."
+    },
+    {
+      id: "ex_5",
+      tipo: "multiple_choice",
+      type: "multiple_choice",
+      domanda: `Scegli la forma corretta (${topicName}): "This book is ___ than that one."`,
+      question: `Scegli la forma corretta (${topicName}): "This book is ___ than that one."`,
+      opzioni: ["more interesting", "interestinger", "most interesting", "as interesting"],
+      options: ["more interesting", "interestinger", "most interesting", "as interesting"],
+      rispostaCorretta: "more interesting",
+      correctAnswer: "more interesting",
+      spiegazione: "Per gli aggettivi lunghi il comparativo di maggioranza si forma con 'more'.",
+      explanation: "Per gli aggettivi lunghi il comparativo di maggioranza si forma con 'more'."
+    },
+    {
+      id: "ex_6",
+      tipo: "fill_in_blank",
+      type: "fill_in_blank",
+      domanda: `Completa la frase (${topicName}): "He ___ (live) in London since 2018."`,
+      question: `Completa la frase (${topicName}): "He ___ (live) in London since 2018."`,
+      rispostaCorretta: "has lived",
+      correctAnswer: "has lived",
+      opzioni: [],
+      options: [],
+      spiegazione: "Con 'since' e un'azione continuativa si usa il Present Perfect ('has lived').",
+      explanation: "Con 'since' e un'azione continuativa si usa il Present Perfect ('has lived')."
+    },
+    {
+      id: "ex_7",
+      tipo: "multiple_choice",
+      type: "multiple_choice",
+      domanda: `Quale forma verbale è corretta (${topicName}): "While I ___ the book, the phone rang."`,
+      question: `Quale forma verbale è corretta (${topicName}): "While I ___ the book, the phone rang."`,
+      opzioni: ["was reading", "read", "have read", "had read"],
+      options: ["was reading", "read", "have read", "had read"],
+      rispostaCorretta: "was reading",
+      correctAnswer: "was reading",
+      spiegazione: "Per un'azione in corso interrotta da un evento puntuale si usa il Past Continuous.",
+      explanation: "Per un'azione in corso interrotta da un evento puntuale si usa il Past Continuous."
+    },
+    {
+      id: "ex_8",
+      tipo: "fill_in_blank",
+      type: "fill_in_blank",
+      domanda: `Inserisci la preposizione corretta (${topicName}): "We usually meet ___ Friday evening."`,
+      question: `Inserisci la preposizione corretta (${topicName}): "We usually meet ___ Friday evening."`,
+      rispostaCorretta: "on",
+      correctAnswer: "on",
+      opzioni: [],
+      options: [],
+      spiegazione: "Con i giorni della settimana si impiega la preposizione 'on'.",
+      explanation: "Con i giorni della settimana si impiega la preposizione 'on'."
+    },
+    {
+      id: "ex_9",
+      tipo: "multiple_choice",
+      type: "multiple_choice",
+      domanda: `Scegli il modale corretto (${topicName}): "You ___ smoke inside the building; it is forbidden."`,
+      question: `Scegli il modale corretto (${topicName}): "You ___ smoke inside the building; it is forbidden."`,
+      opzioni: ["must not", "don't have to", "might not", "should"],
+      options: ["must not", "don't have to", "might not", "should"],
+      rispostaCorretta: "must not",
+      correctAnswer: "must not",
+      spiegazione: "'Must not' esprime divieto categorico.",
+      explanation: "'Must not' esprime divieto categorico."
+    },
+    {
+      id: "ex_10",
+      tipo: "fill_in_blank",
+      type: "fill_in_blank",
+      domanda: `Completa la forma passiva (${topicName}): "The letter ___ (send) by express courier yesterday."`,
+      question: `Completa la forma passiva (${topicName}): "The letter ___ (send) by express courier yesterday."`,
+      rispostaCorretta: "was sent",
+      correctAnswer: "was sent",
+      opzioni: [],
+      options: [],
+      spiegazione: "Il passivo passato semplice si compone di 'was' + participio passato 'sent'.",
+      explanation: "Il passivo passato semplice si compone di 'was' + participio passato 'sent'."
+    }
+  ];
+}
+
 // API 2: Generate Grammar Exercises
 router.post("/generate-grammar", async (req, res) => {
   try {
@@ -258,15 +529,19 @@ router.post("/generate-grammar", async (req, res) => {
     }
 
     const ai = getGeminiClient();
-    const prompt = `Genera una lezione e 5 esercizi grammaticali su: "${topicName}" (Livello ${level}).
+    const prompt = `Genera una lezione e 10-12 esercizi grammaticali progressivi e ricchi su: "${topicName}" (Livello CEFR ${level}).
 Destinatario: studente di madrelingua ${nativeName} (${nativeLang}) che impara la lingua ${targetName} (${targetLang}).
 Includi:
 1. Una spiegazione chiara e concisa in ${nativeName} con regole, schemi ed esempi pratici in ${targetName}.
-2. 5 esercizi interattivi di vario tipo:
+2. 10-12 esercizi interattivi di vario tipo (mix equilibrato):
    - "multiple_choice": domanda con 4 opzioni e 1 corretta.
    - "fill_in_blank": frase con "___" da completare con la forma corretta.
    - "sentence_reorder": lista di parole mescolate ("scrambledWords") da riordinare nella frase corretta ("correctSentence").
-Ogni esercizio deve avere una spiegazione del perché la risposta è corretta.
+
+REGOLE CRITICHE OBBLIGATORIE SULLA VALIDAZIONE:
+- Ogni esercizio DEVE contenere il campo "question" (o "domanda") NON VUOTO con la frase effettiva o la domanda.
+- Per il tipo "fill_in_blank", la frase deve contenere esplicitamente "___" al posto della parola mancante. NON lasciare MAI la frase o la domanda vuota!
+- Ogni esercizio deve avere una risposta corretta non vuota e una spiegazione chiara.
 
 Rispondi SOLO in JSON con la seguente struttura esatta:
 {
@@ -275,19 +550,19 @@ Rispondi SOLO in JSON con la seguente struttura esatta:
     {
       "id": "ex_1",
       "type": "multiple_choice" | "fill_in_blank" | "sentence_reorder",
-      "instruction": "Istruzione per l'esercizio",
-      "question": "Frase con ___ o domanda",
-      "options": ["opzione1", "opzione2", "opzione3", "opzione4"] (solo per multiple_choice),
+      "instruction": "Istruzione breve in ${nativeName}",
+      "question": "Frase completa con ___ o domanda chiara",
+      "options": ["opzione1", "opzione2", "opzione3", "opzione4"],
       "correctAnswer": "risposta esatta",
-      "scrambledWords": ["parola1", "parola2"] (solo per sentence_reorder),
-      "correctSentence": "Frase completa ordinata" (solo per sentence_reorder),
+      "scrambledWords": ["parola1", "parola2"],
+      "correctSentence": "Frase completa ordinata",
       "explanation": "Breve spiegazione della soluzione"
     }
   ]
 }`;
 
     const response = await ai.models.generateContent({
-      model: "gemini-3.6-flash",
+      model: "gemini-3.7-flash",
       contents: prompt,
       config: {
         responseMimeType: "application/json",
@@ -295,10 +570,90 @@ Rispondi SOLO in JSON con la seguente struttura esatta:
     });
 
     const rawText = response.text || "{}";
-    res.json(JSON.parse(cleanJsonOutput(rawText)));
+    const parsed = JSON.parse(cleanJsonOutput(rawText));
+    const rawExercises = Array.isArray(parsed.exercises)
+      ? parsed.exercises
+      : Array.isArray(parsed)
+      ? parsed
+      : [];
+
+    const validatedExercises = rawExercises
+      .map((ex: any, idx: number) => {
+        const rawType = ex.tipo || ex.type || "fill_in_blank";
+        const rawQuestion = (
+          ex.domanda ||
+          ex.question ||
+          ex.frase ||
+          ex.sentence ||
+          ex.instruction ||
+          ""
+        ).trim();
+
+        const rawAnswer = (
+          ex.rispostaCorretta ||
+          ex.correctAnswer ||
+          ex.correctSentence ||
+          ""
+        ).trim();
+
+        const rawExplanation = (ex.spiegazione || ex.explanation || "").trim();
+
+        const rawOptions = Array.isArray(ex.opzioni)
+          ? ex.opzioni.filter((o: any) => typeof o === "string" && o.trim().length > 0)
+          : Array.isArray(ex.options)
+          ? ex.options.filter((o: any) => typeof o === "string" && o.trim().length > 0)
+          : [];
+
+        return {
+          id: ex.id || `ex_${idx + 1}`,
+          tipo: rawType,
+          type: rawType,
+          domanda: rawQuestion,
+          question: rawQuestion,
+          rispostaCorretta: rawAnswer,
+          correctAnswer: rawAnswer,
+          spiegazione: rawExplanation || "Risposta corretta per questo esercizio.",
+          explanation: rawExplanation || "Risposta corretta per questo esercizio.",
+          opzioni: rawOptions,
+          options: rawOptions,
+          scrambledWords: ex.scrambledWords,
+          correctSentence: ex.correctSentence,
+        };
+      })
+      .filter((ex: any) => {
+        // STRICT VALIDATION: question/domanda must be at least 3 characters
+        if (!ex.domanda || typeof ex.domanda !== "string" || ex.domanda.trim().length < 3) {
+          console.warn("Discarding malformed grammar exercise (empty question):", ex);
+          return false;
+        }
+        if (!ex.rispostaCorretta || typeof ex.rispostaCorretta !== "string" || !ex.rispostaCorretta.trim()) {
+          console.warn("Discarding malformed grammar exercise (missing answer):", ex);
+          return false;
+        }
+        if (ex.tipo === "multiple_choice" && (!Array.isArray(ex.opzioni) || ex.opzioni.length < 2)) {
+          console.warn("Discarding multiple choice exercise with < 2 options:", ex);
+          return false;
+        }
+        return true;
+      });
+
+    // If too few valid exercises passed validation, combine with level-appropriate fallbacks
+    const fallbackList = getFallbackGrammarExercises(topicName, level);
+    let finalExercises = validatedExercises;
+    if (finalExercises.length < 8) {
+      finalExercises = [...finalExercises, ...fallbackList];
+    }
+
+    res.json({
+      theory: parsed.theory || `Regole ed esercizi per: ${topicName}`,
+      exercises: finalExercises,
+    });
   } catch (err: any) {
     console.error("Error generating grammar exercises:", err);
-    res.status(500).json({ error: err.message || "Failed to generate grammar content" });
+    res.json({
+      theory: `Lezione ed esercizi su: ${req.body.topicName || "Grammatica"}`,
+      exercises: getFallbackGrammarExercises(req.body.topicName || "Grammatica", req.body.level || "A1"),
+    });
   }
 });
 
@@ -315,14 +670,14 @@ router.post("/generate-reading", async (req, res) => {
     } = req.body;
 
     const wordLengths: Record<string, string> = {
-      A1: "100-150 parole",
-      A2: "120-180 parole",
-      B1: "200-250 parole",
-      B2: "250-320 parole",
-      C1: "350-450 parole",
-      C2: "450-550 parole",
+      A1: "120-180 parole",
+      A2: "160-220 parole",
+      B1: "240-300 parole",
+      B2: "300-400 parole",
+      C1: "400-520 parole",
+      C2: "500-650 parole",
     };
-    const wordRange = wordLengths[level] || "150-250 parole";
+    const wordRange = wordLengths[level] || "180-280 parole";
 
     const ai = getGeminiClient();
     const genreInstruction = genre && genre !== "Sorprendimi"
@@ -334,9 +689,9 @@ La persona che legge è di madrelingua ${nativeName} (${nativeLang}).
 
 Includi:
 1. Titolo in ${targetName} e traduzione in ${nativeName}.
-2. Testo suddiviso in paragrafi ben articolati e piacevoli da leggere.
-3. 3-4 domande di comprensione a scelta multipla (domande e opzioni in ${targetName}, con spiegazione in ${nativeName}).
-4. 4-6 vocaboli chiave evidenziati nel testo con traduzione in ${nativeName}, pronuncia IPA approssimata e contesto d'uso.
+2. Testo suddiviso in 3-5 paragrafi ben articolati e piacevoli da leggere.
+3. 5-6 domande di comprensione a scelta multipla progressive e stimolanti (domande e opzioni in ${targetName}, con spiegazione in ${nativeName}).
+4. 5-8 vocaboli chiave evidenziati nel testo con traduzione in ${nativeName}, pronuncia IPA approssimata e contesto d'uso.
 
 Rispondi SOLO in JSON con la struttura esatta:
 {
@@ -704,17 +1059,65 @@ Rispondi RIGOROSAMENTE SOLO in JSON con questa struttura:
       },
     });
 
-    const parsed = JSON.parse(cleanJsonOutput(response.text || "{}"));
+    const rawParsed = JSON.parse(cleanJsonOutput(response.text || "{}"));
+    const validExercises = Array.isArray(rawParsed.exercises)
+      ? rawParsed.exercises
+          .map((ex: any, idx: number) => {
+            const q = (ex.domanda || ex.question || "").trim();
+            const a = (ex.rispostaCorretta || ex.correctAnswer || "").trim();
+            const opts = Array.isArray(ex.opzioni)
+              ? ex.opzioni.filter((o: any) => typeof o === "string" && o.trim().length > 0)
+              : Array.isArray(ex.options)
+              ? ex.options.filter((o: any) => typeof o === "string" && o.trim().length > 0)
+              : [];
+            return {
+              id: ex.id || `ex_${idx + 1}`,
+              tipo: ex.tipo || ex.type || "multiple_choice",
+              type: ex.tipo || ex.type || "multiple_choice",
+              domanda: q,
+              question: q,
+              opzioni: opts,
+              options: opts,
+              rispostaCorretta: a,
+              correctAnswer: a,
+              spiegazione: ex.spiegazione || ex.explanation || "Risposta esatta per questo contesto.",
+              explanation: ex.spiegazione || ex.explanation || "Risposta esatta per questo contesto.",
+            };
+          })
+          .filter((ex: any) => ex.domanda.length >= 3 && ex.rispostaCorretta.length >= 1)
+      : [];
+
+    const validDialogueQuestions = Array.isArray(rawParsed.dialogue?.questions)
+      ? rawParsed.dialogue.questions
+          .map((dq: any, idx: number) => {
+            const q = (dq.domanda || dq.question || "").trim();
+            const a = (dq.rispostaCorretta || dq.correctAnswer || "").trim();
+            return {
+              id: dq.id || `dq_${idx + 1}`,
+              domanda: q,
+              question: q,
+              opzioni: Array.isArray(dq.opzioni) ? dq.opzioni : Array.isArray(dq.options) ? dq.options : [],
+              options: Array.isArray(dq.opzioni) ? dq.opzioni : Array.isArray(dq.options) ? dq.options : [],
+              rispostaCorretta: a,
+              correctAnswer: a,
+              spiegazione: dq.spiegazione || dq.explanation || "",
+              explanation: dq.spiegazione || dq.explanation || "",
+            };
+          })
+          .filter((dq: any) => dq.domanda.length >= 3 && dq.rispostaCorretta.length >= 1)
+      : [];
+
     res.json({
       scenarioId,
-      scenarioTitle: parsed.scenarioTitle || scenarioContext,
-      vocabulary: parsed.vocabulary || [],
-      exercises: parsed.exercises || [],
-      dialogue: parsed.dialogue || {
-        title: parsed.scenarioTitle || scenarioContext,
-        context: scenarioContext,
-        text: "",
-        questions: [],
+      scenarioTitle: rawParsed.scenarioTitle || scenarioContext,
+      vocabulary: Array.isArray(rawParsed.vocabulary) ? rawParsed.vocabulary : [],
+      exercises: validExercises,
+      dialogue: {
+        title: rawParsed.dialogue?.title || rawParsed.scenarioTitle || scenarioContext,
+        context: rawParsed.dialogue?.context || scenarioContext,
+        text: rawParsed.dialogue?.text || "",
+        speakers: Array.isArray(rawParsed.dialogue?.speakers) ? rawParsed.dialogue.speakers : [],
+        questions: validDialogueQuestions,
       },
     });
   } catch (err: any) {
@@ -1033,9 +1436,32 @@ Rispondi RIGOROSAMENTE SOLO in JSON con questo array di 10 oggetti:
       },
     });
 
-    const parsed = JSON.parse(cleanJsonOutput(response.text || "[]"));
-    if (Array.isArray(parsed) && parsed.length >= 8) {
-      return res.json({ questions: parsed.slice(0, 10) });
+    const rawParsed = JSON.parse(cleanJsonOutput(response.text || "[]"));
+    const validQuestions = Array.isArray(rawParsed)
+      ? rawParsed
+          .map((q: any, idx: number) => {
+            const text = (q.domanda || q.question || "").trim();
+            const ans = (q.rispostaCorretta || q.correctAnswer || "").trim();
+            return {
+              id: q.id || `cp_${idx + 1}`,
+              tipo: q.tipo || q.type || "multiple_choice",
+              type: q.tipo || q.type || "multiple_choice",
+              lezioneTipo: q.lezioneTipo || "vocabolario",
+              domanda: text,
+              question: text,
+              opzioni: Array.isArray(q.opzioni) ? q.opzioni : Array.isArray(q.options) ? q.options : [],
+              options: Array.isArray(q.opzioni) ? q.opzioni : Array.isArray(q.options) ? q.options : [],
+              rispostaCorretta: ans,
+              correctAnswer: ans,
+              spiegazione: q.spiegazione || q.explanation || "Risposta corretta.",
+              explanation: q.spiegazione || q.explanation || "Risposta corretta.",
+            };
+          })
+          .filter((q: any) => q.domanda.length >= 3 && q.rispostaCorretta.length >= 1)
+      : [];
+
+    if (validQuestions.length >= 8) {
+      return res.json({ questions: validQuestions.slice(0, 10) });
     }
 
     res.json({ questions: getFallbackCheckpointQuestions(level) });
@@ -1187,9 +1613,31 @@ Rispondi RIGOROSAMENTE SOLO in JSON con questo array di 10 oggetti:
       },
     });
 
-    const parsed = JSON.parse(cleanJsonOutput(response.text || "[]"));
-    if (Array.isArray(parsed) && parsed.length >= 8) {
-      return res.json({ targetLevel: nextLevel, questions: parsed.slice(0, 10) });
+    const rawParsed = JSON.parse(cleanJsonOutput(response.text || "[]"));
+    const validQuestions = Array.isArray(rawParsed)
+      ? rawParsed
+          .map((q: any, idx: number) => {
+            const text = (q.domanda || q.question || "").trim();
+            const ans = (q.rispostaCorretta || q.correctAnswer || "").trim();
+            return {
+              id: q.id || `mt_${idx + 1}`,
+              tipo: q.tipo || q.type || "multiple_choice",
+              type: q.tipo || q.type || "multiple_choice",
+              domanda: text,
+              question: text,
+              opzioni: Array.isArray(q.opzioni) ? q.opzioni : Array.isArray(q.options) ? q.options : [],
+              options: Array.isArray(q.opzioni) ? q.opzioni : Array.isArray(q.options) ? q.options : [],
+              rispostaCorretta: ans,
+              correctAnswer: ans,
+              spiegazione: q.spiegazione || q.explanation || "Risposta corretta.",
+              explanation: q.spiegazione || q.explanation || "Risposta corretta.",
+            };
+          })
+          .filter((q: any) => q.domanda.length >= 3 && q.rispostaCorretta.length >= 1)
+      : [];
+
+    if (validQuestions.length >= 8) {
+      return res.json({ targetLevel: nextLevel, questions: validQuestions.slice(0, 10) });
     }
 
     res.json({ targetLevel: nextLevel, questions: getFallbackMiniTestQuestions(nextLevel) });

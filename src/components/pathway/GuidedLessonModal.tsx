@@ -4,7 +4,7 @@ import { Mascot } from '../../mascot/Mascot';
 import { LessonItem, UserProfile, VocabItem, ExerciseError, GrammarTopic, GrammarTopicProgress, CEFRLevel, Exercise, ReadingText } from '../../types';
 import { GRAMMAR_SYLLABUS } from '../../data/grammarSyllabus';
 import { TARGET_LANGUAGES, NATIVE_LANGUAGES } from '../../data/languages';
-import { generateGrammarExercises, generateReadingText, explainWordInContext } from '../../services/gemini';
+import { generateGrammarExercises, generateReadingText, explainWordInContext, generateSuggestedVocab } from '../../services/gemini';
 import { playSound } from '../../services/sound';
 
 interface GuidedLessonModalProps {
@@ -101,129 +101,56 @@ export const GuidedLessonModal: React.FC<GuidedLessonModalProps> = ({
           );
 
           let selected: VocabItem[] = [];
-          if (langVocab.length >= 5) {
-            // Pick 5-7 words
-            selected = [...langVocab].sort(() => 0.5 - Math.random()).slice(0, 6);
+          if (langVocab.length >= 10) {
+            // Pick 10 words
+            selected = [...langVocab].sort(() => 0.5 - Math.random()).slice(0, 10);
           } else {
-            // Mix with level appropriate default words
-            const fallbackPool: VocabItem[] = [
-              {
-                id: 'fb_1',
-                term: 'Hello',
-                translation: 'Ciao',
-                sourceLang: 'en',
-                targetLang: 'en',
-                synonyms: [],
-                exampleSource: 'Hello, how are you?',
-                exampleTranslation: 'Ciao, come stai?',
-                origin: 'special_section',
-                originDetail: 'lezione_guidata',
-                createdAt: Date.now(),
-                lastReviewedAt: null,
-                box: 1,
-                nextReviewAt: Date.now() + 86400000,
-                correctStreak: 0,
-                wrongCount: 0,
-              },
-              {
-                id: 'fb_2',
-                term: 'Friend',
-                translation: 'Amico',
-                sourceLang: 'en',
-                targetLang: 'en',
-                synonyms: [],
-                exampleSource: 'She is my best friend.',
-                exampleTranslation: 'Lei è la mia migliore amica.',
-                origin: 'special_section',
-                originDetail: 'lezione_guidata',
-                createdAt: Date.now(),
-                lastReviewedAt: null,
-                box: 1,
-                nextReviewAt: Date.now() + 86400000,
-                correctStreak: 0,
-                wrongCount: 0,
-              },
-              {
-                id: 'fb_3',
-                term: 'Water',
-                translation: 'Acqua',
-                sourceLang: 'en',
-                targetLang: 'en',
-                synonyms: [],
-                exampleSource: 'A glass of fresh water.',
-                exampleTranslation: "Un bicchiere d'acqua fresca.",
-                origin: 'special_section',
-                originDetail: 'lezione_guidata',
-                createdAt: Date.now(),
-                lastReviewedAt: null,
-                box: 1,
-                nextReviewAt: Date.now() + 86400000,
-                correctStreak: 0,
-                wrongCount: 0,
-              },
-              {
-                id: 'fb_4',
-                term: 'Book',
-                translation: 'Libro',
-                sourceLang: 'en',
-                targetLang: 'en',
-                synonyms: [],
-                exampleSource: 'I am reading an interesting book.',
-                exampleTranslation: 'Sto leggendo un libro interessante.',
-                origin: 'special_section',
-                originDetail: 'lezione_guidata',
-                createdAt: Date.now(),
-                lastReviewedAt: null,
-                box: 1,
-                nextReviewAt: Date.now() + 86400000,
-                correctStreak: 0,
-                wrongCount: 0,
-              },
-              {
-                id: 'fb_5',
-                term: 'Time',
-                translation: 'Tempo / Ora',
-                sourceLang: 'en',
-                targetLang: 'en',
-                synonyms: [],
-                exampleSource: 'What time is it?',
-                exampleTranslation: 'Che ora è?',
-                origin: 'special_section',
-                originDetail: 'lezione_guidata',
-                createdAt: Date.now(),
-                lastReviewedAt: null,
-                box: 1,
-                nextReviewAt: Date.now() + 86400000,
-                correctStreak: 0,
-                wrongCount: 0,
-              },
-              {
-                id: 'fb_6',
-                term: 'Always',
-                translation: 'Sempre',
-                sourceLang: 'en',
-                targetLang: 'en',
-                synonyms: [],
-                exampleSource: 'I always wake up early.',
-                exampleTranslation: 'Mi sveglio sempre presto.',
-                origin: 'special_section',
-                originDetail: 'lezione_guidata',
-                createdAt: Date.now(),
-                lastReviewedAt: null,
-                box: 1,
-                nextReviewAt: Date.now() + 86400000,
-                correctStreak: 0,
-                wrongCount: 0,
-              },
-            ];
-            const needed = 6 - langVocab.length;
-            selected = [...langVocab, ...fallbackPool.slice(0, needed)];
+            // Fetch words matching the user's active CEFR level to reach 10
+            const needed = 10 - langVocab.length;
+            const existingTerms = langVocab.map((v) => v.term);
+
+            const suggested = await generateSuggestedVocab(
+              needed,
+              currentStudyLevel,
+              targetLang,
+              nativeLang,
+              targetName,
+              nativeName,
+              existingTerms
+            );
+
+            // Convert to VocabItem with origin 'ai_suggested'
+            const newItems: VocabItem[] = suggested.map((item, idx) => ({
+              id: `ai_sug_${Date.now()}_${idx}_${Math.random().toString(36).substring(2, 6)}`,
+              term: item.termine,
+              translation: item.traduzione,
+              sourceLang: targetLang,
+              targetLang: targetLang,
+              synonyms: [],
+              exampleSource: item.esempio,
+              exampleTranslation: item.esempioTraduzione || '',
+              origin: 'ai_suggested',
+              originDetail: 'lezione_guidata',
+              createdAt: Date.now(),
+              lastReviewedAt: null,
+              box: 1,
+              nextReviewAt: Date.now() + 86400000,
+              correctStreak: 0,
+              wrongCount: 0,
+            }));
+
+            // Persist newly generated words so they become part of the den
+            newItems.forEach((it) => onSaveVocabItem(it));
+
+            selected = [...langVocab, ...newItems].slice(0, 12);
           }
 
           if (isMounted) {
             setVocabList(selected);
             setVocabIndex(0);
-            generateVocabOptions(selected[0], selected);
+            if (selected.length > 0) {
+              generateVocabOptions(selected[0], selected);
+            }
           }
         } else if (lesson.tipo === 'grammatica') {
           // Find topic in syllabus
@@ -245,7 +172,7 @@ export const GuidedLessonModal: React.FC<GuidedLessonModalProps> = ({
           );
 
           if (isMounted) {
-            setGrammarExercises(exercises.slice(0, 5));
+            setGrammarExercises(exercises);
             setGrammarExIdx(0);
             setGrammarScore(0);
           }

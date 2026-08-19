@@ -68,7 +68,7 @@ export interface UserProfile {
   interessi?: string[];
 }
 
-export type VocabOrigin = 'import' | 'grammar_error' | 'reading_error' | 'exercise_error' | 'translator_search' | 'translator_lookup' | 'level_test_error' | 'special_section' | 'context_practice' | 'reading_word';
+export type VocabOrigin = 'import' | 'grammar_error' | 'reading_error' | 'exercise_error' | 'translator_search' | 'translator_lookup' | 'level_test_error' | 'special_section' | 'context_practice' | 'reading_word' | 'ai_suggested';
 
 export type ExerciseErrorType = 'grammatica' | 'test_livello' | 'lettura';
 
@@ -126,15 +126,23 @@ export interface VocabItem {
   wrongCount: number;
 }
 
-export type ExerciseType = 'multiple_choice' | 'fill_in_blank' | 'sentence_transformation' | 'matching' | 'translation';
+export type ExerciseType = 'multiple_choice' | 'fill_in_blank' | 'sentence_transformation' | 'matching' | 'translation' | 'sentence_reorder';
 
 export interface Exercise {
   id: string;
   tipo: ExerciseType;
+  type?: ExerciseType;
   domanda: string;
+  question?: string;
   opzioni?: string[];
+  options?: string[];
   rispostaCorretta: string;
+  correctAnswer?: string;
   spiegazione: string;
+  explanation?: string;
+  scrambledWords?: string[];
+  correctSentence?: string;
+  instruction?: string;
   // Extra properties for matching items if applicable
   matchingPairs?: { term: string; translation: string }[];
 }
