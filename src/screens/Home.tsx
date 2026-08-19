@@ -5,7 +5,6 @@ import { UserProfile, VocabItem, SharedLanguagePairContent, CEFRLevel, GrammarTo
 import { TARGET_LANGUAGES } from '../data/languages';
 import { GRAMMAR_SYLLABUS } from '../data/grammarSyllabus';
 import { NavTab } from '../components/Navigation';
-import { PathwayScreen } from './PathwayScreen';
 import { TanaManager } from '../components/TanaManager';
 import { genderedWord } from '../utils/gender';
 import { playSound } from '../services/sound';
@@ -69,7 +68,6 @@ export const Home: React.FC<HomeProps> = ({
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showLevelModal, setShowLevelModal] = useState(false);
-  const [showPathwayScreen, setShowPathwayScreen] = useState(false);
   const [showTanaManagerModal, setShowTanaManagerModal] = useState(false);
 
   const activeLang = TARGET_LANGUAGES.find((l) => l.code === (user.activeProfileId || 'en')) || {
@@ -173,7 +171,7 @@ export const Home: React.FC<HomeProps> = ({
       : 'Tutti i vocaboli in tana sono in pari per oggi!';
 
   return (
-    <div className="pb-20 pt-8 sm:pt-10 px-4 sm:px-6 max-w-5xl mx-auto space-y-8 select-none">
+    <div className="pb-16 pt-16 sm:pt-14 px-4 sm:px-6 max-w-5xl mx-auto space-y-8 select-none">
       {/* 1. Saluto + Livello Attivo in Grande Evidenza (Direttamente su sfondo scuro, senza card box) */}
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-5 relative text-[#F2E8D5]">
         <div className="flex items-start sm:items-center gap-4">
@@ -351,7 +349,7 @@ export const Home: React.FC<HomeProps> = ({
         <div
           onClick={() => {
             playSound('review');
-            setShowPathwayScreen(true);
+            onNavigate('pathway');
           }}
           className="bg-gradient-to-br from-[#2B2622] via-[#332A24] to-[#241F1C] rounded-[28px] p-6 sm:p-8 border border-[#6B7C4F]/35 hover:border-[#E8802F]/70 text-[#F2E8D5] cursor-pointer group transition-all duration-300 shadow-2xl relative overflow-hidden space-y-5"
           title="Tocca per aprire il percorso a schermo intero"
@@ -416,7 +414,7 @@ export const Home: React.FC<HomeProps> = ({
               onClick={(e) => {
                 e.stopPropagation();
                 playSound('review');
-                setShowPathwayScreen(true);
+                onNavigate('pathway');
               }}
               className="btn-zucca w-full py-3.5 px-6 font-black text-sm sm:text-base flex items-center justify-center gap-2 shadow-xl hover:shadow-2xl transition-all cursor-pointer rounded-2xl"
             >
@@ -698,29 +696,6 @@ export const Home: React.FC<HomeProps> = ({
             </div>
           </div>
         </div>
-      )}
-
-      {/* Full-Screen Pathway View */}
-      {showPathwayScreen && (
-        <PathwayScreen
-          user={user}
-          vocabItems={vocabItems}
-          grammarProgress={grammarProgress}
-          readingProgress={readingProgress}
-          onClose={() => setShowPathwayScreen(false)}
-          onNavigate={(tab) => {
-            setShowPathwayScreen(false);
-            onNavigate(tab);
-          }}
-          onOpenLevelTest={() => {
-            setShowPathwayScreen(false);
-            onOpenLevelTest();
-          }}
-          onSaveVocabItem={onAddVocabItem}
-          onSaveExerciseError={onSaveExerciseError}
-          onUpdateGrammarProgress={onUpdateGrammarProgress}
-          onCompleteReading={onCompleteReading}
-        />
       )}
 
       {/* Tana Manager Modal */}

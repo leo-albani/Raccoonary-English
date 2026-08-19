@@ -49,6 +49,7 @@ import { Settings } from './screens/Settings';
 import { LevelTest } from './screens/LevelTest';
 import { Pronunciation } from './screens/Pronunciation';
 import { TranslatorScreen } from './screens/TranslatorScreen';
+import { PathwayScreen } from './screens/PathwayScreen';
 import { Navigation, NavTab } from './components/Navigation';
 import { GuidedTour } from './components/GuidedTour';
 import { AmbientForestBackground } from './components/AmbientForestBackground';
@@ -643,26 +644,29 @@ export function App() {
   const dueVocabCount = vocabItems.filter((i) => i.nextReviewAt <= Date.now()).length;
   const dueErrorCount = exerciseErrors.filter((i) => i.nextReviewAt <= Date.now()).length;
   const dueTotalCount = dueVocabCount + dueErrorCount;
+  const isPrimaryScreen = !showLevelTest && (currentTab === 'home' || currentTab === 'translator' || currentTab === 'settings');
 
   return (
     <div className="min-h-screen bg-[#1A1512] text-[#F2E8D5] font-sans antialiased relative selection:bg-[#E8802F]/30 selection:text-[#F2E8D5]">
       {/* Subtle Ambient Forest Silhouettes */}
       <AmbientForestBackground />
 
-      {/* Global Slide-In Navigation & Top Hamburger Trigger */}
-      <Navigation
-        currentTab={currentTab}
-        onSelectTab={(tab) => {
-          setSelectedGrammarTopicId(null);
-          setCurrentTab(tab);
-        }}
-        dueCount={dueTotalCount}
-        user={user}
-        t={t}
-      />
+      {/* Global Fixed Hamburger Trigger & Left-Edge Swipe Drawer (Only on Primary Screens: Tana, Traduttore, Impostazioni) */}
+      {isPrimaryScreen && (
+        <Navigation
+          currentTab={currentTab}
+          onSelectTab={(tab) => {
+            setSelectedGrammarTopicId(null);
+            setCurrentTab(tab);
+          }}
+          dueCount={dueTotalCount}
+          user={user}
+          t={t}
+        />
+      )}
 
       {/* Active Tab Screen */}
-      <main className="min-h-screen relative z-10 pb-20 sm:pb-24">
+      <main className="min-h-screen relative z-10 pb-8">
         {showLevelTest ? (
           <LevelTest
             userProfile={user}
@@ -787,6 +791,25 @@ export function App() {
                 existingVocabItems={vocabItems}
                 onBulkImport={handleBulkImport}
                 onNavigateToHome={() => setCurrentTab('home')}
+              />
+            )}
+
+            {currentTab === 'pathway' && (
+              <PathwayScreen
+                user={user}
+                vocabItems={vocabItems}
+                grammarProgress={grammarProgress}
+                readingProgress={readingProgress}
+                onClose={() => setCurrentTab('home')}
+                onNavigate={(tab) => {
+                  setSelectedGrammarTopicId(null);
+                  setCurrentTab(tab);
+                }}
+                onOpenLevelTest={() => setShowLevelTest(true)}
+                onSaveVocabItem={handleSaveItem}
+                onSaveExerciseError={handleSaveExerciseError}
+                onUpdateGrammarProgress={handleUpdateGrammarProgress}
+                onCompleteReading={handleCompleteReading}
               />
             )}
 

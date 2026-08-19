@@ -40,7 +40,7 @@ export const TranslatorScreen: React.FC<TranslatorScreenProps> = ({
   };
 
   return (
-    <div className="p-4 sm:p-6 max-w-4xl mx-auto space-y-6 pb-28">
+    <div className="p-4 sm:p-6 max-w-4xl mx-auto space-y-6 pb-20 pt-16 sm:pt-14">
       {/* Screen Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-[#2B2622] p-5 sm:p-6 rounded-3xl border-2 border-[#6B7C4F]/30 shadow-xl text-[#F2E8D5]">
         <div className="space-y-1.5 flex-1">

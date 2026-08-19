@@ -216,7 +216,7 @@ export const Settings: React.FC<SettingsProps> = ({
   const availableLanguagesToAdd = TARGET_LANGUAGES.filter((l) => !userProfiles.includes(l.code));
 
   return (
-    <div className="p-4 sm:p-6 max-w-3xl mx-auto space-y-8 pb-32">
+    <div className="p-4 sm:p-6 max-w-3xl mx-auto space-y-8 pb-20 pt-16 sm:pt-14">
       {/* Header Banner */}
       <div className="bento-card flex flex-col sm:flex-row items-center gap-5 text-center sm:text-left">
         <Mascot pose="greeting" size={85} />
