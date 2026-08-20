@@ -45,6 +45,7 @@ interface PathwayScreenProps {
   onNavigate: (tab: NavTab) => void;
   onOpenLevelTest: () => void;
   onSaveVocabItem?: (item: VocabItem) => void;
+  onDeleteVocabItem?: (id: string) => void;
   onSaveExerciseError?: (item: ExerciseError) => void;
   onUpdateGrammarProgress?: (progress: GrammarTopicProgress) => void;
   onCompleteReading?: (level: CEFRLevel) => void;
@@ -59,6 +60,7 @@ export const PathwayScreen: React.FC<PathwayScreenProps> = ({
   onNavigate,
   onOpenLevelTest,
   onSaveVocabItem = () => {},
+  onDeleteVocabItem,
   onSaveExerciseError,
   onUpdateGrammarProgress,
   onCompleteReading,
@@ -207,10 +209,10 @@ export const PathwayScreen: React.FC<PathwayScreenProps> = ({
             onClick={onClose}
             id="btn-close-pathway"
             className="px-3 sm:px-4 py-2 rounded-2xl bg-[#1A1512] border-2 border-[#6B7C4F]/40 hover:border-[#E8802F] text-[#F2E8D5] flex items-center gap-1.5 sm:gap-2 cursor-pointer transition-all active:scale-95 shadow-md group"
-            title="Torna alla Tana"
+            title="Indietro"
           >
             <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5 text-[#E8802F] group-hover:-translate-x-0.5 transition-transform" />
-            <span className="font-extrabold font-display text-xs sm:text-sm">Torna alla Tana</span>
+            <span className="font-extrabold font-display text-xs sm:text-sm">Indietro</span>
           </button>
 
           <div className="hidden sm:block">
@@ -616,6 +618,7 @@ export const PathwayScreen: React.FC<PathwayScreenProps> = ({
           onComplete={handleLessonComplete}
           onClose={() => setActiveLesson(null)}
           onSaveVocabItem={onSaveVocabItem}
+          onDeleteVocabItem={onDeleteVocabItem}
           onSaveExerciseError={onSaveExerciseError}
           onUpdateGrammarProgress={onUpdateGrammarProgress}
           onCompleteReading={onCompleteReading}

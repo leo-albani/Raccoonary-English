@@ -7,6 +7,8 @@
   --color-notte: #1A1512;
   --color-corteccia: #3A2B22;
   --color-muschio: #6B7C4F;
+  --color-salvia: #859966;
+  --color-muschio-chiaro: #9BB07A;
   --color-zucca: #E8802F;
   --color-ocra: #C99A3D;
   --color-carta: #F2E8D5;
@@ -23,6 +25,31 @@ body {
 
 .font-display {
   font-family: 'Fredoka', cursive, sans-serif;
+}
+
+/* High-Contrast Typographic Utilities (AA & AAA compliant on dark backgrounds #1A1512 and #2B2622) */
+.text-carta {
+  color: #F2E8D5;
+}
+
+.text-carta-soft {
+  color: rgba(242, 232, 213, 0.82);
+}
+
+.text-carta-muted {
+  color: rgba(242, 232, 213, 0.65);
+}
+
+.text-zucca-full {
+  color: #E8802F;
+}
+
+.text-salvia-light {
+  color: #859966;
+}
+
+.text-ocra-bright {
+  color: #C99A3D;
 }
 
 /* Bento Card System in dark theme: Antracite background, subtle moss border, soft deep shadow */
@@ -128,10 +155,77 @@ body {
   font-size: 0.8rem;
   font-weight: 800;
   font-family: 'Fredoka', cursive, sans-serif;
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
   letter-spacing: 0.02em;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
   border: 1px solid rgba(242, 232, 213, 0.15);
+}
+
+.badge-zucca {
+  background-color: rgba(232, 128, 47, 0.18);
+  color: #E8802F;
+  border: 1.5px solid rgba(232, 128, 47, 0.45);
+  border-radius: 14px 3px 14px 3px;
+  padding: 5px 14px;
+  font-size: 0.8rem;
+  font-weight: 800;
+  font-family: 'Fredoka', cursive, sans-serif;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.badge-ocra {
+  background-color: rgba(201, 154, 61, 0.18);
+  color: #C99A3D;
+  border: 1.5px solid rgba(201, 154, 61, 0.45);
+  border-radius: 14px 3px 14px 3px;
+  padding: 5px 14px;
+  font-size: 0.8rem;
+  font-weight: 800;
+  font-family: 'Fredoka', cursive, sans-serif;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.badge-muschio {
+  background-color: rgba(107, 124, 79, 0.22);
+  color: #9BB07A;
+  border: 1.5px solid rgba(107, 124, 79, 0.45);
+  border-radius: 14px 3px 14px 3px;
+  padding: 5px 14px;
+  font-size: 0.8rem;
+  font-weight: 800;
+  font-family: 'Fredoka', cursive, sans-serif;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+/* Input Fields in Tana Theme */
+.input-tana {
+  background-color: #1A1512;
+  color: #F2E8D5;
+  border: 1.5px solid rgba(107, 124, 79, 0.35);
+  border-radius: 1rem;
+  padding: 0.875rem 1.125rem;
+  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+  font-size: 0.925rem;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  width: 100%;
+}
+
+.input-tana::placeholder {
+  color: rgba(242, 232, 213, 0.45);
+}
+
+.input-tana:focus {
+  border-color: #E8802F;
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(232, 128, 47, 0.25);
 }
 
 /* Thick, smooth progress bar tracks & fills */

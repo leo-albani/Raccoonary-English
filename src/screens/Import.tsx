@@ -156,21 +156,21 @@ export const Import: React.FC<ImportProps> = ({
         <div className="flex justify-center">
           <Mascot pose="digging" size={100} />
         </div>
-        <span className="badge-leaf">Strumento di Importazione</span>
-        <h1 className="text-2xl sm:text-3xl font-bold font-display text-[#3A2B22]">
+        <span className="badge-muschio inline-flex">Strumento di Importazione</span>
+        <h1 className="text-2xl sm:text-3xl font-bold font-display text-[#F2E8D5]">
           Importa i tuoi vocaboli 📥
         </h1>
-        <p className="text-xs sm:text-sm text-[#3A2B22]/75 leading-relaxed font-medium">
+        <p className="text-xs sm:text-sm text-[#F2E8D5]/80 leading-relaxed font-medium">
           Puoi importare i file esportati da Reverso Context (CSV), tabelle Excel (.xlsx) o incollare direttamente un testo.
         </p>
       </div>
 
       {/* Mode Selector */}
-      <div className="bg-white p-1.5 rounded-2xl border border-[#6B7C4F]/20 flex shadow-xs max-w-md mx-auto">
+      <div className="bg-[#1A1512] p-1.5 rounded-2xl border border-[#6B7C4F]/30 flex shadow-xs max-w-md mx-auto">
         <button
           onClick={() => setImportSource('file')}
           className={`flex-1 py-2.5 rounded-xl font-bold font-display text-xs transition-all cursor-pointer ${
-            importSource === 'file' ? 'bg-[#6B7C4F] text-white shadow-xs' : 'text-[#3A2B22]/70 hover:text-[#3A2B22]'
+            importSource === 'file' ? 'bg-[#E8802F] text-[#1A1512] shadow-xs' : 'text-[#F2E8D5]/70 hover:text-[#F2E8D5]'
           }`}
         >
           📄 File CSV / Excel
@@ -178,7 +178,7 @@ export const Import: React.FC<ImportProps> = ({
         <button
           onClick={() => setImportSource('text')}
           className={`flex-1 py-2.5 rounded-xl font-bold font-display text-xs transition-all cursor-pointer ${
-            importSource === 'text' ? 'bg-[#6B7C4F] text-white shadow-xs' : 'text-[#3A2B22]/70 hover:text-[#3A2B22]'
+            importSource === 'text' ? 'bg-[#E8802F] text-[#1A1512] shadow-xs' : 'text-[#F2E8D5]/70 hover:text-[#F2E8D5]'
           }`}
         >
           ✍️ Incolla Testo
@@ -188,18 +188,18 @@ export const Import: React.FC<ImportProps> = ({
       {/* Input Section */}
       <div className="max-w-2xl mx-auto">
         {importSource === 'file' ? (
-          <div className="bento-card border-2 border-dashed border-[#6B7C4F]/40 text-center space-y-4 hover:border-[#6B7C4F] transition-all">
+          <div className="bento-card border-2 border-dashed border-[#6B7C4F]/40 text-center space-y-4 hover:border-[#E8802F] transition-all">
             <div className="text-5xl">📂</div>
             <div className="space-y-1">
-              <p className="text-base font-bold text-[#3A2B22] font-display">
+              <p className="text-base font-bold text-[#F2E8D5] font-display">
                 Trascina qui il tuo file o selezionalo
               </p>
-              <p className="text-xs text-[#3A2B22]/60 font-medium">
+              <p className="text-xs text-[#859966] font-medium">
                 Supporta .csv (Reverso Context), .xlsx, .txt
               </p>
             </div>
 
-            <label className="btn-zucca text-sm px-8 py-3.5 inline-block">
+            <label className="btn-zucca text-sm px-8 py-3.5 inline-flex cursor-pointer">
               <span>Sfoglia file</span>
               <input
                 type="file"
@@ -216,7 +216,7 @@ export const Import: React.FC<ImportProps> = ({
               onChange={(e) => setRawText(e.target.value)}
               rows={6}
               placeholder={`Esempio:\napple, mela\nbook, libro\nbeautiful, bello`}
-              className="w-full p-4 rounded-2xl bg-[#F2E8D5]/50 border border-[#6B7C4F]/30 focus:border-[#6B7C4F] focus:outline-none text-sm text-[#3A2B22] font-medium"
+              className="w-full p-4 rounded-2xl bg-[#1A1512] border border-[#6B7C4F]/35 focus:border-[#E8802F] focus:outline-none text-sm text-[#F2E8D5] placeholder-[#F2E8D5]/40 font-medium leading-relaxed"
             />
             <button
               onClick={handleTextParse}
@@ -233,7 +233,7 @@ export const Import: React.FC<ImportProps> = ({
       {isParsing && (
         <div className="bento-card text-center py-8 space-y-3 max-w-2xl mx-auto">
           <Mascot pose="digging" size={110} speechBubble="Sto scavando per trovare i tuoi vocaboli..." />
-          <p className="text-xs text-[#3A2B22]/70 font-medium">Analisi in corso...</p>
+          <p className="text-xs text-[#859966] font-medium">Analisi in corso...</p>
         </div>
       )}
 
@@ -241,10 +241,10 @@ export const Import: React.FC<ImportProps> = ({
       {successCount !== null && (
         <div className="bento-card border-2 border-[#6B7C4F] text-center space-y-3 animate-fade-in max-w-2xl mx-auto">
           <div className="text-3xl">🎉</div>
-          <h3 className="font-bold font-display text-[#3A2B22] text-xl">
+          <h3 className="font-bold font-display text-[#F2E8D5] text-xl">
             {successCount} parole aggiunte in tana!
           </h3>
-          <p className="text-xs sm:text-sm text-[#3A2B22]/80 font-medium">
+          <p className="text-xs sm:text-sm text-[#859966] font-medium">
             Sono pronte nel tuo sistema di memorizzazione Spaced Repetition.
           </p>
           <button
@@ -260,26 +260,26 @@ export const Import: React.FC<ImportProps> = ({
       {parsedRows.length > 0 && (
         <div className="space-y-4 animate-fade-in max-w-3xl mx-auto">
           <div className="flex items-center justify-between px-1">
-            <h2 className="text-base font-bold font-display text-[#3A2B22]">
+            <h2 className="text-base font-bold font-display text-[#F2E8D5]">
               Trovati {parsedRows.length} vocaboli
             </h2>
             <div className="flex gap-3">
               <button
                 onClick={() => toggleSelectAll(true)}
-                className="text-xs font-bold font-display text-[#6B7C4F] hover:underline cursor-pointer"
+                className="text-xs font-bold font-display text-[#859966] hover:underline cursor-pointer"
               >
                 Seleziona tutti
               </button>
               <button
                 onClick={() => toggleSelectAll(false)}
-                className="text-xs font-bold font-display text-[#3A2B22]/60 hover:underline cursor-pointer"
+                className="text-xs font-bold font-display text-[#F2E8D5]/60 hover:underline cursor-pointer"
               >
                 Deseleziona
               </button>
             </div>
           </div>
 
-          <div className="bento-card p-2 overflow-hidden max-h-96 overflow-y-auto divide-y divide-[#6B7C4F]/10">
+          <div className="bento-card p-2 overflow-hidden max-h-96 overflow-y-auto divide-y divide-[#6B7C4F]/20">
             {parsedRows.map((row, idx) => (
               <div key={idx} className="p-3 flex items-center gap-3">
                 <input
@@ -291,7 +291,7 @@ export const Import: React.FC<ImportProps> = ({
                       prev.map((r, i) => (i === idx ? { ...r, selected: checked } : r))
                     );
                   }}
-                  className="w-4 h-4 accent-[#6B7C4F] cursor-pointer"
+                  className="w-4 h-4 accent-[#E8802F] cursor-pointer"
                 />
                 <div className="flex-1 grid grid-cols-2 gap-2 text-xs">
                   <input
@@ -303,7 +303,7 @@ export const Import: React.FC<ImportProps> = ({
                         prev.map((r, i) => (i === idx ? { ...r, term: val } : r))
                       );
                     }}
-                    className="p-2 rounded-xl border border-gray-200 font-bold text-[#3A2B22] text-sm"
+                    className="p-2.5 rounded-xl bg-[#1A1512] border border-[#6B7C4F]/30 font-bold text-[#F2E8D5] text-sm focus:outline-none focus:border-[#E8802F]"
                   />
                   <input
                     type="text"
@@ -314,7 +314,7 @@ export const Import: React.FC<ImportProps> = ({
                         prev.map((r, i) => (i === idx ? { ...r, translation: val } : r))
                       );
                     }}
-                    className="p-2 rounded-xl border border-gray-200 text-[#6B7C4F] text-sm font-medium"
+                    className="p-2.5 rounded-xl bg-[#1A1512] border border-[#6B7C4F]/30 text-[#859966] text-sm font-medium focus:outline-none focus:border-[#E8802F]"
                   />
                 </div>
               </div>

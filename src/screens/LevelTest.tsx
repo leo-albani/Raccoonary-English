@@ -186,7 +186,7 @@ export const LevelTest: React.FC<LevelTestProps> = ({
 
     let estimatedLevel: CEFRLevel | 'Sotto A1' = 'Sotto A1';
     for (const lvl of CEFR_LEVELS) {
-      if (breakdown[lvl].passed) {
+      if (breakdown[lvl]?.passed) {
         estimatedLevel = lvl;
       } else {
         break;
@@ -241,14 +241,21 @@ export const LevelTest: React.FC<LevelTestProps> = ({
         }
       });
 
-      const passed = blockCorrect >= 3;
+      const totalInBlock = currentLevelQuestions.length;
+      const blockPercent = totalInBlock > 0 ? (blockCorrect / totalInBlock) * 100 : 0;
 
-      if (passed && currentLevelIndex < CEFR_LEVELS.length - 1) {
+      // 1. Solid pass (>= 70%) to proceed to the next difficulty level
+      const canProceedToNext = blockPercent >= 70;
+
+      // 2. Pass/credit current level (>= 50%) as achieved outcome
+      const isCurrentLevelPassed = blockPercent >= 50;
+
+      if (canProceedToNext && currentLevelIndex < CEFR_LEVELS.length - 1) {
         playSound('correct');
         setCurrentLevelIndex((prev) => prev + 1);
         setCurrentQuestionInLevel(0);
       } else {
-        finishTest(currentLevelIndex, passed, userAnswers);
+        finishTest(currentLevelIndex, isCurrentLevelPassed, userAnswers);
       }
     }
   };

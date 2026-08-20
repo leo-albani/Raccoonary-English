@@ -6,7 +6,7 @@ import { calculateNextReview, filterDueItems } from '../services/leitner';
 import { TanaManager } from '../components/TanaManager';
 import { TARGET_LANGUAGES, NATIVE_LANGUAGES } from '../data/languages';
 import { playSound } from '../services/sound';
-import { ArrowLeft, BookOpen, Target, Sparkles, CheckCircle2, XCircle, HelpCircle, Layers } from 'lucide-react';
+import { ArrowLeft, BookOpen, Target, Sparkles, CheckCircle2, XCircle, HelpCircle, Layers, Star } from 'lucide-react';
 
 export type ReviewMode = 'all' | 'vocab_only' | 'errors_only';
 
@@ -82,7 +82,7 @@ export const Memorization: React.FC<MemorizationProps> = ({
             className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#2B2622] border border-[#6B7C4F]/30 text-[#859966] hover:text-[#F2E8D5] font-display text-xs font-bold transition-all cursor-pointer shadow-sm"
           >
             <ArrowLeft className="w-4 h-4" />
-            <span>Torna alla Tana</span>
+            <span>Indietro</span>
           </button>
 
           <button
@@ -258,7 +258,7 @@ export const Memorization: React.FC<MemorizationProps> = ({
           onClick={onBackToHome}
           className="w-full py-4 rounded-2xl bg-[#E8802F] text-[#1A1512] font-black font-display text-base shadow-lg hover:bg-[#E8802F]/90 active:scale-98 transition-all cursor-pointer"
         >
-          Torna alla Tana 🏠
+          Continua 🏠
         </button>
       </div>
     );
@@ -476,7 +476,28 @@ export const Memorization: React.FC<MemorizationProps> = ({
       </div>
 
       {/* Main Review Card - High Contrast Game Layout */}
-      <div className="bg-[#2B2622] rounded-3xl p-5 sm:p-6 border-2 border-[#6B7C4F]/35 shadow-xl text-center space-y-4">
+      <div className="bg-[#2B2622] rounded-3xl p-5 sm:p-6 border-2 border-[#6B7C4F]/35 shadow-xl text-center space-y-4 relative">
+        {isVocab && vocab && (
+          <div className="absolute top-4 right-4">
+            <button
+              type="button"
+              onClick={() => {
+                const isStarred = vocabItems.some((v) => v.id === vocab.id);
+                if (isStarred) {
+                  onDeleteItem(vocab.id);
+                } else {
+                  playSound('acorn');
+                  onSaveItem(vocab);
+                }
+              }}
+              className="p-2 rounded-xl bg-[#1A1512] border border-[#6B7C4F]/30 text-[#E8802F] hover:bg-[#E8802F] hover:text-[#1A1512] transition-colors cursor-pointer"
+              title="Salva parola nella Tana"
+            >
+              <Star className="w-4 h-4 fill-current" />
+            </button>
+          </div>
+        )}
+
         <div className="flex items-center justify-center gap-2 flex-wrap">
           <span className="badge-leaf bg-[#C99A3D] text-[#1A1512] font-black">
             Box Leitner {isVocab ? vocab!.box : error!.box}
@@ -508,28 +529,36 @@ export const Memorization: React.FC<MemorizationProps> = ({
       {!evaluation ? (
         <div className="space-y-3">
           {hasOptions ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-              {options.map((opt, idx) => (
-                <button
-                  key={idx}
-                  type="button"
-                  onClick={() => {
-                    setSelectedOption(opt);
-                    handleSubmit(opt);
-                  }}
-                  disabled={isEvaluating}
-                  className={`p-4 rounded-2xl text-left font-bold font-display text-sm border-2 transition-all flex items-center justify-between cursor-pointer ${
-                    selectedOption === opt
-                      ? 'bg-[#E8802F]/20 border-[#E8802F] text-[#E8802F]'
-                      : 'bg-[#1A1512] border-[#6B7C4F]/30 hover:border-[#E8802F] text-[#F2E8D5]'
-                  }`}
-                >
-                  <span className="pr-2">{opt}</span>
-                  <span className="text-xs text-[#859966] font-display font-extrabold shrink-0">
-                    Scegli
-                  </span>
-                </button>
-              ))}
+            <div className="space-y-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                {options.map((opt, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => setSelectedOption(opt)}
+                    disabled={isEvaluating}
+                    className={`p-4 rounded-2xl text-left font-bold font-display text-sm border-2 transition-all flex items-center justify-between cursor-pointer ${
+                      selectedOption === opt
+                        ? 'bg-[#E8802F]/20 border-[#E8802F] text-[#E8802F]'
+                        : 'bg-[#1A1512] border-[#6B7C4F]/30 hover:border-[#E8802F] text-[#F2E8D5]'
+                    }`}
+                  >
+                    <span className="pr-2">{opt}</span>
+                    <span className={`text-xs font-display font-extrabold shrink-0 ${selectedOption === opt ? 'text-[#E8802F]' : 'text-[#859966]'}`}>
+                      {selectedOption === opt ? '✓ Selezionato' : 'Scegli'}
+                    </span>
+                  </button>
+                ))}
+              </div>
+
+              <button
+                type="button"
+                onClick={() => selectedOption && handleSubmit(selectedOption)}
+                disabled={!selectedOption || isEvaluating}
+                className="btn-zucca w-full py-4 text-base disabled:opacity-40 cursor-pointer font-black shadow-md"
+              >
+                {isEvaluating ? 'Verifico...' : 'Conferma risposta ⚡'}
+              </button>
             </div>
           ) : (
             <div className="space-y-3">

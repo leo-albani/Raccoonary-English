@@ -536,10 +536,12 @@ Includi:
 2. 10-12 esercizi interattivi di vario tipo (mix equilibrato):
    - "multiple_choice": domanda con 4 opzioni e 1 corretta.
    - "fill_in_blank": frase con "___" da completare con la forma corretta.
-   - "sentence_reorder": lista di parole mescolate ("scrambledWords") da riordinare nella frase corretta ("correctSentence").
+   - "sentence_reorder": riordina le parole per formare la frase corretta. DEVI fornire "scrambledWords": array NON VUOTO di tutte le parole o blocchi mescolati da ordinare (es. ["yesterday", "cinema", "the", "went", "to", "I"]), "correctSentence": la frase intera ordinata, e "question": la consegna in ${nativeName}.
 
 REGOLE CRITICHE OBBLIGATORIE SULLA VALIDAZIONE:
-- Ogni esercizio DEVE contenere il campo "question" (o "domanda") NON VUOTO con la frase effettiva o la domanda.
+- Ogni esercizio DEVE contenere il campo "question" (o "domanda") NON VUOTO con la frase effettiva o la domanda/consegna.
+- Per il tipo "sentence_reorder", DEVI includere tassativamente "scrambledWords" con ALMENO 3 parole/pezzi separati mescolati. NON restituire MAI un array vuoto!
+- Per il tipo "multiple_choice", DEVI includere "options" con 4 opzioni distinte.
 - Per il tipo "fill_in_blank", la frase deve contenere esplicitamente "___" al posto della parola mancante. NON lasciare MAI la frase o la domanda vuota!
 - Ogni esercizio deve avere una risposta corretta non vuota e una spiegazione chiara.
 
@@ -551,10 +553,10 @@ Rispondi SOLO in JSON con la seguente struttura esatta:
       "id": "ex_1",
       "type": "multiple_choice" | "fill_in_blank" | "sentence_reorder",
       "instruction": "Istruzione breve in ${nativeName}",
-      "question": "Frase completa con ___ o domanda chiara",
+      "question": "Frase completa con ___ o consegna chiara",
       "options": ["opzione1", "opzione2", "opzione3", "opzione4"],
       "correctAnswer": "risposta esatta",
-      "scrambledWords": ["parola1", "parola2"],
+      "scrambledWords": ["parola1", "parola2", "parola3"],
       "correctSentence": "Frase completa ordinata",
       "explanation": "Breve spiegazione della soluzione"
     }
@@ -580,7 +582,7 @@ Rispondi SOLO in JSON con la seguente struttura esatta:
     const validatedExercises = rawExercises
       .map((ex: any, idx: number) => {
         const rawType = ex.tipo || ex.type || "fill_in_blank";
-        const rawQuestion = (
+        let rawQuestion = (
           ex.domanda ||
           ex.question ||
           ex.frase ||
@@ -604,6 +606,31 @@ Rispondi SOLO in JSON con la seguente struttura esatta:
           ? ex.options.filter((o: any) => typeof o === "string" && o.trim().length > 0)
           : [];
 
+        let rawScrambledWords: string[] = [];
+        if (Array.isArray(ex.scrambledWords) && ex.scrambledWords.length > 0) {
+          rawScrambledWords = ex.scrambledWords.map((w: any) => String(w).trim()).filter((w: string) => w.length > 0);
+        } else if (Array.isArray(ex.parole) && ex.parole.length > 0) {
+          rawScrambledWords = ex.parole.map((w: any) => String(w).trim()).filter((w: string) => w.length > 0);
+        } else if (Array.isArray(ex.words) && ex.words.length > 0) {
+          rawScrambledWords = ex.words.map((w: any) => String(w).trim()).filter((w: string) => w.length > 0);
+        }
+
+        // Guaranteed fallback extraction if sentence_reorder lacks words
+        if (rawType === "sentence_reorder") {
+          if (!rawQuestion) {
+            rawQuestion = "Riordina le parole per formare la frase corretta:";
+          }
+          if (rawScrambledWords.length < 2) {
+            const sentenceToSplit = (ex.correctSentence || rawAnswer || "").trim();
+            if (sentenceToSplit) {
+              const tokens = sentenceToSplit.split(/\s+/).map((w: string) => w.trim()).filter((w: string) => w.length > 0);
+              if (tokens.length >= 2) {
+                rawScrambledWords = [...tokens].sort(() => 0.5 - Math.random());
+              }
+            }
+          }
+        }
+
         return {
           id: ex.id || `ex_${idx + 1}`,
           tipo: rawType,
@@ -616,8 +643,8 @@ Rispondi SOLO in JSON con la seguente struttura esatta:
           explanation: rawExplanation || "Risposta corretta per questo esercizio.",
           opzioni: rawOptions,
           options: rawOptions,
-          scrambledWords: ex.scrambledWords,
-          correctSentence: ex.correctSentence,
+          scrambledWords: rawScrambledWords.length > 0 ? rawScrambledWords : undefined,
+          correctSentence: ex.correctSentence || rawAnswer,
         };
       })
       .filter((ex: any) => {
@@ -632,6 +659,10 @@ Rispondi SOLO in JSON con la seguente struttura esatta:
         }
         if (ex.tipo === "multiple_choice" && (!Array.isArray(ex.opzioni) || ex.opzioni.length < 2)) {
           console.warn("Discarding multiple choice exercise with < 2 options:", ex);
+          return false;
+        }
+        if (ex.tipo === "sentence_reorder" && (!Array.isArray(ex.scrambledWords) || ex.scrambledWords.length < 2)) {
+          console.warn("Discarding sentence_reorder exercise with < 2 scrambled words:", ex);
           return false;
         }
         return true;

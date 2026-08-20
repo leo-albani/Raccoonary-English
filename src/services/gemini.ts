@@ -1,4 +1,4 @@
-import { AnswerEvaluationResult, Exercise, PhraseDeepDiveResult, ReadingText, TranslationResult, WordDeepDiveResult, ScenarioContent } from '../types';
+import { AnswerEvaluationResult, Exercise, PhraseDeepDiveResult, ReadingText, ReadingQuestion, CEFRLevel, TranslationResult, WordDeepDiveResult, ScenarioContent } from '../types';
 import { SEED_SCENARIOS } from '../data/scenarioSeeds';
 
 export async function evaluateUserAnswer(
@@ -96,20 +96,37 @@ export async function generateGrammarExercises(
         ? ex.options
         : [];
 
+      const rawType = ex.tipo || ex.type || 'fill_in_blank';
+      let scrambled = Array.isArray(ex.scrambledWords) && ex.scrambledWords.length > 0
+        ? ex.scrambledWords.map((w: any) => String(w).trim()).filter((w: string) => w.length > 0)
+        : Array.isArray(ex.parole) && ex.parole.length > 0
+        ? ex.parole.map((w: any) => String(w).trim()).filter((w: string) => w.length > 0)
+        : [];
+
+      if (rawType === 'sentence_reorder' && scrambled.length < 2) {
+        const sentenceToSplit = (ex.correctSentence || a || '').trim();
+        if (sentenceToSplit) {
+          const tokens = sentenceToSplit.split(/\s+/).map((w: string) => w.trim()).filter((w: string) => w.length > 0);
+          if (tokens.length >= 2) {
+            scrambled = [...tokens].sort(() => 0.5 - Math.random());
+          }
+        }
+      }
+
       return {
         id: ex.id || `ex_${idx + 1}`,
-        tipo: ex.tipo || ex.type || 'fill_in_blank',
-        type: ex.tipo || ex.type || 'fill_in_blank',
-        domanda: q,
-        question: q,
+        tipo: rawType,
+        type: rawType,
+        domanda: q || (rawType === 'sentence_reorder' ? 'Riordina le parole per formare la frase corretta:' : ''),
+        question: q || (rawType === 'sentence_reorder' ? 'Riordina le parole per formare la frase corretta:' : ''),
         rispostaCorretta: a,
         correctAnswer: a,
         spiegazione: exp,
         explanation: exp,
         opzioni: opts,
         options: opts,
-        scrambledWords: ex.scrambledWords,
-        correctSentence: ex.correctSentence,
+        scrambledWords: scrambled.length > 0 ? scrambled : undefined,
+        correctSentence: ex.correctSentence || a,
       } as Exercise;
     })
     .filter((ex) => ex.domanda && ex.domanda.length >= 3 && ex.rispostaCorretta && ex.rispostaCorretta.length >= 1);
@@ -135,7 +152,84 @@ export async function generateReadingText(
     throw new Error(`Non sono riuscito a generare il brano di lettura${detailMsg}`);
   }
 
-  return await res.json();
+  const raw = await res.json();
+
+  // Normalize paragraphs and full text
+  const paragraphs: string[] = Array.isArray(raw.paragraphs) && raw.paragraphs.length > 0
+    ? raw.paragraphs
+    : typeof raw.testo === 'string' && raw.testo.trim().length > 0
+    ? raw.testo.split(/\n\n+/).filter(Boolean)
+    : [raw.testo || ''];
+
+  const testo: string = paragraphs.join('\n\n') || raw.testo || '';
+
+  // Calculate estimated reading minutes
+  const wordCount = testo.split(/\s+/).filter(Boolean).length;
+  const estimatedMinutes = Math.max(1, Math.ceil(wordCount / 70));
+
+  // Normalize questions / comprehension questions
+  const rawQuestions: any[] = Array.isArray(raw.questions)
+    ? raw.questions
+    : Array.isArray(raw.domande)
+    ? raw.domande
+    : Array.isArray(raw.domandeComprensione)
+    ? raw.domandeComprensione
+    : [];
+
+  const domande: ReadingQuestion[] = rawQuestions.map((q: any, idx: number) => {
+    const qText = q.domanda || q.question || `Domanda ${idx + 1}`;
+    const opts: string[] = Array.isArray(q.opzioni)
+      ? q.opzioni
+      : Array.isArray(q.options)
+      ? q.options
+      : [];
+
+    let correctAns = '';
+    if (typeof q.rispostaCorretta === 'string' && q.rispostaCorretta.trim()) {
+      correctAns = q.rispostaCorretta.trim();
+    } else if (typeof q.correctAnswer === 'string' && q.correctAnswer.trim()) {
+      correctAns = q.correctAnswer.trim();
+    } else if (typeof q.correctIndex === 'number' && opts[q.correctIndex]) {
+      correctAns = opts[q.correctIndex];
+    } else if (opts.length > 0) {
+      correctAns = opts[0];
+    }
+
+    const exp = q.spiegazione || q.explanation || '';
+
+    return {
+      id: q.id || `q_${idx + 1}`,
+      tipo: 'multiple_choice' as const,
+      type: 'multiple_choice' as const,
+      domanda: qText,
+      question: qText,
+      opzioni: opts,
+      options: opts,
+      rispostaCorretta: correctAns,
+      correctAnswer: correctAns,
+      spiegazione: exp,
+      explanation: exp,
+    };
+  }).filter((q) => q.domanda && q.rispostaCorretta);
+
+  const title = raw.title || raw.titolo || 'Brano di Lettura';
+  const titleTranslation = raw.titleTranslation || raw.titoloTraduzione || '';
+
+  return {
+    id: raw.id || `reading_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+    level: (raw.level || level) as CEFRLevel,
+    title,
+    titolo: title,
+    titleTranslation,
+    titoloTraduzione: titleTranslation,
+    genre: raw.genre || genre,
+    testo,
+    paragraphs,
+    estimatedMinutes: raw.estimatedMinutes || estimatedMinutes,
+    domande,
+    questions: domande,
+    vocabulary: raw.vocabulary || [],
+  };
 }
 
 export async function explainWordInContext(

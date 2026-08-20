@@ -189,20 +189,37 @@ export interface LevelTestResult {
 
 export interface ReadingQuestion {
   id: string;
-  tipo: 'multiple_choice' | 'open_ended';
+  tipo?: 'multiple_choice' | 'open_ended';
+  type?: 'multiple_choice' | 'open_ended';
   domanda: string;
+  question?: string;
   opzioni?: string[];
+  options?: string[];
   rispostaCorretta: string;
+  correctAnswer?: string;
+  spiegazione?: string;
+  explanation?: string;
 }
 
 export interface ReadingText {
   id: string;
   level: CEFRLevel;
   title: string;
+  titolo?: string;
+  titleTranslation?: string;
+  titoloTraduzione?: string;
   genre?: string;
   testo: string;
+  paragraphs?: string[];
   estimatedMinutes: number;
   domande: ReadingQuestion[];
+  questions?: ReadingQuestion[];
+  vocabulary?: Array<{
+    word: string;
+    translation: string;
+    ipa?: string;
+    context?: string;
+  }>;
 }
 
 export interface ReadingProgress {
